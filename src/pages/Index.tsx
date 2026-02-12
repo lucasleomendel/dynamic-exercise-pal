@@ -1,14 +1,27 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import UserProfileForm from "@/components/UserProfileForm";
+import WorkoutPlanView from "@/components/WorkoutPlan";
+import { UserProfile, WorkoutPlan, generateWorkout } from "@/lib/workout-generator";
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [plan, setPlan] = useState<WorkoutPlan | null>(null);
+
+  const handleSubmit = (p: UserProfile) => {
+    setProfile(p);
+    setPlan(generateWorkout(p));
+  };
+
+  const handleReset = () => {
+    setProfile(null);
+    setPlan(null);
+  };
+
+  if (plan && profile) {
+    return <WorkoutPlanView plan={plan} profile={profile} onReset={handleReset} />;
+  }
+
+  return <UserProfileForm onSubmit={handleSubmit} />;
 };
 
 export default Index;

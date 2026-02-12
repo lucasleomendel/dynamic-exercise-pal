@@ -1,0 +1,151 @@
+import { useState } from "react";
+import { UserProfile } from "@/lib/workout-generator";
+import { Dumbbell, ChevronRight } from "lucide-react";
+
+interface Props {
+  onSubmit: (profile: UserProfile) => void;
+}
+
+const UserProfileForm = ({ onSubmit }: Props) => {
+  const [step, setStep] = useState(0);
+  const [profile, setProfile] = useState<Partial<UserProfile>>({});
+
+  const update = (field: string, value: string | number) => {
+    setProfile(prev => ({ ...prev, [field]: value }));
+  };
+
+  const nextStep = () => {
+    if (step < steps.length - 1) setStep(step + 1);
+    else if (profile.name && profile.age && profile.weight && profile.height && profile.sex && profile.goal && profile.level) {
+      onSubmit(profile as UserProfile);
+    }
+  };
+
+  const steps = [
+    {
+      title: "Como você se chama?",
+      content: (
+        <input
+          type="text"
+          placeholder="Seu nome"
+          value={profile.name || ""}
+          onChange={e => update("name", e.target.value)}
+          className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground text-lg focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+        />
+      ),
+      valid: !!profile.name,
+    },
+    {
+      title: "Informações básicas",
+      content: (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Idade</label>
+            <input type="number" placeholder="25" value={profile.age || ""} onChange={e => update("age", +e.target.value)}
+              className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
+          </div>
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Sexo</label>
+            <div className="flex gap-2">
+              {(["masculino", "feminino"] as const).map(s => (
+                <button key={s} onClick={() => update("sex", s)}
+                  className={`flex-1 py-3 rounded-lg border text-sm font-medium capitalize transition-all ${profile.sex === s ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-muted-foreground hover:border-primary/50"}`}>
+                  {s === "masculino" ? "♂ Masc" : "♀ Fem"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Peso (kg)</label>
+            <input type="number" placeholder="75" value={profile.weight || ""} onChange={e => update("weight", +e.target.value)}
+              className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
+          </div>
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Altura (cm)</label>
+            <input type="number" placeholder="175" value={profile.height || ""} onChange={e => update("height", +e.target.value)}
+              className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
+          </div>
+        </div>
+      ),
+      valid: !!profile.age && !!profile.weight && !!profile.height && !!profile.sex,
+    },
+    {
+      title: "Qual seu objetivo?",
+      content: (
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            { value: "hipertrofia", label: "💪 Hipertrofia", desc: "Ganhar massa muscular" },
+            { value: "emagrecimento", label: "🔥 Emagrecimento", desc: "Perder gordura" },
+            { value: "resistencia", label: "🏃 Resistência", desc: "Melhorar condicionamento" },
+            { value: "forca", label: "🏋️ Força", desc: "Aumentar cargas máximas" },
+          ] as const).map(g => (
+            <button key={g.value} onClick={() => update("goal", g.value)}
+              className={`p-4 rounded-xl border text-left transition-all ${profile.goal === g.value ? "bg-primary/10 border-primary card-glow" : "bg-secondary border-border hover:border-primary/50"}`}>
+              <span className="text-lg font-semibold block">{g.label}</span>
+              <span className="text-xs text-muted-foreground">{g.desc}</span>
+            </button>
+          ))}
+        </div>
+      ),
+      valid: !!profile.goal,
+    },
+    {
+      title: "Qual seu nível?",
+      content: (
+        <div className="flex flex-col gap-3">
+          {([
+            { value: "iniciante", label: "🌱 Iniciante", desc: "Menos de 6 meses de treino" },
+            { value: "intermediario", label: "⚡ Intermediário", desc: "6 meses a 2 anos de treino" },
+            { value: "avancado", label: "🔥 Avançado", desc: "Mais de 2 anos de treino" },
+          ] as const).map(l => (
+            <button key={l.value} onClick={() => update("level", l.value)}
+              className={`p-4 rounded-xl border text-left transition-all ${profile.level === l.value ? "bg-primary/10 border-primary card-glow" : "bg-secondary border-border hover:border-primary/50"}`}>
+              <span className="text-lg font-semibold">{l.label}</span>
+              <span className="text-sm text-muted-foreground ml-2">{l.desc}</span>
+            </button>
+          ))}
+        </div>
+      ),
+      valid: !!profile.level,
+    },
+  ];
+
+  const current = steps[step];
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-lg">
+        {/* Progress */}
+        <div className="flex gap-2 mb-8">
+          {steps.map((_, i) => (
+            <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= step ? "bg-primary" : "bg-secondary"}`} />
+          ))}
+        </div>
+
+        {/* Logo */}
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+            <Dumbbell className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <span className="font-display text-xl font-bold">FitForge</span>
+        </div>
+
+        {/* Step */}
+        <h2 className="font-display text-2xl font-bold mb-6">{current.title}</h2>
+        <div className="mb-8">{current.content}</div>
+
+        {/* Next */}
+        <button
+          onClick={nextStep}
+          disabled={!current.valid}
+          className="w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]"
+        >
+          {step < steps.length - 1 ? "Continuar" : "Gerar Meu Treino"}
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default UserProfileForm;

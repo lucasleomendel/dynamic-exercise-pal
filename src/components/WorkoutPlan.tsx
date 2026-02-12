@@ -40,12 +40,13 @@ const WorkoutPlan = ({ plan, profile, onReset }: Props) => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-3 mb-8">
+        <div className="grid grid-cols-5 gap-3 mb-8">
           {[
             { label: "Peso", value: `${profile.weight}kg` },
             { label: "Altura", value: `${profile.height}cm` },
             { label: "IMC", value: bmi },
             { label: "Dias/sem", value: `${plan.daysPerWeek}x` },
+            { label: "Sessão", value: profile.hoursPerSession < 1 ? `${Math.round(profile.hoursPerSession * 60)}min` : `${profile.hoursPerSession}h` },
           ].map(stat => (
             <div key={stat.label} className="card-elevated rounded-xl p-4 text-center">
               <span className="text-xl font-bold font-display text-primary">{stat.value}</span>

@@ -6,6 +6,8 @@ export interface UserProfile {
   sex: 'masculino' | 'feminino';
   goal: 'hipertrofia' | 'emagrecimento' | 'resistencia' | 'forca';
   level: 'iniciante' | 'intermediario' | 'avancado';
+  daysPerWeek: number;
+  hoursPerSession: number;
 }
 
 export interface Exercise {
@@ -119,7 +121,7 @@ function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
 }
 
 export function generateWorkout(profile: UserProfile): WorkoutPlan {
-  const { goal, level } = profile;
+  const { goal, level, daysPerWeek, hoursPerSession } = profile;
 
   const goalLabels: Record<string, string> = {
     hipertrofia: 'Hipertrofia',
@@ -134,46 +136,57 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     avancado: 'Avançado',
   };
 
+  // Estimate max exercises per session based on time available
+  // ~5-7 min per exercise (sets + rest). For shorter sessions, fewer exercises.
+  const maxExercisesPerDay = Math.max(4, Math.min(10, Math.floor(hoursPerSession * 60 / 6)));
+
   const pick = (group: string) => adjustForLevel(adjustForGoal(exerciseDatabase[group], goal), level);
 
-  if (level === 'iniciante') {
-    return {
-      title: `Treino ${goalLabels[goal]} - ${levelLabels[level]}`,
-      description: `Plano personalizado para ${profile.name}. Treino full body, 3x por semana.`,
-      daysPerWeek: 3,
-      days: [
-        { day: 'Segunda', focus: 'Full Body A', exercises: [...pick('peito').slice(0, 2), ...pick('costas').slice(0, 2), ...pick('pernas').slice(0, 2), ...pick('abdomen').slice(0, 1)] },
-        { day: 'Quarta', focus: 'Full Body B', exercises: [...pick('ombros').slice(0, 2), ...pick('biceps').slice(0, 1), ...pick('triceps').slice(0, 1), ...pick('pernas').slice(0, 2), ...pick('abdomen').slice(0, 1)] },
-        { day: 'Sexta', focus: 'Full Body C', exercises: [...pick('peito').slice(0, 1), ...pick('costas').slice(0, 2), ...pick('ombros').slice(0, 1), ...pick('pernas').slice(0, 2), ...pick('abdomen').slice(0, 1)] },
-      ],
-    };
-  }
+  const dayNames = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
-  if (level === 'intermediario') {
-    return {
-      title: `Treino ${goalLabels[goal]} - ${levelLabels[level]}`,
-      description: `Plano personalizado para ${profile.name}. Divisão ABC, 4x por semana.`,
-      daysPerWeek: 4,
-      days: [
-        { day: 'Segunda', focus: 'Peito + Tríceps', exercises: [...pick('peito'), ...pick('triceps').slice(0, 2)] },
-        { day: 'Terça', focus: 'Costas + Bíceps', exercises: [...pick('costas'), ...pick('biceps').slice(0, 2)] },
-        { day: 'Quinta', focus: 'Pernas + Abdômen', exercises: [...pick('pernas'), ...pick('abdomen')] },
-        { day: 'Sexta', focus: 'Ombros + Braços', exercises: [...pick('ombros'), ...pick('biceps').slice(0, 1), ...pick('triceps').slice(0, 1)] },
-      ],
-    };
-  }
+  const trimDay = (exercises: Exercise[]) => exercises.slice(0, maxExercisesPerDay);
 
-  // Avançado
+  const allSplits: Record<number, WorkoutDay[]> = {
+    2: [
+      { day: dayNames[0], focus: 'Superior', exercises: trimDay([...pick('peito').slice(0, 2), ...pick('costas').slice(0, 2), ...pick('ombros').slice(0, 1), ...pick('biceps').slice(0, 1), ...pick('triceps').slice(0, 1)]) },
+      { day: dayNames[3], focus: 'Inferior + Abdômen', exercises: trimDay([...pick('pernas'), ...pick('abdomen')]) },
+    ],
+    3: [
+      { day: dayNames[0], focus: 'Push (Peito + Ombro + Tríceps)', exercises: trimDay([...pick('peito').slice(0, 2), ...pick('ombros').slice(0, 2), ...pick('triceps').slice(0, 1)]) },
+      { day: dayNames[2], focus: 'Pull (Costas + Bíceps)', exercises: trimDay([...pick('costas'), ...pick('biceps').slice(0, 2), ...pick('abdomen').slice(0, 1)]) },
+      { day: dayNames[4], focus: 'Pernas + Abdômen', exercises: trimDay([...pick('pernas'), ...pick('abdomen').slice(0, 1)]) },
+    ],
+    4: [
+      { day: dayNames[0], focus: 'Peito + Tríceps', exercises: trimDay([...pick('peito'), ...pick('triceps').slice(0, 2)]) },
+      { day: dayNames[1], focus: 'Costas + Bíceps', exercises: trimDay([...pick('costas'), ...pick('biceps').slice(0, 2)]) },
+      { day: dayNames[3], focus: 'Pernas + Abdômen', exercises: trimDay([...pick('pernas'), ...pick('abdomen')]) },
+      { day: dayNames[4], focus: 'Ombros + Braços', exercises: trimDay([...pick('ombros'), ...pick('biceps').slice(0, 1), ...pick('triceps').slice(0, 1)]) },
+    ],
+    5: [
+      { day: dayNames[0], focus: 'Peito', exercises: trimDay([...pick('peito'), ...pick('abdomen').slice(0, 1)]) },
+      { day: dayNames[1], focus: 'Costas', exercises: trimDay([...pick('costas'), ...pick('abdomen').slice(0, 1)]) },
+      { day: dayNames[2], focus: 'Pernas', exercises: trimDay(pick('pernas')) },
+      { day: dayNames[3], focus: 'Ombros + Trapézio', exercises: trimDay([...pick('ombros'), ...pick('abdomen')]) },
+      { day: dayNames[4], focus: 'Braços', exercises: trimDay([...pick('biceps'), ...pick('triceps')]) },
+    ],
+    6: [
+      { day: dayNames[0], focus: 'Peito + Tríceps', exercises: trimDay([...pick('peito'), ...pick('triceps').slice(0, 2)]) },
+      { day: dayNames[1], focus: 'Costas + Bíceps', exercises: trimDay([...pick('costas'), ...pick('biceps').slice(0, 2)]) },
+      { day: dayNames[2], focus: 'Pernas', exercises: trimDay(pick('pernas')) },
+      { day: dayNames[3], focus: 'Ombros + Abdômen', exercises: trimDay([...pick('ombros'), ...pick('abdomen')]) },
+      { day: dayNames[4], focus: 'Peito + Costas', exercises: trimDay([...pick('peito').slice(0, 2), ...pick('costas').slice(0, 2)]) },
+      { day: dayNames[5], focus: 'Braços + Abdômen', exercises: trimDay([...pick('biceps'), ...pick('triceps'), ...pick('abdomen').slice(0, 1)]) },
+    ],
+  };
+
+  const days = allSplits[Math.min(Math.max(daysPerWeek, 2), 6)] || allSplits[3];
+
+  const timeLabel = hoursPerSession < 1 ? `${Math.round(hoursPerSession * 60)}min` : `${hoursPerSession}h`;
+
   return {
     title: `Treino ${goalLabels[goal]} - ${levelLabels[level]}`,
-    description: `Plano personalizado para ${profile.name}. Divisão ABCDE, 5x por semana.`,
-    daysPerWeek: 5,
-    days: [
-      { day: 'Segunda', focus: 'Peito', exercises: [...pick('peito'), ...pick('abdomen').slice(0, 1)] },
-      { day: 'Terça', focus: 'Costas', exercises: [...pick('costas'), ...pick('abdomen').slice(0, 1)] },
-      { day: 'Quarta', focus: 'Pernas', exercises: pick('pernas') },
-      { day: 'Quinta', focus: 'Ombros + Trapézio', exercises: [...pick('ombros'), ...pick('abdomen')] },
-      { day: 'Sexta', focus: 'Braços', exercises: [...pick('biceps'), ...pick('triceps')] },
-    ],
+    description: `Plano personalizado para ${profile.name}. ${daysPerWeek}x por semana, sessões de ~${timeLabel}.`,
+    daysPerWeek,
+    days,
   };
 }

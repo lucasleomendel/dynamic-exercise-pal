@@ -16,7 +16,7 @@ const UserProfileForm = ({ onSubmit }: Props) => {
 
   const nextStep = () => {
     if (step < steps.length - 1) setStep(step + 1);
-    else if (profile.name && profile.age && profile.weight && profile.height && profile.sex && profile.goal && profile.level) {
+    else if (profile.name && profile.age && profile.weight && profile.height && profile.sex && profile.goal && profile.level && profile.daysPerWeek && profile.hoursPerSession) {
       onSubmit(profile as UserProfile);
     }
   };
@@ -107,6 +107,41 @@ const UserProfileForm = ({ onSubmit }: Props) => {
         </div>
       ),
       valid: !!profile.level,
+    },
+    {
+      title: "Sua rotina de treino",
+      content: (
+        <div className="space-y-6">
+          <div>
+            <label className="text-sm text-muted-foreground mb-3 block">Quantos dias por semana você pode treinar?</label>
+            <div className="flex gap-2">
+              {[2, 3, 4, 5, 6].map(d => (
+                <button key={d} onClick={() => update("daysPerWeek", d)}
+                  className={`flex-1 py-3 rounded-lg border text-lg font-bold transition-all ${profile.daysPerWeek === d ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-muted-foreground hover:border-primary/50"}`}>
+                  {d}x
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm text-muted-foreground mb-3 block">Quanto tempo disponível por sessão?</label>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: 0.5, label: "30 min" },
+                { value: 0.75, label: "45 min" },
+                { value: 1, label: "1 hora" },
+                { value: 1.5, label: "1h30" },
+              ]).map(t => (
+                <button key={t.value} onClick={() => update("hoursPerSession", t.value)}
+                  className={`py-3 rounded-lg border font-medium transition-all ${profile.hoursPerSession === t.value ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-muted-foreground hover:border-primary/50"}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ),
+      valid: !!profile.daysPerWeek && !!profile.hoursPerSession,
     },
   ];
 

@@ -1,3 +1,6 @@
+export const ALL_MUSCLE_GROUPS = ['peito', 'costas', 'pernas', 'ombros', 'biceps', 'triceps', 'abdomen'] as const;
+export type MuscleGroup = typeof ALL_MUSCLE_GROUPS[number];
+
 export interface UserProfile {
   name: string;
   age: number;
@@ -8,6 +11,7 @@ export interface UserProfile {
   level: 'iniciante' | 'intermediario' | 'avancado';
   daysPerWeek: number;
   hoursPerSession: number;
+  selectedMuscles?: MuscleGroup[];
 }
 
 export interface Exercise {
@@ -121,7 +125,8 @@ function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
 }
 
 export function generateWorkout(profile: UserProfile): WorkoutPlan {
-  const { goal, level, daysPerWeek, hoursPerSession } = profile;
+  const { goal, level, daysPerWeek, hoursPerSession, selectedMuscles } = profile;
+  const allowed = selectedMuscles && selectedMuscles.length >= 2 ? selectedMuscles : ALL_MUSCLE_GROUPS as unknown as MuscleGroup[];
 
   const goalLabels: Record<string, string> = {
     hipertrofia: 'Hipertrofia',
@@ -136,11 +141,12 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     avancado: 'Avançado',
   };
 
-  // Estimate max exercises per session based on time available
-  // ~5-7 min per exercise (sets + rest). For shorter sessions, fewer exercises.
   const maxExercisesPerDay = Math.max(4, Math.min(10, Math.floor(hoursPerSession * 60 / 6)));
 
-  const pick = (group: string) => adjustForLevel(adjustForGoal(exerciseDatabase[group], goal), level);
+  const pick = (group: string) => {
+    if (!allowed.includes(group as MuscleGroup)) return [];
+    return adjustForLevel(adjustForGoal(exerciseDatabase[group], goal), level);
+  };
 
   const dayNames = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
@@ -179,14 +185,16 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     ],
   };
 
-  const days = allSplits[Math.min(Math.max(daysPerWeek, 2), 6)] || allSplits[3];
+  const rawDays = allSplits[Math.min(Math.max(daysPerWeek, 2), 6)] || allSplits[3];
+  // Filter out days with no exercises (when muscle groups are deselected)
+  const days = rawDays.filter(d => d.exercises.length > 0);
 
   const timeLabel = hoursPerSession < 1 ? `${Math.round(hoursPerSession * 60)}min` : `${hoursPerSession}h`;
 
   return {
     title: `Treino ${goalLabels[goal]} - ${levelLabels[level]}`,
-    description: `Plano personalizado para ${profile.name}. ${daysPerWeek}x por semana, sessões de ~${timeLabel}.`,
-    daysPerWeek,
+    description: `Plano personalizado para ${profile.name}. ${days.length}x por semana, sessões de ~${timeLabel}.`,
+    daysPerWeek: days.length,
     days,
   };
 }

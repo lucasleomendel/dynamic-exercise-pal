@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UserProfile } from "@/lib/workout-generator";
+import { UserProfile, ALL_MUSCLE_GROUPS, MuscleGroup } from "@/lib/workout-generator";
 import { Dumbbell, ChevronRight } from "lucide-react";
 
 interface Props {
@@ -10,16 +10,35 @@ interface Props {
 const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState<Partial<UserProfile>>(initialProfile || {});
+  const [selectedMuscles, setSelectedMuscles] = useState<MuscleGroup[]>(
+    initialProfile?.selectedMuscles || [...ALL_MUSCLE_GROUPS]
+  );
 
   const update = (field: string, value: string | number) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
+  const toggleMuscle = (m: MuscleGroup) => {
+    setSelectedMuscles(prev =>
+      prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]
+    );
+  };
+
   const nextStep = () => {
     if (step < steps.length - 1) setStep(step + 1);
     else if (profile.name && profile.age && profile.weight && profile.height && profile.sex && profile.goal && profile.level && profile.daysPerWeek && profile.hoursPerSession) {
-      onSubmit(profile as UserProfile);
+      onSubmit({ ...profile, selectedMuscles } as UserProfile);
     }
+  };
+
+  const muscleLabels: Record<MuscleGroup, { emoji: string; label: string }> = {
+    peito: { emoji: '🫁', label: 'Peito' },
+    costas: { emoji: '🔙', label: 'Costas' },
+    pernas: { emoji: '🦵', label: 'Pernas' },
+    ombros: { emoji: '💪', label: 'Ombros' },
+    biceps: { emoji: '💪', label: 'Bíceps' },
+    triceps: { emoji: '🦾', label: 'Tríceps' },
+    abdomen: { emoji: '🎯', label: 'Abdômen' },
   };
 
   const steps = [
@@ -144,6 +163,24 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
       ),
       valid: !!profile.daysPerWeek && !!profile.hoursPerSession,
     },
+    // Muscle group selection step (shown for males)
+    ...(profile.sex === 'masculino' ? [{
+      title: "Quais grupos musculares quer treinar?",
+      content: (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Desmarque os grupos que não quer incluir no treino.</p>
+          <div className="grid grid-cols-2 gap-3">
+            {ALL_MUSCLE_GROUPS.map(m => (
+              <button key={m} onClick={() => toggleMuscle(m)}
+                className={`p-4 rounded-xl border text-left transition-all ${selectedMuscles.includes(m) ? "bg-primary/10 border-primary card-glow" : "bg-secondary border-border text-muted-foreground hover:border-primary/50"}`}>
+                <span className="text-lg font-semibold block">{muscleLabels[m].emoji} {muscleLabels[m].label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ),
+      valid: selectedMuscles.length >= 2,
+    }] : []),
   ];
 
   const current = steps[step];

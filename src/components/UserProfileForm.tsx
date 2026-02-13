@@ -14,7 +14,7 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
     initialProfile?.selectedMuscles || [...ALL_MUSCLE_GROUPS]
   );
 
-  const update = (field: string, value: string | number) => {
+  const update = (field: string, value: string | number | boolean) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
@@ -159,6 +159,18 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
               ))}
             </div>
           </div>
+          {/* Split legs option - show when 4+ days and legs are selected */}
+          {(profile.daysPerWeek || 0) >= 4 && (
+            <div>
+              <button
+                onClick={() => update("splitLegs", !profile.splitLegs)}
+                className={`w-full p-4 rounded-xl border text-left transition-all ${profile.splitLegs ? "bg-primary/10 border-primary card-glow" : "bg-secondary border-border hover:border-primary/50"}`}
+              >
+                <span className="text-sm font-semibold block">🦵 Dividir treino de perna em 2 dias?</span>
+                <span className="text-xs text-muted-foreground">Anterior (quadríceps) + Posterior (glúteo/panturrilha)</span>
+              </button>
+            </div>
+          )}
         </div>
       ),
       valid: !!profile.daysPerWeek && !!profile.hoursPerSession,

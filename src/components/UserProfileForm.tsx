@@ -4,11 +4,12 @@ import { Dumbbell, ChevronRight } from "lucide-react";
 
 interface Props {
   onSubmit: (profile: UserProfile) => void;
+  initialProfile?: UserProfile;
 }
 
-const UserProfileForm = ({ onSubmit }: Props) => {
+const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
   const [step, setStep] = useState(0);
-  const [profile, setProfile] = useState<Partial<UserProfile>>({});
+  const [profile, setProfile] = useState<Partial<UserProfile>>(initialProfile || {});
 
   const update = (field: string, value: string | number) => {
     setProfile(prev => ({ ...prev, [field]: value }));

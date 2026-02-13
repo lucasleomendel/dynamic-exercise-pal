@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Exercise } from "@/lib/workout-generator";
-import { Timer, RotateCcw, Play, Check } from "lucide-react";
+import { Timer, RotateCcw, Play, Check, Weight } from "lucide-react";
 
 interface Props {
   exercise: Exercise;
@@ -7,44 +8,71 @@ interface Props {
   checked?: boolean;
   onToggleCheck?: (key: string) => void;
   exerciseKey: string;
+  savedWeight?: number;
+  onWeightChange?: (key: string, weight: number) => void;
 }
 
-const ExerciseCard = ({ exercise, index, checked, onToggleCheck, exerciseKey }: Props) => {
+const ExerciseCard = ({ exercise, index, checked, onToggleCheck, exerciseKey, savedWeight, onWeightChange }: Props) => {
+  const [weightInput, setWeightInput] = useState(savedWeight?.toString() || "");
+
   const handleExample = () => {
     const query = encodeURIComponent(`como fazer ${exercise.name} exercício academia`);
     window.open(`https://www.youtube.com/results?search_query=${query}`, "_blank");
   };
 
-  return (
-    <div className={`flex items-center gap-3 p-4 rounded-xl border transition-all group ${checked ? "bg-primary/5 border-primary/30 opacity-70" : "bg-secondary/50 border-border hover:border-primary/30"}`}>
-      {/* Check button */}
-      <button
-        onClick={() => onToggleCheck?.(exerciseKey)}
-        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all border ${checked ? "bg-primary border-primary text-primary-foreground" : "bg-secondary/50 border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}
-      >
-        {checked ? <Check className="w-4 h-4" /> : <span className="text-xs font-bold">{String(index + 1).padStart(2, "0")}</span>}
-      </button>
+  const handleWeightBlur = () => {
+    const val = parseFloat(weightInput);
+    if (!isNaN(val) && val > 0) {
+      onWeightChange?.(exerciseKey, val);
+    }
+  };
 
-      <div className="flex-1 min-w-0">
-        <h4 className={`font-semibold truncate ${checked ? "line-through text-muted-foreground" : "text-foreground"}`}>{exercise.name}</h4>
-        <p className="text-sm text-muted-foreground">{exercise.muscle}</p>
-      </div>
-      <div className="flex items-center gap-3 text-sm text-muted-foreground shrink-0">
-        <div className="flex items-center gap-1">
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>{exercise.sets}x{exercise.reps}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Timer className="w-3.5 h-3.5" />
-          <span>{exercise.rest}</span>
-        </div>
+  return (
+    <div className={`p-4 rounded-xl border transition-all group ${checked ? "bg-primary/5 border-primary/30 opacity-70" : "bg-secondary/50 border-border hover:border-primary/30"}`}>
+      <div className="flex items-center gap-3">
+        {/* Check button */}
         <button
-          onClick={handleExample}
-          title="Ver exemplo do exercício"
-          className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+          onClick={() => onToggleCheck?.(exerciseKey)}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all border ${checked ? "bg-primary border-primary text-primary-foreground" : "bg-secondary/50 border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}
         >
-          <Play className="w-3.5 h-3.5" />
+          {checked ? <Check className="w-4 h-4" /> : <span className="text-xs font-bold">{String(index + 1).padStart(2, "0")}</span>}
         </button>
+
+        <div className="flex-1 min-w-0">
+          <h4 className={`font-semibold truncate ${checked ? "line-through text-muted-foreground" : "text-foreground"}`}>{exercise.name}</h4>
+          <p className="text-sm text-muted-foreground">{exercise.muscle}</p>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground shrink-0">
+          <div className="flex items-center gap-1">
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>{exercise.sets}x{exercise.reps}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Timer className="w-3.5 h-3.5" />
+            <span>{exercise.rest}</span>
+          </div>
+          <button
+            onClick={handleExample}
+            title="Ver exemplo do exercício"
+            className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+          >
+            <Play className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Weight input */}
+      <div className="flex items-center gap-2 mt-3 ml-11">
+        <Weight className="w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="number"
+          placeholder="Peso (kg)"
+          value={weightInput}
+          onChange={e => setWeightInput(e.target.value)}
+          onBlur={handleWeightBlur}
+          className="w-24 h-7 px-2 text-xs rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        {savedWeight && <span className="text-xs text-muted-foreground">kg</span>}
       </div>
     </div>
   );

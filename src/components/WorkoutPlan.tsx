@@ -1,24 +1,44 @@
 import { useState } from "react";
 import { WorkoutPlan as WorkoutPlanType, UserProfile } from "@/lib/workout-generator";
 import ExerciseCard from "./ExerciseCard";
-import { Dumbbell, Calendar, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
-import { loadChecked, saveChecked } from "@/lib/storage";
+import ProfileSheet from "./ProfileSheet";
+import ProgressSheet from "./ProgressSheet";
+import { Dumbbell, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { loadChecked, saveChecked, saveWeight, loadWeights } from "@/lib/storage";
 
 interface Props {
   plan: WorkoutPlanType;
   profile: UserProfile;
-  onReset: () => void;
+  onEdit: () => void;
+  onClear: () => void;
 }
 
-const WorkoutPlan = ({ plan, profile, onReset }: Props) => {
+const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
   const [expandedDay, setExpandedDay] = useState<number>(0);
   const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
+  const [weights, setWeights] = useState<Record<string, number>>(() => {
+    const entries = loadWeights();
+    const map: Record<string, number> = {};
+    entries.forEach(e => { map[e.exerciseKey] = e.weight; });
+    return map;
+  });
 
   const toggleCheck = (key: string) => {
     setChecked(prev => {
       const next = { ...prev, [key]: !prev[key] };
       saveChecked(next);
       return next;
+    });
+  };
+
+  const handleWeightChange = (key: string, weight: number, exerciseName: string, muscle: string) => {
+    setWeights(prev => ({ ...prev, [key]: weight }));
+    saveWeight({
+      exerciseKey: key,
+      exerciseName,
+      muscle,
+      weight,
+      date: new Date().toISOString(),
     });
   };
 
@@ -33,19 +53,16 @@ const WorkoutPlan = ({ plan, profile, onReset }: Props) => {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <Dumbbell className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-lg">FitForge</span>
+            <span className="font-display font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
           </div>
-          <button onClick={onReset} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Novo treino
-          </button>
+          <ProfileSheet profile={profile} onEdit={onEdit} onClear={onClear} />
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Hero */}
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold mb-2 text-gradient">{plan.title}</h1>
+          <h1 className="font-display text-3xl font-bold mb-2 text-gradient" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{plan.title}</h1>
           <p className="text-muted-foreground">{plan.description}</p>
         </div>
 
@@ -78,7 +95,7 @@ const WorkoutPlan = ({ plan, profile, onReset }: Props) => {
                     <Calendar className="w-5 h-5 text-primary" />
                   </div>
                   <div className="text-left">
-                    <h3 className="font-display font-bold text-lg">{day.day}</h3>
+                    <h3 className="font-display font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{day.day}</h3>
                     <p className="text-sm text-muted-foreground">{day.focus} • {day.exercises.length} exercícios</p>
                   </div>
                 </div>
@@ -97,6 +114,8 @@ const WorkoutPlan = ({ plan, profile, onReset }: Props) => {
                         exerciseKey={exKey}
                         checked={!!checked[exKey]}
                         onToggleCheck={toggleCheck}
+                        savedWeight={weights[exKey]}
+                        onWeightChange={(key, w) => handleWeightChange(key, w, ex.name, ex.muscle)}
                       />
                     );
                   })}
@@ -105,6 +124,9 @@ const WorkoutPlan = ({ plan, profile, onReset }: Props) => {
             </div>
           ))}
         </div>
+
+        {/* Progress button */}
+        <ProgressSheet />
       </div>
     </div>
   );

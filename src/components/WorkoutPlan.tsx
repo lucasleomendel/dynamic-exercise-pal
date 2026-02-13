@@ -2,6 +2,7 @@ import { useState } from "react";
 import { WorkoutPlan as WorkoutPlanType, UserProfile } from "@/lib/workout-generator";
 import ExerciseCard from "./ExerciseCard";
 import { Dumbbell, Calendar, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { loadChecked, saveChecked } from "@/lib/storage";
 
 interface Props {
   plan: WorkoutPlanType;
@@ -11,6 +12,15 @@ interface Props {
 
 const WorkoutPlan = ({ plan, profile, onReset }: Props) => {
   const [expandedDay, setExpandedDay] = useState<number>(0);
+  const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
+
+  const toggleCheck = (key: string) => {
+    setChecked(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      saveChecked(next);
+      return next;
+    });
+  };
 
   const bmi = (profile.weight / ((profile.height / 100) ** 2)).toFixed(1);
 
@@ -77,9 +87,19 @@ const WorkoutPlan = ({ plan, profile, onReset }: Props) => {
 
               {expandedDay === i && (
                 <div className="px-5 pb-5 space-y-2">
-                  {day.exercises.map((ex, j) => (
-                    <ExerciseCard key={j} exercise={ex} index={j} />
-                  ))}
+                  {day.exercises.map((ex, j) => {
+                    const exKey = `${i}-${j}`;
+                    return (
+                      <ExerciseCard
+                        key={j}
+                        exercise={ex}
+                        index={j}
+                        exerciseKey={exKey}
+                        checked={!!checked[exKey]}
+                        onToggleCheck={toggleCheck}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>

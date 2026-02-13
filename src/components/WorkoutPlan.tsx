@@ -3,6 +3,7 @@ import { WorkoutPlan as WorkoutPlanType, UserProfile } from "@/lib/workout-gener
 import ExerciseCard from "./ExerciseCard";
 import ProfileSheet from "./ProfileSheet";
 import ProgressSheet from "./ProgressSheet";
+import BodyCompositionSheet from "./BodyCompositionSheet";
 import { Dumbbell, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { loadChecked, saveChecked, saveWeight, loadWeights } from "@/lib/storage";
 
@@ -55,7 +56,10 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
             </div>
             <span className="font-display font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
           </div>
-          <ProfileSheet profile={profile} onEdit={onEdit} onClear={onClear} />
+          <div className="flex items-center gap-2">
+            <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} />
+            <ProfileSheet profile={profile} onEdit={onEdit} onClear={onClear} />
+          </div>
         </div>
       </div>
 

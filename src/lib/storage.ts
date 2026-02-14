@@ -62,10 +62,35 @@ export function loadReport(): ProgressReport | null {
   return raw ? JSON.parse(raw) : null;
 }
 
+const BODY_COMP_KEY = "fitforge_bodycomp";
+
+export interface BodyCompData {
+  skinfolds: Record<string, number | undefined>;
+  measurements: Record<string, number | undefined>;
+  result: {
+    bodyFat: number;
+    fatMass: number;
+    leanMass: number;
+    classification: string;
+    method: string;
+  } | null;
+  date: string;
+}
+
+export function saveBodyComp(data: BodyCompData) {
+  localStorage.setItem(BODY_COMP_KEY, JSON.stringify(data));
+}
+
+export function loadBodyComp(): BodyCompData | null {
+  const raw = localStorage.getItem(BODY_COMP_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+
 export function clearAll() {
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem(PLAN_KEY);
   localStorage.removeItem(CHECKED_KEY);
   localStorage.removeItem(WEIGHTS_KEY);
   localStorage.removeItem(REPORT_KEY);
+  localStorage.removeItem(BODY_COMP_KEY);
 }

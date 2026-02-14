@@ -4,6 +4,7 @@ import ExerciseCard from "./ExerciseCard";
 import ProfileSheet from "./ProfileSheet";
 import ProgressSheet from "./ProgressSheet";
 import BodyCompositionSheet from "./BodyCompositionSheet";
+import DietSheet from "./DietSheet";
 import { Dumbbell, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { loadChecked, saveChecked, saveWeight, loadWeights } from "@/lib/storage";
 
@@ -57,7 +58,8 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
             <span className="font-display font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
           </div>
           <div className="flex items-center gap-2">
-            <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} />
+            <DietSheet goal={profile.goal} weight={profile.weight} height={profile.height} age={profile.age} sex={profile.sex} />
+            <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} height={profile.height} />
             <ProfileSheet profile={profile} onEdit={onEdit} onClear={onClear} />
           </div>
         </div>

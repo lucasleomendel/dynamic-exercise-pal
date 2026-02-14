@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { Exercise } from "@/lib/workout-generator";
 import { Timer, RotateCcw, Play, Check, Weight } from "lucide-react";
 
@@ -12,7 +12,7 @@ interface Props {
   onWeightChange?: (key: string, weight: number) => void;
 }
 
-const ExerciseCard = ({ exercise, index, checked, onToggleCheck, exerciseKey, savedWeight, onWeightChange }: Props) => {
+const ExerciseCard = forwardRef<HTMLDivElement, Props>(({ exercise, index, checked, onToggleCheck, exerciseKey, savedWeight, onWeightChange }, ref) => {
   const [weightInput, setWeightInput] = useState(savedWeight?.toString() || "");
 
   const handleExample = () => {
@@ -28,9 +28,8 @@ const ExerciseCard = ({ exercise, index, checked, onToggleCheck, exerciseKey, sa
   };
 
   return (
-    <div className={`p-4 rounded-xl border transition-all group ${checked ? "bg-primary/5 border-primary/30 opacity-70" : "bg-secondary/50 border-border hover:border-primary/30"}`}>
+    <div ref={ref} className={`p-4 rounded-xl border transition-all group ${checked ? "bg-primary/5 border-primary/30 opacity-70" : "bg-secondary/50 border-border hover:border-primary/30"}`}>
       <div className="flex items-center gap-3">
-        {/* Check button */}
         <button
           onClick={() => onToggleCheck?.(exerciseKey)}
           className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all border ${checked ? "bg-primary border-primary text-primary-foreground" : "bg-secondary/50 border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}
@@ -61,7 +60,6 @@ const ExerciseCard = ({ exercise, index, checked, onToggleCheck, exerciseKey, sa
         </div>
       </div>
 
-      {/* Weight input */}
       <div className="flex items-center gap-2 mt-3 ml-11">
         <Weight className="w-3.5 h-3.5 text-muted-foreground" />
         <input
@@ -76,6 +74,8 @@ const ExerciseCard = ({ exercise, index, checked, onToggleCheck, exerciseKey, sa
       </div>
     </div>
   );
-};
+});
+
+ExerciseCard.displayName = "ExerciseCard";
 
 export default ExerciseCard;

@@ -126,68 +126,109 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
     const { triceps, subscapular, suprailiac, abdominal, thigh, chest, axilla } = skinfolds;
     const { neck, waist, hip } = measurements;
 
-    // Check if any data was provided
     const hasAnySkin = Object.values(skinfolds).some(v => v !== undefined && v !== null && v > 0);
-    const hasAnyMeas = neck || waist || hip;
+    const hasAnyMeas = Object.values(measurements).some(v => v !== undefined && v !== null && v > 0);
 
     if (!hasAnySkin && !hasAnyMeas) {
-      setError("Preencha ao menos as dobras (3 ou 7) ou as medidas de pescoço + cintura para calcular.");
+      setError("Preencha ao menos um campo de dobra ou medida para calcular.");
       return;
     }
-
-    // Try Jackson-Pollock 7-site first
-    const has7folds = triceps && subscapular && suprailiac && abdominal && thigh && chest && axilla;
-    // Try 3-site
-    const has3foldsMale = chest && abdominal && thigh;
-    const has3foldsFemale = triceps && suprailiac && thigh;
-    // Try US Navy method (circumferences)
-    const hasNavyMale = neck && waist && (waist > neck);
-    const hasNavyFemale = neck && waist && hip;
 
     let bodyFat: number | null = null;
     let method = "";
 
-    if (has7folds) {
+    // 1) Jackson-Pollock 7 dobras
+    const has7 = triceps && subscapular && suprailiac && abdominal && thigh && chest && axilla;
+    if (has7) {
       const sum = triceps! + subscapular! + suprailiac! + abdominal! + thigh! + chest! + axilla!;
-      let density: number;
-      if (sex === 'masculino') {
-        density = 1.112 - (0.00043499 * sum) + (0.00000055 * sum * sum) - (0.00028826 * age);
-      } else {
-        density = 1.097 - (0.00046971 * sum) + (0.00000056 * sum * sum) - (0.00012828 * age);
-      }
+      const density = sex === 'masculino'
+        ? 1.112 - (0.00043499 * sum) + (0.00000055 * sum * sum) - (0.00028826 * age)
+        : 1.097 - (0.00046971 * sum) + (0.00000056 * sum * sum) - (0.00012828 * age);
       bodyFat = parseFloat(((495 / density) - 450).toFixed(1));
       method = "Jackson-Pollock 7 dobras";
-    } else if (sex === 'masculino' && has3foldsMale) {
-      const sum = chest! + abdominal! + thigh!;
-      const density = 1.10938 - (0.0008267 * sum) + (0.0000016 * sum * sum) - (0.0002574 * age);
-      bodyFat = parseFloat(((495 / density) - 450).toFixed(1));
-      method = "Jackson-Pollock 3 dobras";
-    } else if (sex === 'feminino' && has3foldsFemale) {
-      const sum = triceps! + suprailiac! + thigh!;
-      const density = 1.0994921 - (0.0009929 * sum) + (0.0000023 * sum * sum) - (0.0001392 * age);
-      bodyFat = parseFloat(((495 / density) - 450).toFixed(1));
-      method = "Jackson-Pollock 3 dobras";
-    } else if (sex === 'masculino' && hasNavyMale) {
-      const heightCm = height;
-      bodyFat = parseFloat((86.010 * Math.log10(waist! - neck!) - 70.041 * Math.log10(heightCm) + 36.76).toFixed(1));
-      method = "US Navy (circunferências)";
-    } else if (sex === 'feminino' && hasNavyFemale) {
-      const heightCm = height;
-      bodyFat = parseFloat((163.205 * Math.log10(waist! + hip! - neck!) - 97.684 * Math.log10(heightCm) - 78.387).toFixed(1));
-      method = "US Navy (circunferências)";
     }
 
+    // 2) Jackson-Pollock 3 dobras
     if (bodyFat === null) {
-      if (sex === 'masculino') {
-        setError("Para masculino, preencha: Peitoral + Abdominal + Coxa (dobras) ou Pescoço + Cintura (medidas).");
-      } else {
-        setError("Para feminino, preencha: Tríceps + Suprailíaca + Coxa (dobras) ou Pescoço + Cintura + Quadril (medidas).");
+      const has3M = chest && abdominal && thigh;
+      const has3F = triceps && suprailiac && thigh;
+      if (sex === 'masculino' && has3M) {
+        const sum = chest! + abdominal! + thigh!;
+        const density = 1.10938 - (0.0008267 * sum) + (0.0000016 * sum * sum) - (0.0002574 * age);
+        bodyFat = parseFloat(((495 / density) - 450).toFixed(1));
+        method = "Jackson-Pollock 3 dobras";
+      } else if (sex === 'feminino' && has3F) {
+        const sum = triceps! + suprailiac! + thigh!;
+        const density = 1.0994921 - (0.0009929 * sum) + (0.0000023 * sum * sum) - (0.0001392 * age);
+        bodyFat = parseFloat(((495 / density) - 450).toFixed(1));
+        method = "Jackson-Pollock 3 dobras";
       }
-      return;
     }
 
-    if (isNaN(bodyFat) || bodyFat < 2 || bodyFat > 60) {
-      setError("Resultado fora do intervalo válido. Verifique os valores inseridos.");
+    // 3) US Navy
+    if (bodyFat === null && neck && waist) {
+      if (sex === 'masculino' && waist > neck) {
+        bodyFat = parseFloat((86.010 * Math.log10(waist - neck) - 70.041 * Math.log10(height) + 36.76).toFixed(1));
+        method = "US Navy (circunferências)";
+      } else if (sex === 'feminino' && hip) {
+        bodyFat = parseFloat((163.205 * Math.log10(waist + hip - neck) - 97.684 * Math.log10(height) - 78.387).toFixed(1));
+        method = "US Navy (circunferências)";
+      }
+    }
+
+    // 4) Estimativa por soma de dobras disponíveis (Durnin-Womersley simplificado)
+    if (bodyFat === null && hasAnySkin) {
+      const filledSkins = Object.values(skinfolds).filter(v => v !== undefined && v !== null && v > 0) as number[];
+      if (filledSkins.length >= 1) {
+        const sum = filledSkins.reduce((a, b) => a + b, 0);
+        // Durnin-Womersley uses log10 of sum of skinfolds
+        const logSum = Math.log10(sum);
+        let density: number;
+        if (sex === 'masculino') {
+          if (age <= 19) density = 1.1620 - (0.0630 * logSum);
+          else if (age <= 29) density = 1.1631 - (0.0632 * logSum);
+          else if (age <= 39) density = 1.1422 - (0.0544 * logSum);
+          else if (age <= 49) density = 1.1620 - (0.0700 * logSum);
+          else density = 1.1715 - (0.0779 * logSum);
+        } else {
+          if (age <= 19) density = 1.1549 - (0.0678 * logSum);
+          else if (age <= 29) density = 1.1599 - (0.0717 * logSum);
+          else if (age <= 39) density = 1.1423 - (0.0632 * logSum);
+          else if (age <= 49) density = 1.1333 - (0.0612 * logSum);
+          else density = 1.1339 - (0.0645 * logSum);
+        }
+        bodyFat = parseFloat(((495 / density) - 450).toFixed(1));
+        method = `Durnin-Womersley (${filledSkins.length} dobra${filledSkins.length > 1 ? 's' : ''})`;
+      }
+    }
+
+    // 5) Estimativa por cintura apenas (fórmula YMCA)
+    if (bodyFat === null && waist) {
+      if (sex === 'masculino') {
+        bodyFat = parseFloat(((-98.42 + (4.15 * waist) - (0.082 * weight * 2.205)) / (weight * 2.205) * 100).toFixed(1));
+      } else {
+        bodyFat = parseFloat(((-76.76 + (4.15 * waist) - (0.082 * weight * 2.205)) / (weight * 2.205) * 100).toFixed(1));
+      }
+      method = "YMCA (cintura)";
+    }
+
+    // 6) BMI-based estimation as last resort
+    if (bodyFat === null) {
+      const heightM = height / 100;
+      const bmi = weight / (heightM * heightM);
+      if (sex === 'masculino') {
+        bodyFat = parseFloat(((1.20 * bmi) + (0.23 * age) - 16.2).toFixed(1));
+      } else {
+        bodyFat = parseFloat(((1.20 * bmi) + (0.23 * age) - 5.4).toFixed(1));
+      }
+      method = "Estimativa por IMC";
+    }
+
+    // Clamp to valid range
+    bodyFat = Math.max(2, Math.min(60, bodyFat));
+
+    if (isNaN(bodyFat)) {
+      setError("Não foi possível calcular. Verifique os valores inseridos.");
       return;
     }
 
@@ -198,7 +239,6 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
     const newResult = { bodyFat, fatMass, leanMass, classification, method };
     setResult(newResult);
 
-    // Save to localStorage
     saveBodyComp({
       skinfolds: skinfolds as Record<string, number | undefined>,
       measurements: measurements as Record<string, number | undefined>,

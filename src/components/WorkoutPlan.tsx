@@ -5,6 +5,7 @@ import ProfileSheet from "./ProfileSheet";
 import ProgressSheet from "./ProgressSheet";
 import BodyCompositionSheet from "./BodyCompositionSheet";
 import DietSheet from "./DietSheet";
+import WaterTracker from "./WaterTracker";
 import { Dumbbell, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { loadChecked, saveChecked, saveWeight, loadWeights } from "@/lib/storage";
 
@@ -86,6 +87,11 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
               <span className="text-xs text-muted-foreground block mt-1">{stat.label}</span>
             </div>
           ))}
+        </div>
+
+        {/* Water Tracker */}
+        <div className="mb-6">
+          <WaterTracker weight={profile.weight} hoursPerSession={profile.hoursPerSession} daysPerWeek={profile.daysPerWeek} />
         </div>
 
         {/* Days */}

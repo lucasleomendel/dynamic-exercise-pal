@@ -45,6 +45,11 @@ const exerciseDatabase: Record<string, Exercise[]> = {
     { name: 'Flexão de Braço', sets: 3, reps: '15-20', rest: '45s', muscle: 'Peito' },
     { name: 'Supino Declinado', sets: 3, reps: '10-12', rest: '60s', muscle: 'Peito' },
     { name: 'Pullover com Halter', sets: 3, reps: '12-15', rest: '60s', muscle: 'Peito' },
+    { name: 'Supino Reto com Halteres', sets: 4, reps: '8-12', rest: '90s', muscle: 'Peito' },
+    { name: 'Supino Inclinado na Máquina', sets: 3, reps: '10-12', rest: '60s', muscle: 'Peito' },
+    { name: 'Crucifixo Inclinado com Halteres', sets: 3, reps: '12-15', rest: '60s', muscle: 'Peito' },
+    { name: 'Chest Press na Máquina', sets: 3, reps: '10-12', rest: '60s', muscle: 'Peito' },
+    { name: 'Flexão Diamante', sets: 3, reps: '10-15', rest: '45s', muscle: 'Peito' },
   ],
   costas: [
     { name: 'Puxada Frontal', sets: 4, reps: '8-12', rest: '90s', muscle: 'Costas' },
@@ -55,6 +60,12 @@ const exerciseDatabase: Record<string, Exercise[]> = {
     { name: 'Puxada Supinada', sets: 3, reps: '10-12', rest: '60s', muscle: 'Costas' },
     { name: 'Barra Fixa', sets: 3, reps: '8-12', rest: '90s', muscle: 'Costas' },
     { name: 'Remada Cavalinho', sets: 3, reps: '10-12', rest: '60s', muscle: 'Costas' },
+    { name: 'Remada na Máquina', sets: 3, reps: '10-12', rest: '60s', muscle: 'Costas' },
+    { name: 'Puxada Neutra', sets: 3, reps: '10-12', rest: '60s', muscle: 'Costas' },
+    { name: 'Remada Curvada com Halteres', sets: 3, reps: '10-12', rest: '60s', muscle: 'Costas' },
+    { name: 'Pullover no Cabo', sets: 3, reps: '12-15', rest: '45s', muscle: 'Costas' },
+    { name: 'Remada Alta com Barra', sets: 3, reps: '10-12', rest: '60s', muscle: 'Costas' },
+    { name: 'Levantamento Terra', sets: 4, reps: '5-8', rest: '120s', muscle: 'Costas' },
   ],
   pernas_anterior: [
     { name: 'Agachamento Livre', sets: 4, reps: '8-12', rest: '120s', muscle: 'Quadríceps' },
@@ -64,6 +75,10 @@ const exerciseDatabase: Record<string, Exercise[]> = {
     { name: 'Avanço com Halteres', sets: 3, reps: '12 cada', rest: '60s', muscle: 'Quadríceps' },
     { name: 'Agachamento Búlgaro', sets: 3, reps: '10 cada', rest: '60s', muscle: 'Quadríceps' },
     { name: 'Panturrilha no Leg Press', sets: 4, reps: '15-20', rest: '45s', muscle: 'Panturrilha' },
+    { name: 'Agachamento Frontal', sets: 4, reps: '8-10', rest: '120s', muscle: 'Quadríceps' },
+    { name: 'Leg Press Unilateral', sets: 3, reps: '10 cada', rest: '60s', muscle: 'Quadríceps' },
+    { name: 'Agachamento Sumô', sets: 3, reps: '10-12', rest: '90s', muscle: 'Quadríceps' },
+    { name: 'Passada no Smith', sets: 3, reps: '12 cada', rest: '60s', muscle: 'Quadríceps' },
   ],
   pernas_posterior: [
     { name: 'Stiff', sets: 4, reps: '10-12', rest: '90s', muscle: 'Posterior' },
@@ -73,6 +88,10 @@ const exerciseDatabase: Record<string, Exercise[]> = {
     { name: 'Abdução de Quadril', sets: 3, reps: '12-15', rest: '45s', muscle: 'Glúteo' },
     { name: 'Panturrilha no Smith', sets: 4, reps: '15-20', rest: '45s', muscle: 'Panturrilha' },
     { name: 'Panturrilha Sentado', sets: 3, reps: '15-20', rest: '45s', muscle: 'Panturrilha' },
+    { name: 'Stiff Unilateral', sets: 3, reps: '10 cada', rest: '60s', muscle: 'Posterior' },
+    { name: 'Good Morning', sets: 3, reps: '10-12', rest: '60s', muscle: 'Posterior' },
+    { name: 'Glúteo no Cabo', sets: 3, reps: '12-15', rest: '45s', muscle: 'Glúteo' },
+    { name: 'Extensão de Quadril na Máquina', sets: 3, reps: '12-15', rest: '45s', muscle: 'Glúteo' },
   ],
   pernas: [
     { name: 'Agachamento Livre', sets: 4, reps: '8-12', rest: '120s', muscle: 'Pernas' },
@@ -83,6 +102,10 @@ const exerciseDatabase: Record<string, Exercise[]> = {
     { name: 'Stiff', sets: 3, reps: '10-12', rest: '60s', muscle: 'Pernas' },
     { name: 'Avanço', sets: 3, reps: '12 cada', rest: '60s', muscle: 'Pernas' },
     { name: 'Elevação Pélvica (Hip Thrust)', sets: 3, reps: '10-12', rest: '90s', muscle: 'Pernas' },
+    { name: 'Agachamento Hack', sets: 3, reps: '10-12', rest: '90s', muscle: 'Pernas' },
+    { name: 'Agachamento Búlgaro', sets: 3, reps: '10 cada', rest: '60s', muscle: 'Pernas' },
+    { name: 'Panturrilha Sentado', sets: 3, reps: '15-20', rest: '45s', muscle: 'Pernas' },
+    { name: 'Agachamento Sumô', sets: 3, reps: '10-12', rest: '90s', muscle: 'Pernas' },
   ],
   ombros: [
     { name: 'Desenvolvimento com Halteres', sets: 4, reps: '8-12', rest: '90s', muscle: 'Ombros' },
@@ -91,6 +114,11 @@ const exerciseDatabase: Record<string, Exercise[]> = {
     { name: 'Crucifixo Inverso', sets: 3, reps: '12-15', rest: '45s', muscle: 'Ombros' },
     { name: 'Desenvolvimento Arnold', sets: 3, reps: '10-12', rest: '60s', muscle: 'Ombros' },
     { name: 'Encolhimento com Barra', sets: 3, reps: '12-15', rest: '45s', muscle: 'Trapézio' },
+    { name: 'Desenvolvimento Militar com Barra', sets: 4, reps: '6-10', rest: '120s', muscle: 'Ombros' },
+    { name: 'Elevação Lateral no Cabo', sets: 3, reps: '12-15', rest: '45s', muscle: 'Ombros' },
+    { name: 'Face Pull', sets: 3, reps: '15-20', rest: '45s', muscle: 'Ombros' },
+    { name: 'Desenvolvimento na Máquina', sets: 3, reps: '10-12', rest: '60s', muscle: 'Ombros' },
+    { name: 'Encolhimento com Halteres', sets: 3, reps: '12-15', rest: '45s', muscle: 'Trapézio' },
   ],
   biceps: [
     { name: 'Rosca Direta com Barra', sets: 3, reps: '10-12', rest: '60s', muscle: 'Bíceps' },
@@ -99,6 +127,10 @@ const exerciseDatabase: Record<string, Exercise[]> = {
     { name: 'Rosca Scott', sets: 3, reps: '10-12', rest: '60s', muscle: 'Bíceps' },
     { name: 'Rosca Concentrada', sets: 3, reps: '12-15', rest: '45s', muscle: 'Bíceps' },
     { name: 'Rosca no Cabo', sets: 3, reps: '12-15', rest: '45s', muscle: 'Bíceps' },
+    { name: 'Rosca Inversa', sets: 3, reps: '10-12', rest: '45s', muscle: 'Bíceps' },
+    { name: 'Rosca 21', sets: 3, reps: '21', rest: '60s', muscle: 'Bíceps' },
+    { name: 'Rosca Spider', sets: 3, reps: '10-12', rest: '45s', muscle: 'Bíceps' },
+    { name: 'Rosca Inclinada com Halteres', sets: 3, reps: '10-12', rest: '60s', muscle: 'Bíceps' },
   ],
   triceps: [
     { name: 'Tríceps Pulley', sets: 3, reps: '10-12', rest: '60s', muscle: 'Tríceps' },
@@ -107,6 +139,10 @@ const exerciseDatabase: Record<string, Exercise[]> = {
     { name: 'Mergulho no Banco', sets: 3, reps: '12-15', rest: '45s', muscle: 'Tríceps' },
     { name: 'Tríceps Corda', sets: 3, reps: '12-15', rest: '45s', muscle: 'Tríceps' },
     { name: 'Tríceps Coice', sets: 3, reps: '12-15', rest: '45s', muscle: 'Tríceps' },
+    { name: 'Mergulho em Paralelas', sets: 3, reps: '8-12', rest: '90s', muscle: 'Tríceps' },
+    { name: 'Tríceps Pulley Inverso', sets: 3, reps: '12-15', rest: '45s', muscle: 'Tríceps' },
+    { name: 'Tríceps no Cross', sets: 3, reps: '12-15', rest: '45s', muscle: 'Tríceps' },
+    { name: 'Supino Fechado', sets: 3, reps: '8-10', rest: '90s', muscle: 'Tríceps' },
   ],
   abdomen: [
     { name: 'Abdominal Crunch', sets: 3, reps: '15-20', rest: '30s', muscle: 'Abdômen' },
@@ -114,6 +150,11 @@ const exerciseDatabase: Record<string, Exercise[]> = {
     { name: 'Elevação de Pernas', sets: 3, reps: '12-15', rest: '30s', muscle: 'Abdômen' },
     { name: 'Abdominal Bicicleta', sets: 3, reps: '20', rest: '30s', muscle: 'Abdômen' },
     { name: 'Abdominal Infra na Barra', sets: 3, reps: '12-15', rest: '30s', muscle: 'Abdômen' },
+    { name: 'Prancha Lateral', sets: 3, reps: '30s cada', rest: '30s', muscle: 'Abdômen' },
+    { name: 'Abdominal na Polia', sets: 3, reps: '12-15', rest: '30s', muscle: 'Abdômen' },
+    { name: 'Mountain Climber', sets: 3, reps: '20 cada', rest: '30s', muscle: 'Abdômen' },
+    { name: 'Russian Twist', sets: 3, reps: '20', rest: '30s', muscle: 'Abdômen' },
+    { name: 'Abdominal Canivete', sets: 3, reps: '12-15', rest: '30s', muscle: 'Abdômen' },
   ],
 };
 
@@ -147,11 +188,14 @@ function adjustForGoal(exercises: Exercise[], goal: string): Exercise[] {
 function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
   switch (level) {
     case 'iniciante':
-      return exercises.slice(0, 4).map(e => ({ ...e, sets: Math.max(e.sets - 1, 2) }));
+      // Iniciante: 4-5 exercícios base, menos séries, foco em compostos
+      return exercises.slice(0, 5).map(e => ({ ...e, sets: Math.max(e.sets - 1, 2) }));
     case 'intermediario':
-      return exercises.slice(0, 5);
+      // Intermediário: 5-7 exercícios, séries padrão
+      return exercises.slice(0, 7);
     case 'avancado':
-      return exercises;
+      // Avançado: acesso completo ao banco, mais volume
+      return exercises.map(e => ({ ...e, sets: Math.min(e.sets + 1, 6) }));
     default:
       return exercises;
   }
@@ -159,7 +203,6 @@ function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
 
 const MIN_EXERCISES_PER_DAY = 4;
 
-// Ensures every day has at least MIN_EXERCISES_PER_DAY by padding with complementary exercises
 function padDay(exercises: Exercise[], allowed: MuscleGroup[], goal: string, level: string): Exercise[] {
   if (exercises.length >= MIN_EXERCISES_PER_DAY) return exercises;
 
@@ -198,11 +241,10 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     avancado: 'Avançado',
   };
 
-  const maxExercisesPerDay = Math.max(MIN_EXERCISES_PER_DAY, Math.min(10, Math.floor(hoursPerSession * 60 / 6)));
+  const maxExercisesPerDay = Math.max(MIN_EXERCISES_PER_DAY, Math.min(12, Math.floor(hoursPerSession * 60 / 5)));
 
   const pick = (group: string) => {
     if (!allowed.includes(group as MuscleGroup) && group !== 'pernas_anterior' && group !== 'pernas_posterior') return [];
-    // For split leg sub-groups, check if 'pernas' is allowed
     if ((group === 'pernas_anterior' || group === 'pernas_posterior') && !allowed.includes('pernas')) return [];
     return adjustForLevel(adjustForGoal(exerciseDatabase[group] || [], goal), level);
   };
@@ -214,19 +256,8 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     return padDay(trimmed, allowed, goal, level);
   };
 
-  // Build leg days based on split option
-  const legDaysSplit: WorkoutDay[] = splitLegs && allowed.includes('pernas') ? [
-    { day: '', focus: 'Quadríceps + Panturrilha', exercises: trimAndPad([...pick('pernas_anterior')]) },
-    { day: '', focus: 'Posterior + Glúteo', exercises: trimAndPad([...pick('pernas_posterior')]) },
-  ] : [];
-
-  const legDaySingle: WorkoutDay = {
-    day: '', focus: 'Pernas', exercises: trimAndPad([...pick('pernas')]),
-  };
-
   const useSplitLegs = splitLegs && allowed.includes('pernas') && daysPerWeek >= 4;
 
-  // Dynamic split builder based on allowed muscles and days
   function buildSplit(): WorkoutDay[] {
     const result: WorkoutDay[] = [];
 

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Ruler, Calculator } from "lucide-react";
+import { Ruler, Calculator, AlertCircle, Check } from "lucide-react";
+import { saveBodyComp, loadBodyComp } from "@/lib/storage";
 
 interface Skinfolds {
   triceps?: number;
@@ -89,18 +90,50 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
   const [skinfolds, setSkinfolds] = useState<Skinfolds>({});
   const [measurements, setMeasurements] = useState<BodyMeasurements>({});
   const [result, setResult] = useState<Result | null>(null);
+  const [error, setError] = useState<string>("");
+  const [saved, setSaved] = useState(false);
+
+  // Load saved data on mount
+  useEffect(() => {
+    const data = loadBodyComp();
+    if (data) {
+      setSkinfolds(data.skinfolds as Skinfolds);
+      setMeasurements(data.measurements as BodyMeasurements);
+      if (data.result) setResult(data.result);
+    }
+  }, []);
 
   const updateSkin = (key: keyof Skinfolds, value: string) => {
-    setSkinfolds(prev => ({ ...prev, [key]: value ? parseFloat(value) : undefined }));
+    const parsed = value === "" ? undefined : parseFloat(value);
+    setSkinfolds(prev => ({ ...prev, [key]: parsed }));
+    setError("");
   };
 
   const updateMeas = (key: keyof BodyMeasurements, value: string) => {
-    setMeasurements(prev => ({ ...prev, [key]: value ? parseFloat(value) : undefined }));
+    const parsed = value === "" ? undefined : parseFloat(value);
+    setMeasurements(prev => ({ ...prev, [key]: parsed }));
+    setError("");
+  };
+
+  const getInputValue = (val: number | undefined): string => {
+    return val !== undefined && val !== null ? String(val) : "";
   };
 
   const calculate = () => {
+    setError("");
+    setSaved(false);
+
     const { triceps, subscapular, suprailiac, abdominal, thigh, chest, axilla } = skinfolds;
     const { neck, waist, hip } = measurements;
+
+    // Check if any data was provided
+    const hasAnySkin = Object.values(skinfolds).some(v => v !== undefined && v !== null && v > 0);
+    const hasAnyMeas = neck || waist || hip;
+
+    if (!hasAnySkin && !hasAnyMeas) {
+      setError("Preencha ao menos as dobras (3 ou 7) ou as medidas de pescoço + cintura para calcular.");
+      return;
+    }
 
     // Try Jackson-Pollock 7-site first
     const has7folds = triceps && subscapular && suprailiac && abdominal && thigh && chest && axilla;
@@ -108,7 +141,7 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
     const has3foldsMale = chest && abdominal && thigh;
     const has3foldsFemale = triceps && suprailiac && thigh;
     // Try US Navy method (circumferences)
-    const hasNavyMale = neck && waist;
+    const hasNavyMale = neck && waist && (waist > neck);
     const hasNavyFemale = neck && waist && hip;
 
     let bodyFat: number | null = null;
@@ -135,20 +168,45 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
       bodyFat = parseFloat(((495 / density) - 450).toFixed(1));
       method = "Jackson-Pollock 3 dobras";
     } else if (sex === 'masculino' && hasNavyMale) {
-      bodyFat = parseFloat((86.010 * Math.log10(waist! - neck!) - 70.041 * Math.log10(height) + 36.76).toFixed(1));
+      const heightCm = height;
+      bodyFat = parseFloat((86.010 * Math.log10(waist! - neck!) - 70.041 * Math.log10(heightCm) + 36.76).toFixed(1));
       method = "US Navy (circunferências)";
     } else if (sex === 'feminino' && hasNavyFemale) {
-      bodyFat = parseFloat((163.205 * Math.log10(waist! + hip! - neck!) - 97.684 * Math.log10(height) - 78.387).toFixed(1));
+      const heightCm = height;
+      bodyFat = parseFloat((163.205 * Math.log10(waist! + hip! - neck!) - 97.684 * Math.log10(heightCm) - 78.387).toFixed(1));
       method = "US Navy (circunferências)";
     }
 
-    if (bodyFat === null || isNaN(bodyFat) || bodyFat < 2 || bodyFat > 60) return;
+    if (bodyFat === null) {
+      if (sex === 'masculino') {
+        setError("Para masculino, preencha: Peitoral + Abdominal + Coxa (dobras) ou Pescoço + Cintura (medidas).");
+      } else {
+        setError("Para feminino, preencha: Tríceps + Suprailíaca + Coxa (dobras) ou Pescoço + Cintura + Quadril (medidas).");
+      }
+      return;
+    }
+
+    if (isNaN(bodyFat) || bodyFat < 2 || bodyFat > 60) {
+      setError("Resultado fora do intervalo válido. Verifique os valores inseridos.");
+      return;
+    }
 
     const fatMass = parseFloat((weight * bodyFat / 100).toFixed(1));
     const leanMass = parseFloat((weight - fatMass).toFixed(1));
     const classification = sex === 'masculino' ? classifyMale(bodyFat, age) : classifyFemale(bodyFat, age);
 
-    setResult({ bodyFat, fatMass, leanMass, classification, method });
+    const newResult = { bodyFat, fatMass, leanMass, classification, method };
+    setResult(newResult);
+
+    // Save to localStorage
+    saveBodyComp({
+      skinfolds: skinfolds as Record<string, number | undefined>,
+      measurements: measurements as Record<string, number | undefined>,
+      result: newResult,
+      date: new Date().toISOString(),
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const skinfoldFields: { key: keyof Skinfolds; label: string }[] = [
@@ -181,7 +239,7 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
     result.classification === 'Ruim' ? 'text-orange-400' : 'text-destructive'
   ) : '';
 
-  const inputClass = "w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground";
+  const inputClass = "w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
   return (
     <Sheet>
@@ -206,7 +264,8 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
 
             <TabsContent value="skinfolds" className="space-y-3 mt-4">
               <p className="text-xs text-muted-foreground">
-                Dobras cutâneas em milímetros. Preencha 7 para máxima precisão, ou 3 para cálculo simplificado.
+                Dobras cutâneas em milímetros. Preencha 7 para máxima precisão, ou 3 para cálculo simplificado
+                {sex === 'masculino' ? ' (Peitoral, Abdominal, Coxa)' : ' (Tríceps, Suprailíaca, Coxa)'}.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {skinfoldFields.map(f => (
@@ -214,8 +273,11 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
                     <label className="text-xs text-muted-foreground mb-1 block">{f.label}</label>
                     <input
                       type="number"
-                      placeholder="0"
-                      value={skinfolds[f.key] || ""}
+                      inputMode="decimal"
+                      step="0.1"
+                      min="0"
+                      placeholder="—"
+                      value={getInputValue(skinfolds[f.key])}
                       onChange={e => updateSkin(f.key, e.target.value)}
                       className={inputClass}
                     />
@@ -234,8 +296,11 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
                     <label className="text-xs text-muted-foreground mb-1 block">{f.label}</label>
                     <input
                       type="number"
-                      placeholder="0"
-                      value={measurements[f.key] || ""}
+                      inputMode="decimal"
+                      step="0.1"
+                      min="0"
+                      placeholder="—"
+                      value={getInputValue(measurements[f.key])}
                       onChange={e => updateMeas(f.key, e.target.value)}
                       className={inputClass}
                     />
@@ -245,12 +310,19 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
             </TabsContent>
           </Tabs>
 
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive animate-in fade-in slide-in-from-top-1">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <button
             onClick={calculate}
             className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]"
           >
-            <Calculator className="w-4 h-4" />
-            Calcular
+            {saved ? <Check className="w-4 h-4" /> : <Calculator className="w-4 h-4" />}
+            {saved ? "Salvo!" : "Calcular e Salvar"}
           </button>
 
           <p className="text-xs text-muted-foreground text-center">
@@ -281,12 +353,27 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
                 </div>
               </div>
 
+              {/* Show filled skinfolds summary */}
+              {Object.values(skinfolds).some(v => v !== undefined && v > 0) && (
+                <div className="rounded-xl bg-secondary/50 p-3">
+                  <span className="text-xs text-muted-foreground block mb-2">Dobras registradas</span>
+                  <div className="grid grid-cols-2 gap-1 text-xs">
+                    {skinfoldFields.filter(f => skinfolds[f.key] !== undefined && skinfolds[f.key]! > 0).map(f => (
+                      <div key={f.key} className="flex justify-between">
+                        <span className="text-muted-foreground">{f.label.replace(' (mm)', '')}</span>
+                        <span className="text-foreground font-medium">{skinfolds[f.key]} mm</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Show filled measurements summary */}
-              {Object.values(measurements).some(v => v) && (
+              {Object.values(measurements).some(v => v !== undefined && v > 0) && (
                 <div className="rounded-xl bg-secondary/50 p-3">
                   <span className="text-xs text-muted-foreground block mb-2">Medidas registradas</span>
                   <div className="grid grid-cols-2 gap-1 text-xs">
-                    {measurementFields.filter(f => measurements[f.key]).map(f => (
+                    {measurementFields.filter(f => measurements[f.key] !== undefined && measurements[f.key]! > 0).map(f => (
                       <div key={f.key} className="flex justify-between">
                         <span className="text-muted-foreground">{f.label.replace(' (cm)', '')}</span>
                         <span className="text-foreground font-medium">{measurements[f.key]} cm</span>

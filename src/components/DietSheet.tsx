@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { UtensilsCrossed, RefreshCw, ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
+import { UtensilsCrossed, RefreshCw, ChevronDown, ChevronUp, Lightbulb, Flame, Scale, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { DietProfile, DietPlan, generateDietPlan } from "@/lib/diet-generator";
 
 interface Props {
@@ -9,6 +9,23 @@ interface Props {
   height: number;
   age: number;
   sex: 'masculino' | 'feminino';
+  hoursPerSession?: number;
+}
+
+function calculateTDEE(weight: number, height: number, age: number, sex: string, activityLevel: string, hoursPerSession: number): number {
+  let bmr: number;
+  if (sex === 'masculino') {
+    bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+  } else {
+    bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+  }
+  const multipliers: Record<string, number> = {
+    sedentario: 1.2, leve: 1.375, moderado: 1.55, intenso: 1.725, muito_intenso: 1.9,
+  };
+  const base = Math.round(bmr * (multipliers[activityLevel] || 1.55));
+  // Add exercise thermogenesis estimate (approx 300-500 kcal/hr of training)
+  const trainingBonus = Math.round(hoursPerSession * 400);
+  return base + trainingBonus;
 }
 
 const restrictionOptions = [
@@ -26,7 +43,7 @@ const activityOptions: { value: DietProfile['activityLevel']; label: string }[] 
   { value: 'muito_intenso', label: 'Muito intenso' },
 ];
 
-const DietSheet = ({ goal, weight, height, age, sex }: Props) => {
+const DietSheet = ({ goal, weight, height, age, sex, hoursPerSession = 1 }: Props) => {
   const [activityLevel, setActivityLevel] = useState<DietProfile['activityLevel']>('moderado');
   const [mealsPerDay, setMealsPerDay] = useState(5);
   const [restrictions, setRestrictions] = useState<string[]>([]);
@@ -35,6 +52,8 @@ const DietSheet = ({ goal, weight, height, age, sex }: Props) => {
   const [plan, setPlan] = useState<DietPlan | null>(null);
   const [expandedMeal, setExpandedMeal] = useState<number>(0);
   const [showTips, setShowTips] = useState(false);
+
+  const tdee = useMemo(() => calculateTDEE(weight, height, age, sex, activityLevel, hoursPerSession), [weight, height, age, sex, activityLevel, hoursPerSession]);
 
   const toggleRestriction = (r: string) => {
     setRestrictions(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
@@ -145,6 +164,15 @@ const DietSheet = ({ goal, weight, height, age, sex }: Props) => {
                 />
               </div>
 
+              {/* TDEE Preview */}
+              <div className="rounded-xl border border-border p-3 flex items-center gap-3">
+                <Flame className="w-5 h-5 text-orange-500 shrink-0" />
+                <div>
+                  <span className="text-xs text-muted-foreground block">Seu gasto calórico estimado</span>
+                  <span className="text-lg font-bold text-foreground">{tdee} kcal/dia</span>
+                </div>
+              </div>
+
               <button
                 onClick={generate}
                 className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]"
@@ -154,13 +182,46 @@ const DietSheet = ({ goal, weight, height, age, sex }: Props) => {
               </button>
             </>
           ) : (
-            <>
-              {/* Macro summary */}
-              <div className="rounded-xl bg-secondary/50 p-4 text-center">
-                <span className="text-xs text-muted-foreground block mb-1">Meta Diária</span>
-                <span className="text-2xl font-bold text-foreground">{plan.totalCalories} kcal</span>
+            (() => {
+              const diff = plan.totalCalories - tdee;
+              const absDiff = Math.abs(diff);
+              const pctDiff = Math.round((absDiff / tdee) * 100);
+              const isBalanced = absDiff <= 100;
+              const isSurplus = diff > 100;
+              const isDeficit = diff < -100;
+              return <>
+              {/* TDEE vs Diet Comparison */}
+              <div className="rounded-xl border border-border p-4 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs font-semibold text-foreground">Balanço Calórico</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-secondary/50 p-3 text-center">
+                    <span className="text-[10px] text-muted-foreground block">Gasto Diário (TDEE)</span>
+                    <span className="text-lg font-bold text-foreground">{tdee}</span>
+                    <span className="text-[10px] text-muted-foreground"> kcal</span>
+                  </div>
+                  <div className="rounded-lg bg-secondary/50 p-3 text-center">
+                    <span className="text-[10px] text-muted-foreground block">Dieta Gerada</span>
+                    <span className="text-lg font-bold text-foreground">{plan.totalCalories}</span>
+                    <span className="text-[10px] text-muted-foreground"> kcal</span>
+                  </div>
+                </div>
+                <div className={`rounded-lg p-3 flex items-center gap-2 ${isBalanced ? 'bg-green-500/10 border border-green-500/30' : isSurplus ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-orange-500/10 border border-orange-500/30'}`}>
+                  {isBalanced ? <Minus className="w-4 h-4 text-green-500" /> : isSurplus ? <TrendingUp className="w-4 h-4 text-blue-500" /> : <TrendingDown className="w-4 h-4 text-orange-500" />}
+                  <div className="text-xs">
+                    <span className="font-semibold text-foreground">
+                      {isBalanced ? 'Equilibrado' : isSurplus ? `Superávit de ${absDiff} kcal (+${pctDiff}%)` : `Déficit de ${absDiff} kcal (-${pctDiff}%)`}
+                    </span>
+                    <span className="text-muted-foreground block mt-0.5">
+                      {isBalanced ? 'Dieta alinhada ao seu gasto calórico' : isSurplus ? 'Ideal para ganho de massa muscular' : 'Ideal para perda de gordura'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
+              {/* Macro summary */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-xl bg-secondary/50 p-3 text-center">
                   <span className="text-[10px] text-muted-foreground block">Proteína</span>
@@ -247,7 +308,8 @@ const DietSheet = ({ goal, weight, height, age, sex }: Props) => {
               >
                 Voltar às configurações
               </button>
-            </>
+            </>;
+            })()
           )}
         </div>
       </SheetContent>

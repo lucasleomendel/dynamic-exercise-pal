@@ -59,7 +59,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
             <span className="font-display font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
           </div>
           <div className="flex items-center gap-2">
-            <DietSheet goal={profile.goal} weight={profile.weight} height={profile.height} age={profile.age} sex={profile.sex} />
+            <DietSheet goal={profile.goal} weight={profile.weight} height={profile.height} age={profile.age} sex={profile.sex} hoursPerSession={profile.hoursPerSession} />
             <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} height={profile.height} />
             <ProfileSheet profile={profile} onEdit={onEdit} onClear={onClear} />
           </div>

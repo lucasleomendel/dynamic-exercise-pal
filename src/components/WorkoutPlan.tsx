@@ -6,6 +6,7 @@ import ProgressSheet from "./ProgressSheet";
 import BodyCompositionSheet from "./BodyCompositionSheet";
 import DietSheet from "./DietSheet";
 import WaterTracker from "./WaterTracker";
+import ChatBot from "./ChatBot";
 import { Dumbbell, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { loadChecked, saveChecked, saveWeight, loadWeights } from "@/lib/storage";
 
@@ -140,6 +141,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
         {/* Progress button */}
         <ProgressSheet />
       </div>
+      <ChatBot />
     </div>
   );
 };

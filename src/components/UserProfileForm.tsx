@@ -175,8 +175,8 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
       ),
       valid: !!profile.daysPerWeek && !!profile.hoursPerSession,
     },
-    // Muscle group selection step (shown for males)
-    ...(profile.sex === 'masculino' ? [{
+    // Muscle group selection step
+    ...((profile.sex === 'masculino' || profile.sex === 'feminino') ? [{
       title: "Quais grupos musculares quer treinar?",
       content: (
         <div className="space-y-3">

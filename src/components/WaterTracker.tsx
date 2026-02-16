@@ -62,8 +62,8 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
     <div className="rounded-2xl border border-border p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-            <Droplets className="w-5 h-5 text-blue-400" />
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Droplets className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h3 className="font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Hidratação</h3>
@@ -80,8 +80,8 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
           style={{
             width: `${progress}%`,
             background: progress >= 100
-              ? 'hsl(142 72% 50%)'
-              : 'hsl(210 100% 56%)',
+              ? 'hsl(var(--primary))'
+              : 'hsl(var(--ring))',
           }}
         />
       </div>
@@ -99,7 +99,7 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
           </button>
           <button
             onClick={addGlass}
-            className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 hover:bg-blue-500/30 transition-colors"
+            className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary hover:bg-primary/30 transition-colors"
           >
             <Plus className="w-4 h-4" />
           </button>

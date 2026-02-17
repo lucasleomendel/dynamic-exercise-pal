@@ -7,6 +7,7 @@ import BodyCompositionSheet from "./BodyCompositionSheet";
 import DietSheet from "./DietSheet";
 import WaterTracker from "./WaterTracker";
 import ChatBot from "./ChatBot";
+import SettingsSheet from "./SettingsSheet";
 import { Dumbbell, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { loadChecked, saveChecked, saveWeight, loadWeights } from "@/lib/storage";
 
@@ -62,6 +63,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
           <div className="flex items-center gap-2">
             <DietSheet goal={profile.goal} weight={profile.weight} height={profile.height} age={profile.age} sex={profile.sex} hoursPerSession={profile.hoursPerSession} />
             <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} height={profile.height} />
+            <SettingsSheet />
             <ProfileSheet profile={profile} onEdit={onEdit} onClear={onClear} />
           </div>
         </div>

@@ -86,6 +86,16 @@ export function loadBodyComp(): BodyCompData | null {
   return raw ? JSON.parse(raw) : null;
 }
 
+const ADMIN_PASSWORD_KEY = "fitforge_admin_pw";
+
+export function saveAdminPassword(password: string) {
+  localStorage.setItem(ADMIN_PASSWORD_KEY, password);
+}
+
+export function loadAdminPassword(): string | null {
+  return localStorage.getItem(ADMIN_PASSWORD_KEY);
+}
+
 export function clearAll() {
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem(PLAN_KEY);

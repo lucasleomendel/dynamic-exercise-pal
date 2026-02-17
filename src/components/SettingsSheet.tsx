@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Settings, Dumbbell, Lock, KeyRound, Check } from "lucide-react";
+import { Settings, Dumbbell, Lock, KeyRound, Check, Sun, Moon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { loadAdminPassword, saveAdminPassword } from "@/lib/storage";
+import { loadAdminPassword, saveAdminPassword, verifyAdminPassword } from "@/lib/storage";
 
 const SettingsSheet = () => {
   const navigate = useNavigate();
@@ -15,8 +15,17 @@ const SettingsSheet = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [mode, setMode] = useState<"menu" | "access" | "setup" | "change">("menu");
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    return (localStorage.getItem("fitforge_theme") as "dark" | "light") || "dark";
+  });
 
   const existingPassword = loadAdminPassword();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", theme === "light");
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("fitforge_theme", theme);
+  }, [theme]);
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
@@ -36,7 +45,7 @@ const SettingsSheet = () => {
     }
   };
 
-  const handleSetupPassword = () => {
+  const handleSetupPassword = async () => {
     if (newPassword.length < 4) {
       toast({ title: "Senha muito curta", description: "A senha deve ter pelo menos 4 caracteres.", variant: "destructive" });
       return;
@@ -45,14 +54,16 @@ const SettingsSheet = () => {
       toast({ title: "Senhas não conferem", description: "Digite a mesma senha nos dois campos.", variant: "destructive" });
       return;
     }
-    saveAdminPassword(newPassword);
+    await saveAdminPassword(newPassword);
     toast({ title: "Senha criada!", description: "Agora você pode acessar o modo Personal." });
     setOpen(false);
     navigate("/personal");
   };
 
-  const handleLogin = () => {
-    if (passwordInput === existingPassword) {
+  const handleLogin = async () => {
+    const valid = await verifyAdminPassword(passwordInput);
+    if (valid) {
+      sessionStorage.setItem("fitforge_admin_auth", "true");
       setOpen(false);
       navigate("/personal");
     } else {
@@ -61,8 +72,9 @@ const SettingsSheet = () => {
     }
   };
 
-  const handleChangePassword = () => {
-    if (passwordInput !== existingPassword) {
+  const handleChangePassword = async () => {
+    const valid = await verifyAdminPassword(passwordInput);
+    if (!valid) {
       toast({ title: "Senha atual incorreta", description: "Tente novamente.", variant: "destructive" });
       return;
     }
@@ -74,7 +86,7 @@ const SettingsSheet = () => {
       toast({ title: "Senhas não conferem", description: "Digite a mesma senha nos dois campos.", variant: "destructive" });
       return;
     }
-    saveAdminPassword(newPassword);
+    await saveAdminPassword(newPassword);
     toast({ title: "Senha atualizada!" });
     handleOpenChange(false);
   };
@@ -96,6 +108,20 @@ const SettingsSheet = () => {
         <div className="mt-6 space-y-4">
           {mode === "menu" && (
             <>
+              {/* Theme toggle */}
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="w-full flex items-center gap-3 p-4 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  {theme === "dark" ? <Sun className="w-5 h-5 text-primary" /> : <Moon className="w-5 h-5 text-primary" />}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm">Tema</h3>
+                  <p className="text-xs text-muted-foreground">{theme === "dark" ? "Modo escuro ativo" : "Modo claro ativo"}</p>
+                </div>
+              </button>
+
               <button
                 onClick={handleAccessPersonal}
                 className="w-full flex items-center gap-3 p-4 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"
@@ -136,22 +162,11 @@ const SettingsSheet = () => {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Nova senha</label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  placeholder="Mínimo 4 caracteres"
-                />
+                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Mínimo 4 caracteres" />
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Confirmar senha</label>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Repita a senha"
-                  onKeyDown={e => e.key === "Enter" && handleSetupPassword()}
-                />
+                <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repita a senha" onKeyDown={e => e.key === "Enter" && handleSetupPassword()} />
               </div>
               <Button className="w-full gap-2" onClick={handleSetupPassword}>
                 <Check className="w-4 h-4" />
@@ -169,14 +184,7 @@ const SettingsSheet = () => {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Senha</label>
-                <Input
-                  type="password"
-                  value={passwordInput}
-                  onChange={e => setPasswordInput(e.target.value)}
-                  placeholder="Digite a senha"
-                  onKeyDown={e => e.key === "Enter" && handleLogin()}
-                  autoFocus
-                />
+                <Input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Digite a senha" onKeyDown={e => e.key === "Enter" && handleLogin()} autoFocus />
               </div>
               <Button className="w-full gap-2" onClick={handleLogin}>
                 <Dumbbell className="w-4 h-4" />
@@ -201,13 +209,7 @@ const SettingsSheet = () => {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Confirmar nova senha</label>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Repita a nova senha"
-                  onKeyDown={e => e.key === "Enter" && handleChangePassword()}
-                />
+                <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repita a nova senha" onKeyDown={e => e.key === "Enter" && handleChangePassword()} />
               </div>
               <Button className="w-full gap-2" onClick={handleChangePassword}>
                 <Check className="w-4 h-4" />

@@ -87,13 +87,54 @@ export function loadBodyComp(): BodyCompData | null {
 }
 
 const ADMIN_PASSWORD_KEY = "fitforge_admin_pw";
+const WORKOUT_HISTORY_KEY = "fitforge_history";
 
-export function saveAdminPassword(password: string) {
-  localStorage.setItem(ADMIN_PASSWORD_KEY, password);
+// Simple hash function for password (not cryptographic, but better than plaintext)
+async function simpleHash(str: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function saveAdminPassword(password: string) {
+  const hashed = await simpleHash(password);
+  localStorage.setItem(ADMIN_PASSWORD_KEY, hashed);
 }
 
 export function loadAdminPassword(): string | null {
   return localStorage.getItem(ADMIN_PASSWORD_KEY);
+}
+
+export async function verifyAdminPassword(password: string): Promise<boolean> {
+  const stored = loadAdminPassword();
+  if (!stored) return false;
+  const hashed = await simpleHash(password);
+  return hashed === stored;
+}
+
+// Workout history
+export interface WorkoutHistoryEntry {
+  date: string;
+  completedExercises: number;
+  totalExercises: number;
+  dayFocus: string;
+}
+
+export function saveWorkoutHistory(entry: WorkoutHistoryEntry) {
+  const history = loadWorkoutHistory();
+  history.push(entry);
+  // Keep last 90 days
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 90);
+  const filtered = history.filter(h => new Date(h.date) > cutoff);
+  localStorage.setItem(WORKOUT_HISTORY_KEY, JSON.stringify(filtered));
+}
+
+export function loadWorkoutHistory(): WorkoutHistoryEntry[] {
+  const raw = localStorage.getItem(WORKOUT_HISTORY_KEY);
+  return raw ? JSON.parse(raw) : [];
 }
 
 export function clearAll() {

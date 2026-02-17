@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Personal from "./pages/Personal";
 import NotFound from "./pages/NotFound";
+import AdminRouteGuard from "./components/AdminRouteGuard";
 
 const queryClient = new QueryClient();
 
@@ -17,7 +18,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/personal" element={<Personal />} />
+          <Route path="/personal" element={<AdminRouteGuard><Personal /></AdminRouteGuard>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

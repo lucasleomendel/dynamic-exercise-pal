@@ -1,6 +1,7 @@
 import { useState, forwardRef } from "react";
 import { Exercise } from "@/lib/workout-generator";
-import { Timer, RotateCcw, Play, Check, Weight } from "lucide-react";
+import { Timer, RotateCcw, Play, Check, Weight, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
   exercise: Exercise;
@@ -10,9 +11,10 @@ interface Props {
   exerciseKey: string;
   savedWeight?: number;
   onWeightChange?: (key: string, weight: number) => void;
+  weightSaved?: boolean;
 }
 
-const ExerciseCard = forwardRef<HTMLDivElement, Props>(({ exercise, index, checked, onToggleCheck, exerciseKey, savedWeight, onWeightChange }, ref) => {
+const ExerciseCard = forwardRef<HTMLDivElement, Props>(({ exercise, index, checked, onToggleCheck, exerciseKey, savedWeight, onWeightChange, weightSaved }, ref) => {
   const [weightInput, setWeightInput] = useState(savedWeight?.toString() || "");
 
   const handleExample = () => {
@@ -71,6 +73,19 @@ const ExerciseCard = forwardRef<HTMLDivElement, Props>(({ exercise, index, check
           className="w-24 h-7 px-2 text-xs rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
         {savedWeight && <span className="text-xs text-muted-foreground">kg</span>}
+        <AnimatePresence>
+          {weightSaved && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              className="flex items-center gap-1"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs text-primary font-medium">Salvo!</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

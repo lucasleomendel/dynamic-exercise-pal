@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UserProfile, ALL_MUSCLE_GROUPS, MuscleGroup } from "@/lib/workout-generator";
-import { Dumbbell, ChevronRight } from "lucide-react";
+import { Dumbbell, ChevronRight, ChevronLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
   onSubmit: (profile: UserProfile) => void;
@@ -9,6 +10,7 @@ interface Props {
 
 const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
   const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [profile, setProfile] = useState<Partial<UserProfile>>(initialProfile || {});
   const [selectedMuscles, setSelectedMuscles] = useState<MuscleGroup[]>(
     initialProfile?.selectedMuscles || [...ALL_MUSCLE_GROUPS]
@@ -25,9 +27,18 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
   };
 
   const nextStep = () => {
-    if (step < steps.length - 1) setStep(step + 1);
-    else if (profile.name && profile.age && profile.weight && profile.height && profile.sex && profile.goal && profile.level && profile.daysPerWeek && profile.hoursPerSession) {
+    if (step < steps.length - 1) {
+      setDirection(1);
+      setStep(step + 1);
+    } else if (profile.name && profile.age && profile.weight && profile.height && profile.sex && profile.goal && profile.level && profile.daysPerWeek && profile.hoursPerSession) {
       onSubmit({ ...profile, selectedMuscles } as UserProfile);
+    }
+  };
+
+  const prevStep = () => {
+    if (step > 0) {
+      setDirection(-1);
+      setStep(step - 1);
     }
   };
 
@@ -215,19 +226,41 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
           <span className="font-display text-xl font-bold">FitForge</span>
         </div>
 
-        {/* Step */}
-        <h2 className="font-display text-2xl font-bold mb-6">{current.title}</h2>
-        <div className="mb-8">{current.content}</div>
+        {/* Step with animation */}
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={step}
+            custom={direction}
+            initial={{ opacity: 0, x: direction * 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: direction * -60 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+          >
+            <h2 className="font-display text-2xl font-bold mb-6">{current.title}</h2>
+            <div className="mb-8">{current.content}</div>
+          </motion.div>
+        </AnimatePresence>
 
-        {/* Next */}
-        <button
-          onClick={nextStep}
-          disabled={!current.valid}
-          className="w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]"
-        >
-          {step < steps.length - 1 ? "Continuar" : "Gerar Meu Treino"}
-          <ChevronRight className="w-5 h-5" />
-        </button>
+        {/* Navigation */}
+        <div className="flex gap-3">
+          {step > 0 && (
+            <button
+              onClick={prevStep}
+              className="px-6 py-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-secondary text-foreground border border-border hover:bg-secondary/80 active:scale-[0.98]"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Voltar
+            </button>
+          )}
+          <button
+            onClick={nextStep}
+            disabled={!current.valid}
+            className="flex-1 py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]"
+          >
+            {step < steps.length - 1 ? "Continuar" : "Gerar Meu Treino"}
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
   );

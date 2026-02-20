@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import UserProfileForm from "@/components/UserProfileForm";
 import WorkoutPlanView from "@/components/WorkoutPlan";
+import Lobby from "@/components/Lobby";
 import { UserProfile, WorkoutPlan, generateWorkout } from "@/lib/workout-generator";
 import { saveProfile, loadProfile, savePlan, loadPlan, clearAll } from "@/lib/storage";
 
-type View = "form" | "plan";
+type View = "form" | "lobby" | "plan";
 
 const Index = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -17,7 +18,7 @@ const Index = () => {
     if (savedProfile && savedPlan) {
       setProfile(savedProfile);
       setPlan(savedPlan);
-      setView("plan");
+      setView("lobby");
     }
   }, []);
 
@@ -27,11 +28,19 @@ const Index = () => {
     setPlan(newPlan);
     saveProfile(p);
     savePlan(newPlan);
-    setView("plan");
+    setView("lobby");
   };
 
   const handleEdit = () => {
     setView("form");
+  };
+
+  const handleViewPlan = () => {
+    setView("plan");
+  };
+
+  const handleBackToLobby = () => {
+    setView("lobby");
   };
 
   const handleClear = () => {
@@ -42,7 +51,11 @@ const Index = () => {
   };
 
   if (view === "plan" && plan && profile) {
-    return <WorkoutPlanView plan={plan} profile={profile} onEdit={handleEdit} onClear={handleClear} />;
+    return <WorkoutPlanView plan={plan} profile={profile} onEdit={handleEdit} onClear={handleClear} onBack={handleBackToLobby} />;
+  }
+
+  if (view === "lobby" && profile && plan) {
+    return <Lobby profile={profile} plan={plan} onEdit={handleEdit} onViewPlan={handleViewPlan} onClear={handleClear} />;
   }
 
   return <UserProfileForm onSubmit={handleSubmit} initialProfile={profile || undefined} />;

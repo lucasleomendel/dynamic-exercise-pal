@@ -1,4 +1,4 @@
-import { useState, forwardRef } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { Exercise } from "@/lib/workout-generator";
 import { Timer, RotateCcw, Play, Check, Weight, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +16,13 @@ interface Props {
 
 const ExerciseCard = forwardRef<HTMLDivElement, Props>(({ exercise, index, checked, onToggleCheck, exerciseKey, savedWeight, onWeightChange, weightSaved }, ref) => {
   const [weightInput, setWeightInput] = useState(savedWeight?.toString() || "");
+
+  // Sincroniza estado local quando savedWeight muda externamente
+  useEffect(() => {
+    if (savedWeight !== undefined) {
+      setWeightInput(savedWeight.toString());
+    }
+  }, [savedWeight]);
 
   const handleExample = () => {
     const query = encodeURIComponent(`como fazer ${exercise.name} exercício academia`);

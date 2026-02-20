@@ -9,7 +9,7 @@ import WaterTracker from "./WaterTracker";
 import ChatBot from "./ChatBot";
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
-import { Dumbbell, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { Dumbbell, Calendar, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
 import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory } from "@/lib/storage";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -28,9 +28,10 @@ interface Props {
   profile: UserProfile;
   onEdit: () => void;
   onClear: () => void;
+  onBack?: () => void;
 }
 
-const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
+const WorkoutPlan = ({ plan, profile, onEdit, onClear, onBack }: Props) => {
   const [expandedDay, setExpandedDay] = useState<number>(0);
   const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
   const [weights, setWeights] = useState<Record<string, number>>(() => {
@@ -40,6 +41,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
     return map;
   });
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
+  const [timerKey, setTimerKey] = useState(0);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [weightSaved, setWeightSaved] = useState<string | null>(null);
 
@@ -55,6 +57,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
         const exercise = plan.days[dayIdx]?.exercises[exIdx];
         if (exercise) {
           setActiveTimer(exercise.rest);
+          setTimerKey(prev => prev + 1);
         }
 
         // Save to workout history
@@ -89,12 +92,30 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
 
   const bmi = (profile.weight / ((profile.height / 100) ** 2)).toFixed(1);
 
+  // Calcula progresso por dia e total
+  const totalExercises = plan.days.reduce((acc, day) => acc + day.exercises.length, 0);
+  const totalCompleted = plan.days.reduce((acc, day, dayIndex) => {
+    return acc + day.exercises.filter((_, exIndex) => checked[`${dayIndex}-${exIndex}`]).length;
+  }, 0);
+  const overallProgress = totalExercises > 0 ? (totalCompleted / totalExercises) * 100 : 0;
+
+  const getDayProgress = (dayIndex: number) => {
+    const day = plan.days[dayIndex];
+    const completed = day.exercises.filter((_, exIndex) => checked[`${dayIndex}-${exIndex}`]).length;
+    return { completed, total: day.exercises.length };
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {onBack && (
+              <button onClick={onBack} className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors" aria-label="Voltar">
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <Dumbbell className="w-4 h-4 text-primary-foreground" />
             </div>
@@ -148,6 +169,29 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
           ))}
         </motion.div>
 
+        {/* Overall Progress */}
+        {totalCompleted > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="card-elevated rounded-xl p-4 mb-6"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-foreground">Progresso Geral</span>
+              <span className="text-sm text-muted-foreground">{totalCompleted}/{totalExercises}</span>
+            </div>
+            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-primary rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${overallProgress}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            </div>
+          </motion.div>
+        )}
+
         {/* Water Tracker */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -173,13 +217,18 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
                 className="w-full flex items-center justify-between p-5 hover:bg-secondary/50 transition-colors"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center relative">
                     <Calendar className="w-5 h-5 text-primary" />
                   </div>
-                  <div className="text-left">
+                  <div className="text-left flex-1">
                     <h3 className="font-display font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{day.day}</h3>
-                    <p className="text-sm text-muted-foreground">{day.focus} • {day.exercises.length} exercícios</p>
+                    <p className="text-sm text-muted-foreground">{day.focus} • {day.exercises.length} exercicios</p>
                   </div>
+                  {getDayProgress(i).completed > 0 && (
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getDayProgress(i).completed === getDayProgress(i).total ? "bg-green-500/20 text-green-400" : "bg-primary/10 text-primary"}`}>
+                      {getDayProgress(i).completed}/{getDayProgress(i).total}
+                    </span>
+                  )}
                 </div>
                 <motion.div
                   animate={{ rotate: expandedDay === i ? 180 : 0 }}
@@ -239,7 +288,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
       <AnimatePresence>
         {activeTimer && (
           <RestTimer
-            key={activeTimer + Date.now()}
+            key={timerKey}
             duration={activeTimer}
             onComplete={() => setActiveTimer(null)}
           />

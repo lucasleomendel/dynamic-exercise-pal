@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { UtensilsCrossed, RefreshCw, ChevronDown, ChevronUp, Lightbulb, Flame, Scale, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { UtensilsCrossed, RefreshCw, ChevronDown, ChevronUp, Lightbulb, Flame, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { DietProfile, DietPlan, generateDietPlan } from "@/lib/diet-generator";
 
 interface Props {
@@ -166,7 +166,7 @@ const DietSheet = ({ goal, weight, height, age, sex, hoursPerSession = 1 }: Prop
 
               {/* TDEE Preview */}
               <div className="rounded-xl border border-border p-3 flex items-center gap-3">
-                <Flame className="w-5 h-5 text-orange-500 shrink-0" />
+                <Flame className="w-5 h-5 text-destructive shrink-0" />
                 <div>
                   <span className="text-xs text-muted-foreground block">Seu gasto calórico estimado</span>
                   <span className="text-lg font-bold text-foreground">{tdee} kcal/dia</span>
@@ -193,7 +193,7 @@ const DietSheet = ({ goal, weight, height, age, sex, hoursPerSession = 1 }: Prop
               {/* TDEE vs Diet Comparison */}
               <div className="rounded-xl border border-border p-4 space-y-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <Flame className="w-4 h-4 text-orange-500" />
+                  <Flame className="w-4 h-4 text-destructive" />
                   <span className="text-xs font-semibold text-foreground">Balanço Calórico</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -208,8 +208,8 @@ const DietSheet = ({ goal, weight, height, age, sex, hoursPerSession = 1 }: Prop
                     <span className="text-[10px] text-muted-foreground"> kcal</span>
                   </div>
                 </div>
-                <div className={`rounded-lg p-3 flex items-center gap-2 ${isBalanced ? 'bg-green-500/10 border border-green-500/30' : isSurplus ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-orange-500/10 border border-orange-500/30'}`}>
-                  {isBalanced ? <Minus className="w-4 h-4 text-green-500" /> : isSurplus ? <TrendingUp className="w-4 h-4 text-blue-500" /> : <TrendingDown className="w-4 h-4 text-orange-500" />}
+              <div className={`rounded-lg p-3 flex items-center gap-2 ${isBalanced ? 'bg-primary/10 border border-primary/30' : isSurplus ? 'bg-accent/10 border border-accent/30' : 'bg-destructive/10 border border-destructive/30'}`}>
+                  {isBalanced ? <Minus className="w-4 h-4 text-primary" /> : isSurplus ? <TrendingUp className="w-4 h-4 text-accent" /> : <TrendingDown className="w-4 h-4 text-destructive" />}
                   <div className="text-xs">
                     <span className="font-semibold text-foreground">
                       {isBalanced ? 'Equilibrado' : isSurplus ? `Superávit de ${absDiff} kcal (+${pctDiff}%)` : `Déficit de ${absDiff} kcal (-${pctDiff}%)`}

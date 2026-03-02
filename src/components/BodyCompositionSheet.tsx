@@ -275,8 +275,8 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
   const classColor = result ? (
     result.classification === 'Excelente' ? 'text-primary' :
     result.classification === 'Bom' ? 'text-primary/80' :
-    result.classification === 'Acima da média' ? 'text-yellow-400' :
-    result.classification === 'Ruim' ? 'text-orange-400' : 'text-destructive'
+    result.classification === 'Acima da média' ? 'text-muted-foreground' :
+    result.classification === 'Ruim' ? 'text-destructive/70' : 'text-destructive'
   ) : '';
 
   const inputClass = "w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";

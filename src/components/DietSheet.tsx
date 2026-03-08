@@ -50,7 +50,7 @@ const DietSheet = ({ goal, weight, height, age, sex, hoursPerSession = 1 }: Prop
   const [expandedMeal, setExpandedMeal] = useState<number>(0);
   const [showTips, setShowTips] = useState(false);
 
-  const tdee = useMemo(() => calculateTDEE(weight, height, age, sex, activityLevel, hoursPerSession), [weight, height, age, sex, activityLevel, hoursPerSession]);
+  const tdee = useMemo(() => calculateTDEE(weight, height, age, sex, activityLevel), [weight, height, age, sex, activityLevel]);
 
   const toggleRestriction = (r: string) => {
     setRestrictions(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);

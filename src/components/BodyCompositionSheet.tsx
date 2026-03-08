@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Ruler, Calculator, AlertCircle, Check } from "lucide-react";
+import { Ruler, Calculator, AlertCircle, Check, Info } from "lucide-react";
 import { saveBodyComp, loadBodyComp } from "@/lib/storage";
+import { motion } from "framer-motion";
 
 interface Skinfolds {
   triceps?: number;
@@ -103,17 +104,17 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
     }
   }, []);
 
-  const updateSkin = (key: keyof Skinfolds, value: string) => {
+  const updateSkin = useCallback((key: keyof Skinfolds, value: string) => {
     const parsed = value === "" ? undefined : parseFloat(value);
     setSkinfolds(prev => ({ ...prev, [key]: parsed }));
     setError("");
-  };
+  }, []);
 
-  const updateMeas = (key: keyof BodyMeasurements, value: string) => {
+  const updateMeas = useCallback((key: keyof BodyMeasurements, value: string) => {
     const parsed = value === "" ? undefined : parseFloat(value);
     setMeasurements(prev => ({ ...prev, [key]: parsed }));
     setError("");
-  };
+  }, []);
 
   const getInputValue = (val: number | undefined): string => {
     return val !== undefined && val !== null ? String(val) : "";
@@ -370,14 +371,33 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
           </p>
 
           {result && (
-            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-3"
+            >
+              {/* Body fat gauge */}
               <div className="rounded-xl bg-secondary/50 p-4 text-center">
                 <span className="text-xs text-muted-foreground block mb-1">% de Gordura</span>
                 <span className="text-3xl font-bold text-foreground">{result.bodyFat}%</span>
                 <span className={`text-sm font-semibold block mt-1 ${classColor}`}>
                   {result.classification}
                 </span>
-                <span className="text-[10px] text-muted-foreground block mt-1">
+                {/* Visual gauge */}
+                <div className="mt-3 h-2.5 rounded-full bg-secondary overflow-hidden relative">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-700"
+                    style={{ width: `${Math.min(result.bodyFat * 2, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+                  <span>5%</span>
+                  <span>15%</span>
+                  <span>25%</span>
+                  <span>35%</span>
+                  <span>50%</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground block mt-2">
                   Método: {result.method}
                 </span>
               </div>
@@ -386,10 +406,21 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
                 <div className="rounded-xl bg-secondary/50 p-3 text-center">
                   <span className="text-xs text-muted-foreground block mb-1">Massa Gorda</span>
                   <span className="font-bold text-foreground">{result.fatMass} kg</span>
+                  <span className="text-[10px] text-muted-foreground block">{result.bodyFat}% do total</span>
                 </div>
                 <div className="rounded-xl bg-secondary/50 p-3 text-center">
                   <span className="text-xs text-muted-foreground block mb-1">Massa Magra</span>
                   <span className="font-bold text-foreground">{result.leanMass} kg</span>
+                  <span className="text-[10px] text-muted-foreground block">{(100 - result.bodyFat).toFixed(1)}% do total</span>
+                </div>
+              </div>
+
+              {/* BMI context */}
+              <div className="rounded-xl bg-secondary/50 p-3 flex items-start gap-2">
+                <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <div className="text-xs text-muted-foreground">
+                  <span className="text-foreground font-medium">IMC: {(weight / ((height / 100) ** 2)).toFixed(1)}</span>
+                  {" — "}O IMC sozinho não diferencia massa magra de gordura. A análise de composição corporal é mais precisa para avaliar saúde e fitness.
                 </div>
               </div>
 
@@ -422,7 +453,7 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           )}
         </div>
       </SheetContent>

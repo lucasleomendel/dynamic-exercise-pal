@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { UtensilsCrossed, RefreshCw, ChevronDown, ChevronUp, Lightbulb, Flame, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useCallback } from "react";
 import { DietProfile, DietPlan, generateDietPlan } from "@/lib/diet-generator";
 
 interface Props {

@@ -12,7 +12,7 @@ interface Props {
   hoursPerSession?: number;
 }
 
-function calculateTDEE(weight: number, height: number, age: number, sex: string, activityLevel: string, hoursPerSession: number): number {
+function calculateTDEE(weight: number, height: number, age: number, sex: string, activityLevel: string): number {
   let bmr: number;
   if (sex === 'masculino') {
     bmr = 10 * weight + 6.25 * height - 5 * age + 5;
@@ -22,10 +22,7 @@ function calculateTDEE(weight: number, height: number, age: number, sex: string,
   const multipliers: Record<string, number> = {
     sedentario: 1.2, leve: 1.375, moderado: 1.55, intenso: 1.725, muito_intenso: 1.9,
   };
-  const base = Math.round(bmr * (multipliers[activityLevel] || 1.55));
-  // Add exercise thermogenesis estimate (approx 300-500 kcal/hr of training)
-  const trainingBonus = Math.round(hoursPerSession * 400);
-  return base + trainingBonus;
+  return Math.round(bmr * (multipliers[activityLevel] || 1.55));
 }
 
 const restrictionOptions = [

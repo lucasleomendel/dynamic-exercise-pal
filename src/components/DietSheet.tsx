@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { UtensilsCrossed, RefreshCw, ChevronDown, ChevronUp, Lightbulb, Flame, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useCallback } from "react";
 import { DietProfile, DietPlan, generateDietPlan } from "@/lib/diet-generator";
 
 interface Props {
@@ -9,10 +10,9 @@ interface Props {
   height: number;
   age: number;
   sex: 'masculino' | 'feminino';
-  hoursPerSession?: number;
 }
 
-function calculateTDEE(weight: number, height: number, age: number, sex: string, activityLevel: string, hoursPerSession: number): number {
+function calculateTDEE(weight: number, height: number, age: number, sex: string, activityLevel: string): number {
   let bmr: number;
   if (sex === 'masculino') {
     bmr = 10 * weight + 6.25 * height - 5 * age + 5;
@@ -22,10 +22,7 @@ function calculateTDEE(weight: number, height: number, age: number, sex: string,
   const multipliers: Record<string, number> = {
     sedentario: 1.2, leve: 1.375, moderado: 1.55, intenso: 1.725, muito_intenso: 1.9,
   };
-  const base = Math.round(bmr * (multipliers[activityLevel] || 1.55));
-  // Add exercise thermogenesis estimate (approx 300-500 kcal/hr of training)
-  const trainingBonus = Math.round(hoursPerSession * 400);
-  return base + trainingBonus;
+  return Math.round(bmr * (multipliers[activityLevel] || 1.55));
 }
 
 const restrictionOptions = [
@@ -43,7 +40,7 @@ const activityOptions: { value: DietProfile['activityLevel']; label: string }[] 
   { value: 'muito_intenso', label: 'Muito intenso' },
 ];
 
-const DietSheet = ({ goal, weight, height, age, sex, hoursPerSession = 1 }: Props) => {
+const DietSheet = ({ goal, weight, height, age, sex }: Props) => {
   const [activityLevel, setActivityLevel] = useState<DietProfile['activityLevel']>('moderado');
   const [mealsPerDay, setMealsPerDay] = useState(5);
   const [restrictions, setRestrictions] = useState<string[]>([]);
@@ -53,7 +50,7 @@ const DietSheet = ({ goal, weight, height, age, sex, hoursPerSession = 1 }: Prop
   const [expandedMeal, setExpandedMeal] = useState<number>(0);
   const [showTips, setShowTips] = useState(false);
 
-  const tdee = useMemo(() => calculateTDEE(weight, height, age, sex, activityLevel, hoursPerSession), [weight, height, age, sex, activityLevel, hoursPerSession]);
+  const tdee = useMemo(() => calculateTDEE(weight, height, age, sex, activityLevel), [weight, height, age, sex, activityLevel]);
 
   const toggleRestriction = (r: string) => {
     setRestrictions(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);

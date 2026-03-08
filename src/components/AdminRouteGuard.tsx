@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadAdminPassword } from "@/lib/storage";
 import { Lock, ArrowLeft } from "lucide-react";

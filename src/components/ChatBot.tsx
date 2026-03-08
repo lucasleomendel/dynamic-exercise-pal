@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { MessageCircle, X, Send, ChevronLeft } from "lucide-react";
 import { searchKnowledge, getEntriesByCategory, getPopularQuestions, getFallbackResponse } from "@/lib/chatbot-engine";
 import { categories } from "@/lib/chatbot-knowledge";
@@ -20,7 +20,7 @@ const ChatBot = () => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     const q = input.trim();
     if (!q) return;
     setInput("");
@@ -35,20 +35,20 @@ const ChatBot = () => {
     };
 
     setMessages(prev => [...prev, userMsg, botMsg]);
-  };
+  }, [input]);
 
-  const handleQuickQuestion = (question: string, answer: string) => {
+  const handleQuickQuestion = useCallback((question: string, answer: string) => {
     setShowCategories(false);
     setSelectedCategory(null);
     setMessages(prev => [...prev, { role: "user", text: question }, { role: "bot", text: answer }]);
-  };
+  }, []);
 
-  const handleCategorySelect = (catId: string) => {
+  const handleCategorySelect = useCallback((catId: string) => {
     setSelectedCategory(catId);
-  };
+  }, []);
 
-  const categoryEntries = selectedCategory ? getEntriesByCategory(selectedCategory) : [];
-  const popular = getPopularQuestions();
+  const categoryEntries = useMemo(() => selectedCategory ? getEntriesByCategory(selectedCategory) : [], [selectedCategory]);
+  const popular = useMemo(() => getPopularQuestions(), []);
 
   return (
     <>

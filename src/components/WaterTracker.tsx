@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Droplets, Plus, Minus } from "lucide-react";
 
 interface Props {
@@ -40,7 +40,7 @@ function saveWater(state: WaterState) {
 
 const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
   const [water, setWater] = useState<WaterState>(loadWater);
-  const dailyTarget = calculateDailyWater(weight, hoursPerSession, daysPerWeek);
+  const dailyTarget = useMemo(() => calculateDailyWater(weight, hoursPerSession, daysPerWeek), [weight, hoursPerSession, daysPerWeek]);
   const glassSize = 0.25; // 250ml per glass
   const targetGlasses = Math.ceil(dailyTarget / glassSize);
   const currentLiters = (water.glasses * glassSize).toFixed(2);
@@ -50,13 +50,13 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
     saveWater(water);
   }, [water]);
 
-  const addGlass = () => {
+  const addGlass = useCallback(() => {
     setWater(prev => ({ ...prev, glasses: prev.glasses + 1 }));
-  };
+  }, []);
 
-  const removeGlass = () => {
+  const removeGlass = useCallback(() => {
     setWater(prev => ({ ...prev, glasses: Math.max(0, prev.glasses - 1) }));
-  };
+  }, []);
 
   return (
     <div className="rounded-2xl border border-border p-5">

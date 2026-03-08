@@ -89,7 +89,11 @@ export function loadBodyComp(): BodyCompData | null {
 const ADMIN_PASSWORD_KEY = "fitforge_admin_pw";
 const WORKOUT_HISTORY_KEY = "fitforge_history";
 
-// Simple hash function for password (not cryptographic, but better than plaintext)
+/**
+ * SECURITY NOTE: Client-side password hashing in localStorage is NOT secure
+ * for production use. Any user can manipulate localStorage/sessionStorage.
+ * For real security, migrate to Lovable Cloud with proper server-side auth.
+ */
 async function simpleHash(str: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(str);

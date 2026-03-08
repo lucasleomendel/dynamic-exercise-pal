@@ -104,17 +104,17 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
     }
   }, []);
 
-  const updateSkin = (key: keyof Skinfolds, value: string) => {
+  const updateSkin = useCallback((key: keyof Skinfolds, value: string) => {
     const parsed = value === "" ? undefined : parseFloat(value);
     setSkinfolds(prev => ({ ...prev, [key]: parsed }));
     setError("");
-  };
+  }, []);
 
-  const updateMeas = (key: keyof BodyMeasurements, value: string) => {
+  const updateMeas = useCallback((key: keyof BodyMeasurements, value: string) => {
     const parsed = value === "" ? undefined : parseFloat(value);
     setMeasurements(prev => ({ ...prev, [key]: parsed }));
     setError("");
-  };
+  }, []);
 
   const getInputValue = (val: number | undefined): string => {
     return val !== undefined && val !== null ? String(val) : "";

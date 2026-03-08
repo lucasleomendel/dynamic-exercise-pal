@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { MessageCircle, X, Send, ChevronLeft } from "lucide-react";
 import { searchKnowledge, getEntriesByCategory, getPopularQuestions, getFallbackResponse } from "@/lib/chatbot-engine";
 import { categories } from "@/lib/chatbot-knowledge";

@@ -10,7 +10,6 @@ interface Props {
   height: number;
   age: number;
   sex: 'masculino' | 'feminino';
-  hoursPerSession?: number;
 }
 
 function calculateTDEE(weight: number, height: number, age: number, sex: string, activityLevel: string): number {

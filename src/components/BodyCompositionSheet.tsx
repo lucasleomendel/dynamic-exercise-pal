@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Ruler, Calculator, AlertCircle, Check } from "lucide-react";
+import { Ruler, Calculator, AlertCircle, Check, Info } from "lucide-react";
 import { saveBodyComp, loadBodyComp } from "@/lib/storage";
+import { motion } from "framer-motion";
 
 interface Skinfolds {
   triceps?: number;

@@ -17,15 +17,39 @@ const ExportWorkoutButton = ({ plan, profile }: Props) => {
 
   const handleExport = async () => {
     if (!cardRef.current) return;
-
     setIsExporting(true);
 
     try {
+      // Temporarily make the card visible for rendering
+      const wrapper = cardRef.current.parentElement;
+      if (wrapper) {
+        wrapper.style.position = "fixed";
+        wrapper.style.left = "0";
+        wrapper.style.top = "0";
+        wrapper.style.zIndex = "-1";
+        wrapper.style.opacity = "1";
+      }
+
+      // Wait for fonts/layout to settle
+      await new Promise((r) => setTimeout(r, 300));
+
       const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        backgroundColor: null,
+        scale: 3,
+        backgroundColor: "#1a1a2e",
         useCORS: true,
+        logging: false,
+        width: cardRef.current.scrollWidth,
+        height: cardRef.current.scrollHeight,
       });
+
+      // Hide it again
+      if (wrapper) {
+        wrapper.style.position = "fixed";
+        wrapper.style.left = "-9999px";
+        wrapper.style.top = "0";
+        wrapper.style.zIndex = "-1";
+        wrapper.style.opacity = "0";
+      }
 
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((b) => {
@@ -36,7 +60,7 @@ const ExportWorkoutButton = ({ plan, profile }: Props) => {
 
       const file = new File([blob], "meu-treino-fitforge.png", { type: "image/png" });
 
-      // Try Web Share API (mobile)
+      // Try native share on mobile
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -45,25 +69,20 @@ const ExportWorkoutButton = ({ plan, profile }: Props) => {
         });
         toast.success("Treino compartilhado!");
       } else {
-        // Fallback: download + open WhatsApp
+        // Fallback: download the image
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
         a.download = "meu-treino-fitforge.png";
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
-
-        // Open WhatsApp with message
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
-          "Confira meu plano de treino personalizado! 💪 Gerado pelo FitForge"
-        )}`;
-        window.open(whatsappUrl, "_blank");
-
-        toast.success("Imagem baixada! Anexe no WhatsApp.");
+        toast.success("Imagem do treino baixada! 📥 Envie pelo WhatsApp.");
       }
     } catch (error) {
       console.error("Export error:", error);
-      toast.error("Erro ao exportar treino");
+      toast.error("Erro ao exportar treino. Tente novamente.");
     } finally {
       setIsExporting(false);
     }
@@ -77,13 +96,17 @@ const ExportWorkoutButton = ({ plan, profile }: Props) => {
         onClick={handleExport}
         disabled={isExporting}
         className="h-9 w-9"
-        title="Compartilhar treino"
+        title="Baixar imagem do treino"
       >
-        <Share2 className={`w-4 h-4 ${isExporting ? "animate-pulse" : ""}`} />
+        {isExporting ? (
+          <Share2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Download className="w-4 h-4" />
+        )}
       </Button>
 
       {/* Hidden card for capture */}
-      <div className="fixed -left-[9999px] top-0">
+      <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1, opacity: 0 }}>
         <ShareWorkoutCard ref={cardRef} plan={plan} profile={profile} />
       </div>
     </>

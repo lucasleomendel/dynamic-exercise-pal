@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Share2 } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Share2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkoutPlan, UserProfile } from "@/lib/workout-generator";
 import ShareWorkoutCard from "./ShareWorkoutCard";

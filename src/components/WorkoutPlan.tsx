@@ -102,6 +102,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
             <span className="font-display font-bold text-lg hidden sm:inline" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <ExportWorkoutButton plan={plan} profile={profile} />
             <DietSheet goal={profile.goal} weight={profile.weight} height={profile.height} age={profile.age} sex={profile.sex} />
             <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} height={profile.height} />
             <SettingsSheet />

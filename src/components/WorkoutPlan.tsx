@@ -10,6 +10,7 @@ import ChatBot from "./ChatBot";
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
 import { Dumbbell, Calendar, ChevronDown } from "lucide-react";
+import ExportWorkoutButton from "./ExportWorkoutButton";
 import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory } from "@/lib/storage";
 import { motion, AnimatePresence } from "framer-motion";
 import {

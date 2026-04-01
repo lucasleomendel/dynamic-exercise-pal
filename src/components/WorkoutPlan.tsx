@@ -9,7 +9,8 @@ import WaterTracker from "./WaterTracker";
 import ChatBot from "./ChatBot";
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
-import { Dumbbell, Calendar, ChevronDown } from "lucide-react";
+import { Calendar, ChevronDown } from "lucide-react";
+import logoImg from "@/assets/logo-fitforge.png";
 import ExportWorkoutButton from "./ExportWorkoutButton";
 import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory } from "@/lib/storage";
 import { motion, AnimatePresence } from "framer-motion";
@@ -96,9 +97,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <Dumbbell className="w-4 h-4 text-primary-foreground" />
-            </div>
+            <img src={logoImg} alt="FitForge" className="w-9 h-9 rounded-lg object-contain" />
             <span className="font-display font-bold text-lg hidden sm:inline" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">

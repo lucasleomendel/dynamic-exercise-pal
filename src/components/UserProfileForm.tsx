@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UserProfile, ALL_MUSCLE_GROUPS, MuscleGroup } from "@/lib/workout-generator";
-import { Dumbbell, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import logoImg from "@/assets/logo-fitforge.png";
 
 interface Props {
   onSubmit: (profile: UserProfile) => void;
@@ -159,7 +160,6 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
               ))}
             </div>
           </div>
-          {/* Split legs option - show when 4+ days and legs are selected */}
           {(profile.daysPerWeek || 0) >= 4 && (
             <div>
               <button
@@ -175,7 +175,6 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
       ),
       valid: !!profile.daysPerWeek && !!profile.hoursPerSession,
     },
-    // Muscle group selection step
     ...((profile.sex === 'masculino' || profile.sex === 'feminino') ? [{
       title: "Quais grupos musculares quer treinar?",
       content: (
@@ -209,9 +208,7 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
 
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <Dumbbell className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <img src={logoImg} alt="FitForge Logo" className="w-12 h-12 rounded-xl object-contain" />
           <span className="font-display text-xl font-bold">FitForge</span>
         </div>
 

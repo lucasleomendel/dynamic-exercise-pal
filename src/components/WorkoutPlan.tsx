@@ -9,7 +9,8 @@ import WaterTracker from "./WaterTracker";
 import ChatBot from "./ChatBot";
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
-import { Calendar, ChevronDown } from "lucide-react";
+import { Calendar, ChevronDown, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import logoImg from "@/assets/logo-fitforge.png";
 import ExportWorkoutButton from "./ExportWorkoutButton";
 import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory } from "@/lib/storage";
@@ -33,6 +34,7 @@ interface Props {
 }
 
 const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
+  const { signOut } = useAuth();
   const [expandedDay, setExpandedDay] = useState<number>(0);
   const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
   const [weights, setWeights] = useState<Record<string, number>>(() => {
@@ -106,6 +108,9 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
             <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} height={profile.height} />
             <SettingsSheet />
             <ProfileSheet profile={profile} onEdit={onEdit} onClear={() => setShowClearDialog(true)} />
+            <button onClick={signOut} className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-destructive/20 hover:text-destructive transition-colors" title="Sair">
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>

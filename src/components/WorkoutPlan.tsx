@@ -108,6 +108,9 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
             <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} height={profile.height} />
             <SettingsSheet />
             <ProfileSheet profile={profile} onEdit={onEdit} onClear={() => setShowClearDialog(true)} />
+            <button onClick={signOut} className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-destructive/20 hover:text-destructive transition-colors" title="Sair">
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>

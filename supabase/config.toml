@@ -14,3 +14,6 @@ site_url = "http://localhost:5173"
 
 [functions.ai-chat]
 verify_jwt = false
+
+[functions.validate-cref]
+verify_jwt = false

@@ -52,7 +52,7 @@ const SettingsSheet = () => {
             </div>
           </button>
 
-          {isAdmin && (
+          {showPersonal && (
             <button
               onClick={() => { setOpen(false); navigate("/personal"); }}
               className="w-full flex items-center gap-3 p-4 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"

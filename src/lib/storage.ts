@@ -86,37 +86,7 @@ export function loadBodyComp(): BodyCompData | null {
   return raw ? JSON.parse(raw) : null;
 }
 
-const ADMIN_PASSWORD_KEY = "fitforge_admin_pw";
 const WORKOUT_HISTORY_KEY = "fitforge_history";
-
-/**
- * SECURITY NOTE: Client-side password hashing in localStorage is NOT secure
- * for production use. Any user can manipulate localStorage/sessionStorage.
- * For real security, migrate to Lovable Cloud with proper server-side auth.
- */
-async function simpleHash(str: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-export async function saveAdminPassword(password: string) {
-  const hashed = await simpleHash(password);
-  localStorage.setItem(ADMIN_PASSWORD_KEY, hashed);
-}
-
-export function loadAdminPassword(): string | null {
-  return localStorage.getItem(ADMIN_PASSWORD_KEY);
-}
-
-export async function verifyAdminPassword(password: string): Promise<boolean> {
-  const stored = loadAdminPassword();
-  if (!stored) return false;
-  const hashed = await simpleHash(password);
-  return hashed === stored;
-}
 
 // Workout history
 export interface WorkoutHistoryEntry {

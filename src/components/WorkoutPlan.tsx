@@ -214,6 +214,34 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-5 pb-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-muted-foreground whitespace-nowrap">Dia da semana</label>
+                        <Select value={day.day} onValueChange={(v) => handleDayChange(i, v)}>
+                          <SelectTrigger className="h-8 text-xs w-36">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DAY_NAMES.map(n => (
+                              <SelectItem key={n} value={n}>{n}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {expandedDay === i && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3 }}
                     className="overflow-hidden"
                   >

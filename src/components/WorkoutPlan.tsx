@@ -13,8 +13,9 @@ import { Calendar, ChevronDown, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import logoImg from "@/assets/logo-fitforge.png";
 import ExportWorkoutButton from "./ExportWorkoutButton";
-import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory } from "@/lib/storage";
+import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory, savePlan } from "@/lib/storage";
 import { motion, AnimatePresence } from "framer-motion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,14 +27,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const DAY_NAMES = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+
 interface Props {
   plan: WorkoutPlanType;
   profile: UserProfile;
   onEdit: () => void;
   onClear: () => void;
+  onPlanUpdate?: (plan: WorkoutPlanType) => void;
 }
 
-const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
+const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) => {
   const { signOut } = useAuth();
   const [expandedDay, setExpandedDay] = useState<number>(0);
   const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
@@ -46,6 +50,15 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [weightSaved, setWeightSaved] = useState<string | null>(null);
+
+  const handleDayChange = useCallback((dayIndex: number, newDay: string) => {
+    const updatedPlan = {
+      ...plan,
+      days: plan.days.map((d, i) => i === dayIndex ? { ...d, day: newDay } : d),
+    };
+    savePlan(updatedPlan);
+    onPlanUpdate?.(updatedPlan);
+  }, [plan, onPlanUpdate]);
 
   const toggleCheck = useCallback((key: string) => {
     setChecked(prev => {
@@ -194,6 +207,34 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
                   <ChevronDown className="w-5 h-5 text-muted-foreground" />
                 </motion.div>
               </button>
+
+              <AnimatePresence>
+                {expandedDay === i && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-5 pb-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-muted-foreground whitespace-nowrap">Dia da semana</label>
+                        <Select value={day.day} onValueChange={(v) => handleDayChange(i, v)}>
+                          <SelectTrigger className="h-8 text-xs w-36">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DAY_NAMES.map(n => (
+                              <SelectItem key={n} value={n}>{n}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <AnimatePresence>
                 {expandedDay === i && (

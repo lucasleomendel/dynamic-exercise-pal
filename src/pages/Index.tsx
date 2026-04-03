@@ -42,7 +42,15 @@ const Index = () => {
   };
 
   if (view === "plan" && plan && profile) {
-    return <WorkoutPlanView plan={plan} profile={profile} onEdit={handleEdit} onClear={handleClear} />;
+    return (
+      <WorkoutPlanView
+        plan={plan}
+        profile={profile}
+        onEdit={handleEdit}
+        onClear={handleClear}
+        onPlanUpdate={(updatedPlan) => { setPlan(updatedPlan); }}
+      />
+    );
   }
 
   return <UserProfileForm onSubmit={handleSubmit} initialProfile={profile || undefined} />;

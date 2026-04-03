@@ -13,8 +13,9 @@ import { Calendar, ChevronDown, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import logoImg from "@/assets/logo-fitforge.png";
 import ExportWorkoutButton from "./ExportWorkoutButton";
-import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory } from "@/lib/storage";
+import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory, savePlan } from "@/lib/storage";
 import { motion, AnimatePresence } from "framer-motion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,14 +27,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const DAY_NAMES = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+
 interface Props {
   plan: WorkoutPlanType;
   profile: UserProfile;
   onEdit: () => void;
   onClear: () => void;
+  onPlanUpdate?: (plan: WorkoutPlanType) => void;
 }
 
-const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
+const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) => {
   const { signOut } = useAuth();
   const [expandedDay, setExpandedDay] = useState<number>(0);
   const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
@@ -46,6 +50,15 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear }: Props) => {
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [weightSaved, setWeightSaved] = useState<string | null>(null);
+
+  const handleDayChange = useCallback((dayIndex: number, newDay: string) => {
+    const updatedPlan = {
+      ...plan,
+      days: plan.days.map((d, i) => i === dayIndex ? { ...d, day: newDay } : d),
+    };
+    savePlan(updatedPlan);
+    onPlanUpdate?.(updatedPlan);
+  }, [plan, onPlanUpdate]);
 
   const toggleCheck = useCallback((key: string) => {
     setChecked(prev => {

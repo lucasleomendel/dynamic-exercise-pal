@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Dumbbell, Sun, Moon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { isMasterAdmin } from "@/lib/admin";
+import { hasPersonalAccess } from "@/lib/admin";
 
 const SettingsSheet = () => {
   const navigate = useNavigate();
@@ -14,7 +14,8 @@ const SettingsSheet = () => {
     return (localStorage.getItem("fitforge_theme") as "dark" | "light") || "dark";
   });
 
-  const isAdmin = isMasterAdmin(user?.email);
+  const userMeta = user?.user_metadata as Record<string, unknown> | undefined;
+  const showPersonal = hasPersonalAccess(user?.email, userMeta);
 
   useEffect(() => {
     document.documentElement.classList.toggle("light", theme === "light");

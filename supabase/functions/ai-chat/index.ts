@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é o FitForge AI, um assistente especialista em fitness, musculação, nutrição esportiva, composição corporal e saúde. 
+const SYSTEM_PROMPT = `Você é o FitForge AI, um assistente especialista em fitness, musculação, nutrição esportiva, composição corporal e saúde.
 
 Suas características:
 - Responda SEMPRE em português brasileiro
@@ -19,6 +19,7 @@ Suas características:
 - Use emojis moderadamente para tornar a conversa mais amigável (💪🏋️‍♂️🥗)
 - Mantenha respostas concisas (máx 200 palavras) exceto quando o usuário pedir detalhes
 - Pode fazer cálculos de IMC, TMB, macros quando solicitado
+- Quando o usuário fornecer dados pessoais (peso, altura, idade, objetivo), use essas informações para personalizar as respostas
 
 Se o usuário perguntar algo fora do escopo fitness/saúde, responda brevemente mas redirecione para o tema principal.`;
 
@@ -28,22 +29,31 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
-    
-    if (!messages || !Array.isArray(messages)) {
+    const body = await req.json().catch(() => null);
+
+    if (!body || !Array.isArray(body.messages)) {
       return new Response(
-        JSON.stringify({ error: "Messages array is required" }),
+        JSON.stringify({ error: "Campo 'messages' (array) é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const { messages } = body;
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not found in environment");
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
+        JSON.stringify({ error: "Serviço de IA não configurado. Contate o suporte." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Sanitize messages - only keep role and content
+    const sanitizedMessages = messages
+      .filter((m: any) => m?.role && m?.content)
+      .slice(-20)
+      .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 4000) }));
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -55,30 +65,32 @@ serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          ...messages.slice(-20), // Keep last 20 messages for context
+          ...sanitizedMessages,
         ],
         stream: true,
       }),
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
+      const status = response.status;
+      const errorText = await response.text().catch(() => "");
+      console.error(`AI gateway error: ${status} ${errorText}`);
+
+      if (status === 429) {
         return new Response(
-          JSON.stringify({ error: "Muitas requisições. Tente novamente em alguns segundos." }),
+          JSON.stringify({ error: "Muitas requisições. Aguarde alguns segundos e tente novamente." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
+      if (status === 402) {
         return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Entre em contato com o suporte." }),
+          JSON.stringify({ error: "Créditos de IA esgotados. Contate o administrador." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
       return new Response(
-        JSON.stringify({ error: "Erro ao conectar com a IA" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Erro ao conectar com a IA. Tente novamente." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -88,7 +100,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("ai-chat error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
+      JSON.stringify({ error: e instanceof Error ? e.message : "Erro interno do servidor" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

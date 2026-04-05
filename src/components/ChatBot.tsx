@@ -22,7 +22,12 @@ function loadChatHistory(): Message[] {
 }
 
 function saveChatHistory(messages: Message[]) {
-  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-50)));
+  try {
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-50)));
+  } catch {
+    // localStorage full, clear old entries
+    localStorage.removeItem(CHAT_HISTORY_KEY);
+  }
 }
 
 async function streamChat({
@@ -30,11 +35,13 @@ async function streamChat({
   onDelta,
   onDone,
   onError,
+  signal,
 }: {
   messages: { role: string; content: string }[];
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (msg: string) => void;
+  signal?: AbortSignal;
 }) {
   try {
     const resp = await fetch(CHAT_URL, {
@@ -44,11 +51,21 @@ async function streamChat({
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ messages }),
+      signal,
     });
 
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ error: "Erro de conexão" }));
-      onError(err.error || `Erro ${resp.status}`);
+      const status = resp.status;
+      if (status === 429) {
+        onError("Muitas requisições. Aguarde alguns segundos.");
+        return;
+      }
+      if (status === 402) {
+        onError("Créditos de IA esgotados. Contate o administrador.");
+        return;
+      }
+      onError(err.error || `Erro ${status}`);
       return;
     }
 
@@ -71,6 +88,7 @@ async function streamChat({
         let line = buffer.slice(0, newlineIdx);
         buffer = buffer.slice(newlineIdx + 1);
         if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (line.startsWith(":") || line.trim() === "") continue;
         if (!line.startsWith("data: ")) continue;
         const jsonStr = line.slice(6).trim();
         if (jsonStr === "[DONE]") break;
@@ -84,9 +102,9 @@ async function streamChat({
       }
     }
 
-    // flush remaining
+    // flush remaining buffer
     if (buffer.trim()) {
-      for (let raw of buffer.split("\n")) {
+      for (const raw of buffer.split("\n")) {
         if (!raw || !raw.startsWith("data: ")) continue;
         const jsonStr = raw.slice(6).trim();
         if (jsonStr === "[DONE]") continue;
@@ -100,6 +118,7 @@ async function streamChat({
 
     onDone();
   } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") return;
     onError(e instanceof Error ? e.message : "Erro de conexão");
   }
 }
@@ -119,6 +138,7 @@ const ChatBot = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (open) setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
@@ -126,6 +146,11 @@ const ChatBot = () => {
 
   useEffect(() => { saveChatHistory(messages); }, [messages]);
   useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
+
+  // Cleanup abort on unmount
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
@@ -135,6 +160,9 @@ const ChatBot = () => {
     const currentMessages = [...messages, userMsg];
     setMessages(currentMessages);
     setIsStreaming(true);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     let assistantContent = "";
 
@@ -160,6 +188,7 @@ const ChatBot = () => {
           )
         );
         setIsStreaming(false);
+        abortRef.current = null;
       },
       onError: (err) => {
         setMessages(prev => [
@@ -167,12 +196,16 @@ const ChatBot = () => {
           { role: "assistant", content: `❌ ${err}`, timestamp: Date.now() },
         ]);
         setIsStreaming(false);
+        abortRef.current = null;
       },
+      signal: controller.signal,
     });
   }, [messages, isStreaming]);
 
   const handleClear = useCallback(() => {
+    abortRef.current?.abort();
     setMessages([]);
+    setIsStreaming(false);
     localStorage.removeItem(CHAT_HISTORY_KEY);
   }, []);
 
@@ -247,7 +280,7 @@ const ChatBot = () => {
                     </div>
                     <p className="text-foreground font-semibold text-sm">Olá! Sou o FitForge AI 🤖</p>
                     <p className="text-muted-foreground text-xs mt-1">
-                      Pergunte qualquer coisa sobre treino, dieta, suplementação e saúde. Respostas inteligentes e atualizadas!
+                      Pergunte qualquer coisa sobre treino, dieta, suplementação e saúde.
                     </p>
                   </div>
                   <div className="space-y-1.5">
@@ -268,7 +301,7 @@ const ChatBot = () => {
 
               {messages.map((m, i) => (
                 <motion.div
-                  key={i}
+                  key={`${i}-${m.timestamp}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
@@ -287,7 +320,7 @@ const ChatBot = () => {
                       }`}
                     >
                       {m.role === "assistant" ? (
-                        <div className="prose prose-xs prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
+                        <div className="prose prose-xs dark:prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
                           <ReactMarkdown>{m.content}</ReactMarkdown>
                         </div>
                       ) : (

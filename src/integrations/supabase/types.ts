@@ -14,13 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      personal_student_links: {
+        Row: {
+          created_at: string | null
+          id: string
+          personal_id: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          personal_id: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          personal_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_student_links_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          birth_date: string | null
+          cpf: string
+          created_at: string | null
+          email: string | null
+          full_name: string
+          goal: string | null
+          height: number | null
+          id: string
+          level: string | null
+          notes: string | null
+          phone: string | null
+          sex: string | null
+          updated_at: string | null
+          user_id: string | null
+          weight: number | null
+        }
+        Insert: {
+          birth_date?: string | null
+          cpf: string
+          created_at?: string | null
+          email?: string | null
+          full_name: string
+          goal?: string | null
+          height?: number | null
+          id?: string
+          level?: string | null
+          notes?: string | null
+          phone?: string | null
+          sex?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          weight?: number | null
+        }
+        Update: {
+          birth_date?: string | null
+          cpf?: string
+          created_at?: string | null
+          email?: string | null
+          full_name?: string
+          goal?: string | null
+          height?: number | null
+          id?: string
+          level?: string | null
+          notes?: string | null
+          phone?: string | null
+          sex?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          weight?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_personal_trainer: { Args: { uid: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

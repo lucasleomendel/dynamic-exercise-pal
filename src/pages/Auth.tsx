@@ -39,7 +39,7 @@ const Auth = () => {
       const message = error instanceof Error ? error.message : "Erro desconhecido";
       toast({
         title: "Erro",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
     } finally {

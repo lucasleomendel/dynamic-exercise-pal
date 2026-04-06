@@ -172,6 +172,7 @@ const StudentManagement = ({ userId }: { userId?: string }) => {
   useEffect(() => {
     if (!userId) return;
     loadMyStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const loadMyStudents = async () => {

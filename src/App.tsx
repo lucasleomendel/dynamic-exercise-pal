@@ -15,60 +15,37 @@ import AdminRouteGuard from "./components/AdminRouteGuard";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    const { user, loading } = useAuth();
-    if (loading) return <LoadingScreen />;
-    if (!user) return <Navigate to="/auth" replace />;
-    return <>{children}</>;
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
 };
 
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
-    const { user, loading } = useAuth();
-    if (loading) return <LoadingScreen />;
-    if (user) return <Navigate to="/" replace />;
-    return <>{children}</>;
-};
-
-const PersonalRoute = ({ children }: { children: React.ReactNode }) => {
-    const { user, loading, profile } = useAuth();
-    if (loading) return <LoadingScreen />;
-    if (!user) return <Navigate to="/auth" replace />;
-    if (profile?.user_type !== 'personal') { 
-        return <Navigate to="/" replace />;
-    }
-    if (profile?.cref_status !== 'verified') { 
-        return <Navigate to="/cref-validation" replace />;
-    }
-    return <>{children}</>;
-};
-
-const CREFRoute = ({ children }: { children: React.ReactNode }) => {
-    const { user, loading, profile } = useAuth();
-    if (loading) return <LoadingScreen />;
-    if (!user) return <Navigate to="/auth" replace />;
-    if (profile?.cref_status === 'verified') { 
-        return <Navigate to="/personal" replace />;
-    }
-    return <>{children}</>;
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (user) return <Navigate to="/" replace />;
+  return <>{children}</>;
 };
 
 const App = () => (
-    <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-            <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                    <Routes>
-                        <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-                        <Route path="/cref-validation" element={<CREFRoute><CREFValidation /></CREFRoute>} />
-                        <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                        <Route path="/personal" element={<PersonalRoute><AdminRouteGuard><Personal /></AdminRouteGuard></PersonalRoute>} />
-                        <Route path="*" element={<NotFound />} />
-                    </Routes>
-                </BrowserRouter>
-            </TooltipProvider>
-        </AuthProvider>
-    </QueryClientProvider>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+            <Route path="/cref-validation" element={<ProtectedRoute><CREFValidation /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/personal" element={<ProtectedRoute><AdminRouteGuard><Personal /></AdminRouteGuard></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
+  </QueryClientProvider>
 );
 
 export default App;

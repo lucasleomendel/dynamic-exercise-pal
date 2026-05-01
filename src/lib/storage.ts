@@ -41,6 +41,7 @@ export function loadPlan(): WorkoutPlan | null {
 
 export function saveChecked(checked: Record<string, boolean>) {
   localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
+  bg(async () => (await cloud()).syncChecks());
 }
 
 export function loadChecked(): Record<string, boolean> {
@@ -52,6 +53,7 @@ export function saveWeight(entry: WeightEntry) {
   const weights = loadWeights();
   weights.push(entry);
   localStorage.setItem(WEIGHTS_KEY, JSON.stringify(weights));
+  bg(async () => (await cloud()).syncWeights([entry]));
 }
 
 export function loadWeights(): WeightEntry[] {

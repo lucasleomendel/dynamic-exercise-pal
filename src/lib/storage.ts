@@ -1,6 +1,12 @@
 import { UserProfile, WorkoutPlan } from "./workout-generator";
 import { ProgressReport } from "./progress";
 
+/** Dispara fn em background sem bloquear nem propagar erros (auto-sync cloud). */
+const bg = (fn: () => Promise<unknown>) => {
+  Promise.resolve().then(() => fn().catch(() => {}));
+};
+const cloud = () => import("./cloud-sync");
+
 const PROFILE_KEY = "fitforge_profile";
 const PLAN_KEY = "fitforge_plan";
 const CHECKED_KEY = "fitforge_checked";

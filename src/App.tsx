@@ -10,6 +10,7 @@ import Personal from "./pages/Personal";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import CREFValidation from "./pages/CREFValidation";
+import Progress from "./pages/Progress";
 import AdminRouteGuard from "./components/AdminRouteGuard";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
             <Route path="/cref-validation" element={<ProtectedRoute><CREFValidation /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
             <Route path="/personal" element={<ProtectedRoute><AdminRouteGuard><Personal /></AdminRouteGuard></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

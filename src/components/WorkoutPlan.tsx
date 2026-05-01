@@ -9,8 +9,9 @@ import WaterTracker from "./WaterTracker";
 import ChatBot from "./ChatBot";
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
-import { Calendar, ChevronDown, LogOut } from "lucide-react";
+import { Calendar, ChevronDown, LogOut, BarChart3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import logoImg from "@/assets/logo-fitforge.png";
 import ExportWorkoutButton from "./ExportWorkoutButton";
 import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory, savePlan } from "@/lib/storage";
@@ -39,6 +40,7 @@ interface Props {
 
 const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) => {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [expandedDay, setExpandedDay] = useState<number>(0);
   const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
   const [weights, setWeights] = useState<Record<string, number>>(() => {
@@ -116,6 +118,14 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
             <span className="font-display font-bold text-lg hidden sm:inline" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              onClick={() => navigate("/progress")}
+              className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-primary/20 hover:text-primary transition-colors"
+              title="Painel de Progresso"
+              aria-label="Painel de Progresso"
+            >
+              <BarChart3 className="w-4 h-4" />
+            </button>
             <ExportWorkoutButton plan={plan} profile={profile} />
             <DietSheet goal={profile.goal} weight={profile.weight} height={profile.height} age={profile.age} sex={profile.sex} />
             <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} height={profile.height} />

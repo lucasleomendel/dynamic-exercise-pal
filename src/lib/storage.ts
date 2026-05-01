@@ -23,6 +23,8 @@ export interface WeightEntry {
 
 export function saveProfile(profile: UserProfile) {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  localStorage.setItem("fitforge_profile_ts", String(Date.now()));
+  bg(async () => (await cloud()).syncProfile(profile));
 }
 
 export function loadProfile(): UserProfile | null {
@@ -32,6 +34,8 @@ export function loadProfile(): UserProfile | null {
 
 export function savePlan(plan: WorkoutPlan) {
   localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+  localStorage.setItem("fitforge_plan_ts", String(Date.now()));
+  bg(async () => (await cloud()).syncPlan(plan));
 }
 
 export function loadPlan(): WorkoutPlan | null {

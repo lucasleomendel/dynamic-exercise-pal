@@ -211,12 +211,109 @@ export async function fullSync(opts?: { silent?: boolean }) {
   }
 }
 
+/* ============ CONFLICT RESOLUTION ============
+ * Estratégia: Last-Write-Wins por timestamp.
+ * - Se cloud é mais recente que local → puxa cloud
+ * - Se local é mais recente → empurra local
+ * - Se nenhum existe → no-op
+ * - Se ambos são iguais → no-op
+ */
+const PROFILE_TS_KEY = "fitforge_profile_ts";
+const PLAN_TS_KEY = "fitforge_plan_ts";
+
+export function markLocalUpdate(kind: "profile" | "plan") {
+  const key = kind === "profile" ? PROFILE_TS_KEY : PLAN_TS_KEY;
+  localStorage.setItem(key, String(Date.now()));
+}
+
+async function resolveProfileConflict() {
+  const userId = await getUserId();
+  if (!userId) return;
+  const localProfile = loadProfile();
+  const localTs = Number(localStorage.getItem(PROFILE_TS_KEY) ?? 0);
+  const { data } = await supabase
+    .from("profiles")
+    .select("updated_at,name,age,weight,height,sex,goal,level,days_per_week,hours_per_session,selected_muscles,split_legs")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
+
+  if (!data?.name && !localProfile) return;
+  if (cloudTs > localTs && data?.name) {
+    // cloud mais novo → hidrata local
+    const profile: UserProfile = {
+      name: data.name,
+      age: data.age ?? 0,
+      weight: Number(data.weight ?? 0),
+      height: Number(data.height ?? 0),
+      sex: (data.sex as UserProfile["sex"]) ?? "masculino",
+      goal: (data.goal as UserProfile["goal"]) ?? "hipertrofia",
+      level: (data.level as UserProfile["level"]) ?? "iniciante",
+      daysPerWeek: data.days_per_week ?? 3,
+      hoursPerSession: Number(data.hours_per_session ?? 1),
+      selectedMuscles: (data.selected_muscles as UserProfile["selectedMuscles"]) ?? undefined,
+      splitLegs: data.split_legs ?? false,
+    };
+    saveProfile(profile);
+    localStorage.setItem(PROFILE_TS_KEY, String(cloudTs));
+  } else if (localTs > cloudTs && localProfile) {
+    await syncProfile(localProfile);
+  }
+}
+
+async function resolvePlanConflict() {
+  const userId = await getUserId();
+  if (!userId) return;
+  const localPlan = loadPlan();
+  const localTs = Number(localStorage.getItem(PLAN_TS_KEY) ?? 0);
+  const { data } = await supabase
+    .from("workout_plans")
+    .select("plan_data,updated_at")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
+
+  if (!data?.plan_data && !localPlan) return;
+  if (cloudTs > localTs && data?.plan_data) {
+    savePlan(data.plan_data as unknown as WorkoutPlan);
+    localStorage.setItem(PLAN_TS_KEY, String(cloudTs));
+  } else if (localTs > cloudTs && localPlan) {
+    await syncPlan(localPlan);
+  }
+}
+
+async function resolveChecksConflict() {
+  const userId = await getUserId();
+  if (!userId) return;
+  const { data } = await supabase
+    .from("exercise_checks")
+    .select("checks_data,updated_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const local = loadChecked();
+  const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
+  // Merge: união (true tem prioridade); se cloud > local em timestamp, prefere cloud
+  const cloud = (data?.checks_data ?? {}) as Record<string, boolean>;
+  const merged: Record<string, boolean> = { ...local };
+  Object.keys(cloud).forEach(k => {
+    if (cloudTs > 0 || cloud[k]) merged[k] = cloud[k] || merged[k] || false;
+  });
+  saveChecked(merged);
+}
+
 /* ============ INITIAL HYDRATION ============ */
-/** Ao logar, puxa do servidor o que for mais novo e popula localStorage */
+/** Resolve conflitos cloud↔local na entrada (last-write-wins) */
 export async function hydrateFromCloud() {
   const userId = await getUserId();
   if (!userId) return;
-  await Promise.allSettled([pullProfile(), pullPlan(), pullChecks()]);
+  await Promise.allSettled([
+    resolveProfileConflict(),
+    resolvePlanConflict(),
+    resolveChecksConflict(),
+  ]);
 }
 
 /* ============ DAILY AUTO-SYNC ============ */
@@ -227,3 +324,4 @@ export async function maybeDailySync() {
     await fullSync({ silent: true });
   }
 }
+

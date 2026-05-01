@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { hydrateFromCloud, maybeDailySync } from "@/lib/cloud-sync";
 
 interface AuthContextType {
   session: Session | null;
@@ -24,18 +25,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setLoading(false);
+        if (event === "SIGNED_IN" && session?.user) {
+          // Hidrata cache local com dados do servidor (em background)
+          setTimeout(() => {
+            hydrateFromCloud().catch(() => {});
+            maybeDailySync().catch(() => {});
+          }, 0);
+        }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
+      if (session?.user) {
+        setTimeout(() => {
+          hydrateFromCloud().catch(() => {});
+          maybeDailySync().catch(() => {});
+        }, 0);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    // Sync diário em background quando a aba volta a ficar visível
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        maybeDailySync().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   const signOut = async () => {

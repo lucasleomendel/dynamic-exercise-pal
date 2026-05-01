@@ -40,6 +40,7 @@ interface Props {
 
 const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) => {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [expandedDay, setExpandedDay] = useState<number>(0);
   const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
   const [weights, setWeights] = useState<Record<string, number>>(() => {

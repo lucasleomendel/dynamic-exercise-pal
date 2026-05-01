@@ -111,17 +111,27 @@ export async function syncWeights(weights?: WeightEntry[]) {
   if (!userId) return;
   const list = weights ?? loadWeights();
   if (!list.length) return;
-  // upsert simples por chave+data
-  const rows = list.map(w => ({
-    user_id: userId,
-    exercise_key: w.exerciseKey,
-    exercise_name: w.exerciseName,
-    muscle: w.muscle,
-    weight: w.weight,
-    logged_at: w.date,
-  }));
-  // best-effort: insere ignorando erros de duplicidade
-  await supabase.from("weight_logs").insert(rows);
+
+  // Dedupe: busca timestamps já existentes para evitar duplicar em re-syncs
+  const dates = list.map(w => w.date);
+  const { data: existing } = await supabase
+    .from("weight_logs")
+    .select("logged_at,exercise_key")
+    .eq("user_id", userId)
+    .in("logged_at", dates);
+  const existingSet = new Set((existing ?? []).map(e => `${e.exercise_key}|${e.logged_at}`));
+
+  const rows = list
+    .filter(w => !existingSet.has(`${w.exerciseKey}|${w.date}`))
+    .map(w => ({
+      user_id: userId,
+      exercise_key: w.exerciseKey,
+      exercise_name: w.exerciseName,
+      muscle: w.muscle,
+      weight: w.weight,
+      logged_at: w.date,
+    }));
+  if (rows.length) await supabase.from("weight_logs").insert(rows);
 }
 
 /* ============ HISTORY ============ */
@@ -130,14 +140,25 @@ export async function syncHistory(history?: WorkoutHistoryEntry[]) {
   if (!userId) return;
   const list = history ?? loadWorkoutHistory();
   if (!list.length) return;
-  const rows = list.map(h => ({
-    user_id: userId,
-    workout_date: h.date,
-    completed_exercises: h.completedExercises,
-    total_exercises: h.totalExercises,
-    day_focus: h.dayFocus,
-  }));
-  await supabase.from("workout_history").insert(rows);
+
+  const dates = list.map(h => h.date);
+  const { data: existing } = await supabase
+    .from("workout_history")
+    .select("workout_date")
+    .eq("user_id", userId)
+    .in("workout_date", dates);
+  const existingSet = new Set((existing ?? []).map(e => e.workout_date));
+
+  const rows = list
+    .filter(h => !existingSet.has(h.date))
+    .map(h => ({
+      user_id: userId,
+      workout_date: h.date,
+      completed_exercises: h.completedExercises,
+      total_exercises: h.totalExercises,
+      day_focus: h.dayFocus,
+    }));
+  if (rows.length) await supabase.from("workout_history").insert(rows);
 }
 
 /* ============ BODY COMP ============ */

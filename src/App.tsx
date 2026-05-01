@@ -10,6 +10,7 @@ import Personal from "./pages/Personal";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import CREFValidation from "./pages/CREFValidation";
+import Progress from "./pages/Progress";
 import AdminRouteGuard from "./components/AdminRouteGuard";
 
 const queryClient = new QueryClient();

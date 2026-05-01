@@ -87,6 +87,7 @@ export interface BodyCompData {
 
 export function saveBodyComp(data: BodyCompData) {
   localStorage.setItem(BODY_COMP_KEY, JSON.stringify(data));
+  bg(async () => (await cloud()).syncBodyComp(data));
 }
 
 export function loadBodyComp(): BodyCompData | null {
@@ -112,6 +113,7 @@ export function saveWorkoutHistory(entry: WorkoutHistoryEntry) {
   cutoff.setDate(cutoff.getDate() - 90);
   const filtered = history.filter(h => new Date(h.date) > cutoff);
   localStorage.setItem(WORKOUT_HISTORY_KEY, JSON.stringify(filtered));
+  bg(async () => (await cloud()).syncHistory([entry]));
 }
 
 export function loadWorkoutHistory(): WorkoutHistoryEntry[] {

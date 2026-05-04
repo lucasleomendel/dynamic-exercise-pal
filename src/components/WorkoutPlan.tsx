@@ -354,7 +354,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
         <ProgressSheet />
       </div>
 
-      <ChatBot />
+      <ChatBot profile={profile} />
 
       {/* Rest Timer */}
       <AnimatePresence>

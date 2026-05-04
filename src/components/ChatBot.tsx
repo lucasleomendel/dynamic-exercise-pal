@@ -139,7 +139,7 @@ const QUICK_SUGGESTIONS = [
   "Dicas para melhorar o sono",
 ];
 
-const ChatBot = () => {
+const ChatBot = ({ profile }: { profile?: UserProfile }) => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>(loadChatHistory);
   const [input, setInput] = useState("");

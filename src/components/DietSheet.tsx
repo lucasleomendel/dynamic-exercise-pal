@@ -42,7 +42,8 @@ const activityOptions: { value: DietProfile['activityLevel']; label: string }[] 
   { value: 'muito_intenso', label: 'Muito intenso' },
 ];
 
-const DietSheet = ({ goal, weight, height, age, sex }: Props) => {
+const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props) => {
+  const controlled = open !== undefined;
   const [activityLevel, setActivityLevel] = useState<DietProfile['activityLevel']>('moderado');
   const [mealsPerDay, setMealsPerDay] = useState(5);
   const [restrictions, setRestrictions] = useState<string[]>([]);

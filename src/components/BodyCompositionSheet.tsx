@@ -85,9 +85,12 @@ interface Props {
   age: number;
   weight: number;
   height: number;
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }
 
-const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
+const BodyCompositionSheet = ({ sex, age, weight, height, open, onOpenChange }: Props) => {
+  const controlled = open !== undefined;
   const [skinfolds, setSkinfolds] = useState<Skinfolds>({});
   const [measurements, setMeasurements] = useState<BodyMeasurements>({});
   const [result, setResult] = useState<Result | null>(null);
@@ -283,12 +286,14 @@ const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
   const inputClass = "w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors">
-          <Ruler className="w-4 h-4" />
-        </button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {!controlled && (
+        <SheetTrigger asChild>
+          <button className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors">
+            <Ruler className="w-4 h-4" />
+          </button>
+        </SheetTrigger>
+      )}
       <SheetContent side="right" className="bg-background border-border overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>

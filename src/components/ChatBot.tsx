@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Sparkles, Bot, User, Loader2 } from "lucide-rea
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
+import type { UserProfile } from "@/lib/workout-generator";
 
 interface Message {
   role: "user" | "assistant";
@@ -33,12 +34,14 @@ function saveChatHistory(messages: Message[]) {
 
 async function streamChat({
   messages,
+  profile,
   onDelta,
   onDone,
   onError,
   signal,
 }: {
   messages: { role: string; content: string }[];
+  profile?: UserProfile;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (msg: string) => void;
@@ -57,7 +60,7 @@ async function streamChat({
         Authorization: `Bearer ${session.access_token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({ messages, profile }),
       signal,
     });
 
@@ -138,7 +141,7 @@ const QUICK_SUGGESTIONS = [
   "Dicas para melhorar o sono",
 ];
 
-const ChatBot = () => {
+const ChatBot = ({ profile }: { profile?: UserProfile }) => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>(loadChatHistory);
   const [input, setInput] = useState("");
@@ -186,6 +189,7 @@ const ChatBot = () => {
 
     await streamChat({
       messages: currentMessages.map(m => ({ role: m.role, content: m.content })),
+      profile,
       onDelta: updateAssistant,
       onDone: () => {
         setMessages(prev =>

@@ -9,14 +9,22 @@ import WaterTracker from "./WaterTracker";
 import ChatBot from "./ChatBot";
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
-import { Calendar, ChevronDown, LogOut, BarChart3 } from "lucide-react";
+import { Calendar, ChevronDown, LogOut, BarChart3, MoreVertical, Download, UtensilsCrossed, Ruler, Settings, User, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import logoImg from "@/assets/logo-fitforge.png";
-import ExportWorkoutButton from "./ExportWorkoutButton";
+import { generateWorkoutPDF } from "@/lib/pdf-generator";
+import { toast } from "sonner";
 import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory, savePlan } from "@/lib/storage";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,6 +60,20 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [weightSaved, setWeightSaved] = useState<string | null>(null);
+  const [openSheet, setOpenSheet] = useState<null | "diet" | "body" | "settings" | "profile">(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      await generateWorkoutPDF(plan, profile);
+      toast.success("PDF do treino baixado! 📥");
+    } catch {
+      toast.error("Erro ao gerar PDF.");
+    } finally {
+      setExporting(false);
+    }
+  }, [plan, profile]);
 
   const handleDayChange = useCallback((dayIndex: number, newDay: string) => {
     const updatedPlan = {
@@ -117,25 +139,80 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
             <img src={logoImg} alt="FitForge" className="w-9 h-9 rounded-lg object-contain" />
             <span className="font-display font-bold text-lg hidden sm:inline" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => navigate("/progress")}
               className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-primary/20 hover:text-primary transition-colors"
               title="Painel de Progresso"
-              aria-label="Painel de Progresso"
+              aria-label="Progresso"
             >
               <BarChart3 className="w-4 h-4" />
             </button>
-            <ExportWorkoutButton plan={plan} profile={profile} />
-            <DietSheet goal={profile.goal} weight={profile.weight} height={profile.height} age={profile.age} sex={profile.sex} />
-            <BodyCompositionSheet sex={profile.sex} age={profile.age} weight={profile.weight} height={profile.height} />
-            <SettingsSheet />
-            <ProfileSheet profile={profile} onEdit={onEdit} onClear={() => setShowClearDialog(true)} />
-            <button onClick={signOut} className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-destructive/20 hover:text-destructive transition-colors" title="Sair">
-              <LogOut className="w-4 h-4" />
-            </button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors"
+                  aria-label="Menu"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => setOpenSheet("profile")}>
+                  <User className="w-4 h-4 mr-2" /> Meu perfil
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOpenSheet("diet")}>
+                  <UtensilsCrossed className="w-4 h-4 mr-2" /> Dieta
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOpenSheet("body")}>
+                  <Ruler className="w-4 h-4 mr-2" /> Composição corporal
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExport} disabled={exporting}>
+                  {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                  Baixar PDF do treino
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setOpenSheet("settings")}>
+                  <Settings className="w-4 h-4 mr-2" /> Configurações
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" /> Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+
+        {/* Hidden controlled sheets */}
+        <ProfileSheet
+          profile={profile}
+          onEdit={onEdit}
+          onClear={() => { setOpenSheet(null); setShowClearDialog(true); }}
+          open={openSheet === "profile"}
+          onOpenChange={(v) => setOpenSheet(v ? "profile" : null)}
+        />
+        <DietSheet
+          goal={profile.goal}
+          weight={profile.weight}
+          height={profile.height}
+          age={profile.age}
+          sex={profile.sex}
+          open={openSheet === "diet"}
+          onOpenChange={(v) => setOpenSheet(v ? "diet" : null)}
+        />
+        <BodyCompositionSheet
+          sex={profile.sex}
+          age={profile.age}
+          weight={profile.weight}
+          height={profile.height}
+          open={openSheet === "body"}
+          onOpenChange={(v) => setOpenSheet(v ? "body" : null)}
+        />
+        <SettingsSheet
+          open={openSheet === "settings"}
+          onOpenChange={(v) => setOpenSheet(v ? "settings" : null)}
+        />
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-8">
@@ -277,7 +354,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
         <ProgressSheet />
       </div>
 
-      <ChatBot />
+      <ChatBot profile={profile} />
 
       {/* Rest Timer */}
       <AnimatePresence>

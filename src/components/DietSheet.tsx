@@ -10,6 +10,8 @@ interface Props {
   height: number;
   age: number;
   sex: 'masculino' | 'feminino';
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }
 
 function calculateTDEE(weight: number, height: number, age: number, sex: string, activityLevel: string): number {
@@ -40,7 +42,8 @@ const activityOptions: { value: DietProfile['activityLevel']; label: string }[] 
   { value: 'muito_intenso', label: 'Muito intenso' },
 ];
 
-const DietSheet = ({ goal, weight, height, age, sex }: Props) => {
+const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props) => {
+  const controlled = open !== undefined;
   const [activityLevel, setActivityLevel] = useState<DietProfile['activityLevel']>('moderado');
   const [mealsPerDay, setMealsPerDay] = useState(5);
   const [restrictions, setRestrictions] = useState<string[]>([]);
@@ -73,12 +76,14 @@ const DietSheet = ({ goal, weight, height, age, sex }: Props) => {
   const inputClass = "w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground";
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors">
-          <UtensilsCrossed className="w-4 h-4" />
-        </button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {!controlled && (
+        <SheetTrigger asChild>
+          <button className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors">
+            <UtensilsCrossed className="w-4 h-4" />
+          </button>
+        </SheetTrigger>
+      )}
       <SheetContent side="right" className="bg-background border-border overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>

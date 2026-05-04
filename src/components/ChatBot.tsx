@@ -34,12 +34,14 @@ function saveChatHistory(messages: Message[]) {
 
 async function streamChat({
   messages,
+  profile,
   onDelta,
   onDone,
   onError,
   signal,
 }: {
   messages: { role: string; content: string }[];
+  profile?: UserProfile;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (msg: string) => void;

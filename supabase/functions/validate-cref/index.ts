@@ -7,10 +7,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// CREF format: XXXXXX-G/UF (6 digits, dash, G or P, slash, state code)
 function isValidCrefFormat(cref: string): boolean {
-  const pattern = /^\d{6}-[GP]\/[A-Z]{2}$/;
-  return pattern.test(cref.toUpperCase());
+  return /^\d{6}-[GP]\/[A-Z]{2}$/.test(cref.toUpperCase());
 }
 
 serve(async (req) => {
@@ -19,35 +17,53 @@ serve(async (req) => {
   }
 
   try {
-    const { cref, userId } = await req.json();
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    if (!cref || !userId) {
+    // Verify caller JWT
+    const authHeader = req.headers.get("Authorization");
+    const jwt = authHeader?.replace("Bearer ", "");
+    if (!jwt) {
       return new Response(
-        JSON.stringify({ valid: false, error: "CREF e userId são obrigatórios" }),
+        JSON.stringify({ valid: false, error: "Não autenticado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userClient = createClient(supabaseUrl, anonKey);
+    const { data: userData, error: authError } = await userClient.auth.getUser(jwt);
+    if (authError || !userData?.user) {
+      return new Response(
+        JSON.stringify({ valid: false, error: "Sessão inválida" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const userId = userData.user.id;
+
+    const { cref } = await req.json().catch(() => ({}));
+    if (!cref || typeof cref !== "string") {
+      return new Response(
+        JSON.stringify({ valid: false, error: "CREF é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const crefUpper = cref.toUpperCase().trim();
-
     if (!isValidCrefFormat(crefUpper)) {
       return new Response(
-        JSON.stringify({ 
-          valid: false, 
-          error: "Formato de CREF inválido. Use o formato: 000000-G/UF (ex: 012345-G/SP)" 
+        JSON.stringify({
+          valid: false,
+          error: "Formato de CREF inválido. Use o formato: 000000-G/UF (ex: 012345-G/SP)",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // For now, validate format only. In production, integrate with CONFEF API.
-    // Store the validated CREF in user metadata
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
-      user_metadata: { cref: crefUpper, role: "personal" },
+    const admin = createClient(supabaseUrl, serviceKey);
+    // Write to app_metadata (admin-only) so users cannot self-promote
+    const { error: updateError } = await admin.auth.admin.updateUserById(userId, {
+      app_metadata: { cref: crefUpper, role: "personal" },
     });
 
     if (updateError) {

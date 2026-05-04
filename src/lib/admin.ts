@@ -1,13 +1,17 @@
+import type { User } from "@supabase/supabase-js";
+
 export const MASTER_EMAIL = "lucas.mendel@hotmail.com";
 
 export const isMasterAdmin = (email: string | undefined | null): boolean => {
   return email?.toLowerCase() === MASTER_EMAIL.toLowerCase();
 };
 
-export const isPersonalTrainer = (userMetadata: Record<string, unknown> | undefined): boolean => {
-  return userMetadata?.role === "personal" && !!userMetadata?.cref;
+// Reads admin-controlled app_metadata (cannot be set by the user themselves).
+export const isPersonalTrainer = (user: User | null | undefined): boolean => {
+  const appMeta = (user?.app_metadata ?? {}) as Record<string, unknown>;
+  return appMeta.role === "personal" && !!appMeta.cref;
 };
 
-export const hasPersonalAccess = (email: string | undefined | null, userMetadata?: Record<string, unknown>): boolean => {
-  return isMasterAdmin(email) || isPersonalTrainer(userMetadata);
+export const hasPersonalAccess = (user: User | null | undefined): boolean => {
+  return isMasterAdmin(user?.email) || isPersonalTrainer(user);
 };

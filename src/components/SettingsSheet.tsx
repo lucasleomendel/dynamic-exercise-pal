@@ -14,8 +14,7 @@ const SettingsSheet = () => {
     return (localStorage.getItem("fitforge_theme") as "dark" | "light") || "dark";
   });
 
-  const userMeta = user?.user_metadata as Record<string, unknown> | undefined;
-  const showPersonal = hasPersonalAccess(user?.email, userMeta);
+  const showPersonal = hasPersonalAccess(user);
 
   useEffect(() => {
     document.documentElement.classList.toggle("light", theme === "light");

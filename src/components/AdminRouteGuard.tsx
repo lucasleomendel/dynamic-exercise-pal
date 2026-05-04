@@ -21,8 +21,6 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
 
   if (loading) return null;
 
-  const userMeta = user?.user_metadata as Record<string, unknown> | undefined;
-
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -43,7 +41,7 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
   }
 
   // Master admin or already validated personal
-  if (hasPersonalAccess(user.email, userMeta)) {
+  if (hasPersonalAccess(user)) {
     return <>{children}</>;
   }
 

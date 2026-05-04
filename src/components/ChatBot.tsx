@@ -189,6 +189,7 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
 
     await streamChat({
       messages: currentMessages.map(m => ({ role: m.role, content: m.content })),
+      profile,
       onDelta: updateAssistant,
       onDone: () => {
         setMessages(prev =>

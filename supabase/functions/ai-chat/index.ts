@@ -60,7 +60,7 @@ serve(async (req) => {
       );
     }
 
-    const { messages } = body;
+    const { messages, profile } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -71,11 +71,21 @@ serve(async (req) => {
       );
     }
 
-    // Sanitize messages - only keep role and content
     const sanitizedMessages = messages
       .filter((m: any) => m?.role && m?.content)
       .slice(-20)
       .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 4000) }));
+
+    let contextPrompt = SYSTEM_PROMPT;
+    if (profile && typeof profile === "object") {
+      const p = profile as Record<string, any>;
+      const bmi = p.weight && p.height ? (p.weight / ((p.height / 100) ** 2)).toFixed(1) : null;
+      contextPrompt += `\n\nPERFIL DO USUÁRIO (use para personalizar):\n` +
+        `- Nome: ${p.name ?? "—"}\n- Idade: ${p.age ?? "—"}\n- Sexo: ${p.sex ?? "—"}\n` +
+        `- Peso: ${p.weight ?? "—"}kg | Altura: ${p.height ?? "—"}cm${bmi ? ` | IMC: ${bmi}` : ""}\n` +
+        `- Objetivo: ${p.goal ?? "—"} | Nível: ${p.level ?? "—"}\n` +
+        `- Frequência: ${p.daysPerWeek ?? "—"}x/sem, ${p.hoursPerSession ?? "—"}h/sessão`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -86,7 +96,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: contextPrompt },
           ...sanitizedMessages,
         ],
         stream: true,

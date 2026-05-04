@@ -10,6 +10,8 @@ interface Props {
   height: number;
   age: number;
   sex: 'masculino' | 'feminino';
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }
 
 function calculateTDEE(weight: number, height: number, age: number, sex: string, activityLevel: string): number {

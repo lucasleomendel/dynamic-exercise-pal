@@ -60,6 +60,20 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [weightSaved, setWeightSaved] = useState<string | null>(null);
+  const [openSheet, setOpenSheet] = useState<null | "diet" | "body" | "settings" | "profile">(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      await generateWorkoutPDF(plan, profile);
+      toast.success("PDF do treino baixado! 📥");
+    } catch {
+      toast.error("Erro ao gerar PDF.");
+    } finally {
+      setExporting(false);
+    }
+  }, [plan, profile]);
 
   const handleDayChange = useCallback((dayIndex: number, newDay: string) => {
     const updatedPlan = {

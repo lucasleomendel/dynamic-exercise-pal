@@ -6,10 +6,18 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasPersonalAccess } from "@/lib/admin";
 
-const SettingsSheet = () => {
+interface Props {
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
+}
+
+const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : internalOpen;
+  const setOpen = (v: boolean) => { onOpenChange?.(v); if (!controlled) setInternalOpen(v); };
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     return (localStorage.getItem("fitforge_theme") as "dark" | "light") || "dark";
   });
@@ -24,11 +32,13 @@ const SettingsSheet = () => {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <button className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors">
-          <Settings className="w-4 h-4" />
-        </button>
-      </SheetTrigger>
+      {!controlled && (
+        <SheetTrigger asChild>
+          <button className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors">
+            <Settings className="w-4 h-4" />
+          </button>
+        </SheetTrigger>
+      )}
       <SheetContent side="right" className="bg-background border-border overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>

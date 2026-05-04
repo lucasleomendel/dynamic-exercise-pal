@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Sparkles, Bot, User, Loader2 } from "lucide-rea
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
+import type { UserProfile } from "@/lib/workout-generator";
 
 interface Message {
   role: "user" | "assistant";

@@ -85,9 +85,12 @@ interface Props {
   age: number;
   weight: number;
   height: number;
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }
 
-const BodyCompositionSheet = ({ sex, age, weight, height }: Props) => {
+const BodyCompositionSheet = ({ sex, age, weight, height, open, onOpenChange }: Props) => {
+  const controlled = open !== undefined;
   const [skinfolds, setSkinfolds] = useState<Skinfolds>({});
   const [measurements, setMeasurements] = useState<BodyMeasurements>({});
   const [result, setResult] = useState<Result | null>(null);

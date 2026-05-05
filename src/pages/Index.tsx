@@ -30,7 +30,7 @@ const Index = () => {
     saveProfile(p);
     savePlan(newPlan);
     setView("plan");
-    // Persiste no banco em background
+    // Persiste no banco em background (apenas se autenticado)
     syncProfile(p).catch(() => {});
     syncPlan(newPlan).catch(() => {});
   };

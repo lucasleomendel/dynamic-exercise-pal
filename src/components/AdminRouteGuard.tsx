@@ -14,12 +14,38 @@ interface AdminRouteGuardProps {
 
 const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, isGuest } = useAuth();
   const { toast } = useToast();
   const [cref, setCref] = useState("");
   const [validating, setValidating] = useState(false);
 
   if (loading) return null;
+
+  if (isGuest) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Lock className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Área exclusiva
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            O modo visitante não tem acesso ao painel do Personal Trainer. Faça login para continuar.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => navigate("/auth")} className="gap-2">
+              <ArrowLeft className="w-4 h-4" /> Fazer login
+            </Button>
+            <Button variant="ghost" onClick={() => navigate("/")} className="text-muted-foreground">
+              Voltar ao app
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

@@ -1,20 +1,28 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { hydrateFromCloud, maybeDailySync } from "@/lib/cloud-sync";
+
+const GUEST_KEY = "fitforge_guest_mode";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  isGuest: boolean;
   signOut: () => Promise<void>;
+  enterGuestMode: () => void;
+  exitGuestMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
+  isGuest: false,
   signOut: async () => {},
+  enterGuestMode: () => {},
+  exitGuestMode: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -22,14 +30,20 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState<boolean>(() => {
+    try { return localStorage.getItem(GUEST_KEY) === "1"; } catch { return false; }
+  });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setLoading(false);
+        if (session?.user) {
+          try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
+          setIsGuest(false);
+        }
         if (event === "SIGNED_IN" && session?.user) {
-          // Hidrata cache local com dados do servidor (em background)
           setTimeout(() => {
             hydrateFromCloud().catch(() => {});
             maybeDailySync().catch(() => {});
@@ -49,7 +63,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Sync diário em background quando a aba volta a ficar visível
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         maybeDailySync().catch(() => {});
@@ -63,12 +76,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
+    try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
+    setIsGuest(false);
     await supabase.auth.signOut();
-  };
+  }, []);
+
+  const enterGuestMode = useCallback(() => {
+    try { localStorage.setItem(GUEST_KEY, "1"); } catch { /* ignore */ }
+    setIsGuest(true);
+  }, []);
+
+  const exitGuestMode = useCallback(() => {
+    try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
+    setIsGuest(false);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>
+    <AuthContext.Provider value={{
+      session,
+      user: session?.user ?? null,
+      loading,
+      isGuest,
+      signOut,
+      enterGuestMode,
+      exitGuestMode,
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -16,7 +16,7 @@ import logoImg from "@/assets/logo-fitforge.png";
 import { generateWorkoutPDF } from "@/lib/pdf-generator";
 import { toast } from "sonner";
 import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory, savePlan } from "@/lib/storage";
-import { motion, AnimatePresence } from "framer-motion";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
@@ -317,15 +317,13 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
       <ChatBot profile={profile} />
 
       {/* Rest Timer */}
-      <AnimatePresence>
-        {activeTimer && (
-          <RestTimer
-            key={activeTimer + Date.now()}
-            duration={activeTimer}
-            onComplete={() => setActiveTimer(null)}
-          />
-        )}
-      </AnimatePresence>
+      {activeTimer && (
+        <RestTimer
+          key={activeTimer + Date.now()}
+          duration={activeTimer}
+          onComplete={() => setActiveTimer(null)}
+        />
+      )}
 
       {/* Clear Confirmation Dialog */}
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>

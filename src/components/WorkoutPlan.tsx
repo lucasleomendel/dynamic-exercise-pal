@@ -217,61 +217,40 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
 
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Hero */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8"
-        >
+        <div className="mb-8 animate-fade-in">
           <h1 className="font-display text-3xl font-bold mb-2 text-gradient" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{plan.title}</h1>
           <p className="text-muted-foreground">{plan.description}</p>
-        </motion.div>
+        </div>
 
         {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="grid grid-cols-5 gap-2 sm:gap-3 mb-8"
-        >
+        <div className="grid grid-cols-5 gap-2 sm:gap-3 mb-8 animate-fade-in">
           {[
             { label: "Peso", value: `${profile.weight}kg` },
             { label: "Altura", value: `${profile.height}cm` },
             { label: "IMC", value: bmi },
             { label: "Dias/sem", value: `${plan.daysPerWeek}x` },
             { label: "Sessão", value: profile.hoursPerSession < 1 ? `${Math.round(profile.hoursPerSession * 60)}min` : `${profile.hoursPerSession}h` },
-          ].map((stat, i) => (
-            <motion.div
+          ].map((stat) => (
+            <div
               key={stat.label}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.1 + i * 0.05 }}
               className="card-elevated rounded-xl p-3 sm:p-4 text-center"
             >
               <span className="text-lg sm:text-xl font-bold font-display text-primary">{stat.value}</span>
               <span className="text-[10px] sm:text-xs text-muted-foreground block mt-1">{stat.label}</span>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
 
         {/* Water Tracker */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mb-6"
-        >
+        <div className="mb-6 animate-fade-in">
           <WaterTracker weight={profile.weight} hoursPerSession={profile.hoursPerSession} daysPerWeek={profile.daysPerWeek} />
-        </motion.div>
+        </div>
 
         {/* Days */}
         <div className="space-y-3">
           {plan.days.map((day, i) => (
-            <motion.div
+            <div
               key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 + i * 0.08 }}
               className="rounded-2xl border border-border overflow-hidden transition-all"
             >
               <button
@@ -287,66 +266,47 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
                     <p className="text-sm text-muted-foreground">{day.focus} • {day.exercises.length} exercícios</p>
                   </div>
                 </div>
-                <motion.div
-                  animate={{ rotate: expandedDay === i ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                </motion.div>
+                <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${expandedDay === i ? "rotate-180" : ""}`} />
               </button>
 
-              <AnimatePresence>
-                {expandedDay === i && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-5 pb-3">
-                      <div className="flex items-center gap-2 mb-3">
-                        <label className="text-xs text-muted-foreground whitespace-nowrap">Dia da semana</label>
-                        <Select value={day.day} onValueChange={(v) => handleDayChange(i, v)}>
-                          <SelectTrigger className="h-8 text-xs w-36">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DAY_NAMES.map(n => (
-                              <SelectItem key={n} value={n}>{n}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+              {expandedDay === i && (
+                <div className="overflow-hidden animate-accordion-down">
+                  <div className="px-5 pb-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <label className="text-xs text-muted-foreground whitespace-nowrap">Dia da semana</label>
+                      <Select value={day.day} onValueChange={(v) => handleDayChange(i, v)}>
+                        <SelectTrigger className="h-8 text-xs w-36">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DAY_NAMES.map(n => (
+                            <SelectItem key={n} value={n}>{n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="px-5 pb-5 space-y-2">
-                      {day.exercises.map((ex, j) => {
-                        const exKey = `${i}-${j}`;
-                        return (
-                          <motion.div
-                            key={j}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: j * 0.04 }}
-                          >
-                            <ExerciseCard
-                              exercise={ex}
-                              index={j}
-                              exerciseKey={exKey}
-                              checked={!!checked[exKey]}
-                              onToggleCheck={toggleCheck}
-                              savedWeight={weights[exKey]}
-                              onWeightChange={(key, w) => handleWeightChange(key, w, ex.name, ex.muscle)}
-                              weightSaved={weightSaved === exKey}
-                            />
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+                  </div>
+                  <div className="px-5 pb-5 space-y-2">
+                    {day.exercises.map((ex, j) => {
+                      const exKey = `${i}-${j}`;
+                      return (
+                        <ExerciseCard
+                          key={j}
+                          exercise={ex}
+                          index={j}
+                          exerciseKey={exKey}
+                          checked={!!checked[exKey]}
+                          onToggleCheck={toggleCheck}
+                          savedWeight={weights[exKey]}
+                          onWeightChange={(key, w) => handleWeightChange(key, w, ex.name, ex.muscle)}
+                          weightSaved={weightSaved === exKey}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
 

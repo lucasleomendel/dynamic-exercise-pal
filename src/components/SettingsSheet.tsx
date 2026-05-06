@@ -90,9 +90,63 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
             </div>
           </button>
 
+          <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground text-sm">Modo avançado</h3>
+                <p className="text-xs text-muted-foreground">Habilita métodos de treino avançados</p>
+              </div>
+              <Switch
+                checked={advancedMode}
+                onCheckedChange={(v) => { setAdvancedMode(v); updateProfile({ advanced_mode: v }); }}
+              />
+            </div>
+            {advancedMode && (
+              <div className="pt-2 border-t border-border space-y-2">
+                <label className="text-xs text-muted-foreground">Método de treino</label>
+                <Select
+                  value={trainingMethod || "default"}
+                  onValueChange={(v) => {
+                    const val = v === "default" ? "" : v;
+                    setTrainingMethod(val);
+                    updateProfile({ training_method: val || null });
+                  }}
+                >
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Padrão" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Padrão (sem técnica)</SelectItem>
+                    {methods.map((m) => (
+                      <SelectItem key={m.slug} value={m.slug}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {trainingMethod && (
+                  <p className="text-[11px] text-muted-foreground leading-snug">
+                    {methods.find((m) => m.slug === trainingMethod)?.short_description}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           {showPersonal && (
             <button
               onClick={() => { setOpen(false); navigate("/personal"); }}
+              className="w-full flex items-center gap-3 p-4 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Dumbbell className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Modo Personal</h3>
+                <p className="text-xs text-muted-foreground">Monte o treino do aluno manualmente</p>
+              </div>
+            </button>
+          )}
+
               className="w-full flex items-center gap-3 p-4 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"
             >
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">

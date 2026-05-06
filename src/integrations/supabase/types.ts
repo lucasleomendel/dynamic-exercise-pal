@@ -104,6 +104,90 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_library: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          default_reps: string | null
+          default_rest: string | null
+          default_sets: number | null
+          difficulty: string | null
+          equipment: string | null
+          id: string
+          last_verified_at: string | null
+          muscle_group: string
+          name: string
+          secondary_muscles: string[] | null
+          source: string | null
+          technique_tip: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          default_reps?: string | null
+          default_rest?: string | null
+          default_sets?: number | null
+          difficulty?: string | null
+          equipment?: string | null
+          id?: string
+          last_verified_at?: string | null
+          muscle_group: string
+          name: string
+          secondary_muscles?: string[] | null
+          source?: string | null
+          technique_tip?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          default_reps?: string | null
+          default_rest?: string | null
+          default_sets?: number | null
+          difficulty?: string | null
+          equipment?: string | null
+          id?: string
+          last_verified_at?: string | null
+          muscle_group?: string
+          name?: string
+          secondary_muscles?: string[] | null
+          source?: string | null
+          technique_tip?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      library_updates: {
+        Row: {
+          exercises_added: number | null
+          exercises_updated: number | null
+          id: string
+          methods_updated: number | null
+          notes: string | null
+          ran_at: string
+          status: string
+        }
+        Insert: {
+          exercises_added?: number | null
+          exercises_updated?: number | null
+          id?: string
+          methods_updated?: number | null
+          notes?: string | null
+          ran_at?: string
+          status?: string
+        }
+        Update: {
+          exercises_added?: number | null
+          exercises_updated?: number | null
+          id?: string
+          methods_updated?: number | null
+          notes?: string | null
+          ran_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       personal_student_links: {
         Row: {
           created_at: string | null
@@ -135,6 +219,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          advanced_mode: boolean | null
           age: number | null
           avatar_url: string | null
           birth_date: string | null
@@ -153,11 +238,13 @@ export type Database = {
           selected_muscles: string[] | null
           sex: string | null
           split_legs: boolean | null
+          training_method: string | null
           updated_at: string
           user_id: string
           weight: number | null
         }
         Insert: {
+          advanced_mode?: boolean | null
           age?: number | null
           avatar_url?: string | null
           birth_date?: string | null
@@ -176,11 +263,13 @@ export type Database = {
           selected_muscles?: string[] | null
           sex?: string | null
           split_legs?: boolean | null
+          training_method?: string | null
           updated_at?: string
           user_id: string
           weight?: number | null
         }
         Update: {
+          advanced_mode?: boolean | null
           age?: number | null
           avatar_url?: string | null
           birth_date?: string | null
@@ -199,9 +288,55 @@ export type Database = {
           selected_muscles?: string[] | null
           sex?: string | null
           split_legs?: boolean | null
+          training_method?: string | null
           updated_at?: string
           user_id?: string
           weight?: number | null
+        }
+        Relationships: []
+      }
+      progression_log: {
+        Row: {
+          analyzed_at: string
+          applied: boolean | null
+          avg_completion_rate: number | null
+          created_at: string
+          id: string
+          period_end: string | null
+          period_start: string | null
+          plan_changes: Json | null
+          recommendation: string | null
+          user_id: string
+          weight_progression: Json | null
+          workouts_completed: number | null
+        }
+        Insert: {
+          analyzed_at?: string
+          applied?: boolean | null
+          avg_completion_rate?: number | null
+          created_at?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          plan_changes?: Json | null
+          recommendation?: string | null
+          user_id: string
+          weight_progression?: Json | null
+          workouts_completed?: number | null
+        }
+        Update: {
+          analyzed_at?: string
+          applied?: boolean | null
+          avg_completion_rate?: number | null
+          created_at?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          plan_changes?: Json | null
+          recommendation?: string | null
+          user_id?: string
+          weight_progression?: Json | null
+          workouts_completed?: number | null
         }
         Relationships: []
       }
@@ -283,6 +418,48 @@ export type Database = {
           status?: string
           sync_type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      training_methods: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          full_description: string
+          id: string
+          intensity: string | null
+          name: string
+          notes: string | null
+          recommended_for: string | null
+          short_description: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          full_description: string
+          id?: string
+          intensity?: string | null
+          name: string
+          notes?: string | null
+          recommended_for?: string | null
+          short_description: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          full_description?: string
+          id?: string
+          intensity?: string | null
+          name?: string
+          notes?: string | null
+          recommended_for?: string | null
+          short_description?: string
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }

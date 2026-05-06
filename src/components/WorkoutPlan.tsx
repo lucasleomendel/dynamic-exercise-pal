@@ -47,8 +47,12 @@ interface Props {
 }
 
 const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) => {
-  const { signOut, isGuest } = useAuth();
+  const { signOut, isGuest, exitGuestMode } = useAuth();
   const navigate = useNavigate();
+  const goToAuth = useCallback(() => {
+    exitGuestMode();
+    navigate("/auth");
+  }, [exitGuestMode, navigate]);
   const [expandedDay, setExpandedDay] = useState<number>(0);
   const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
   const [weights, setWeights] = useState<Record<string, number>>(() => {
@@ -177,7 +181,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
                   <Settings className="w-4 h-4 mr-2" /> Configurações
                 </DropdownMenuItem>
                 {isGuest ? (
-                  <DropdownMenuItem onClick={() => navigate("/auth")} className="text-primary focus:text-primary">
+                  <DropdownMenuItem onClick={goToAuth} className="text-primary focus:text-primary">
                     <LogOut className="w-4 h-4 mr-2" /> Entrar / Cadastrar
                   </DropdownMenuItem>
                 ) : (
@@ -193,7 +197,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
           <div className="max-w-2xl mx-auto px-4 pb-2">
             <div className="flex items-center justify-between gap-2 text-[11px] px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary">
               <span>👤 Modo visitante · seus dados ficam só nesse dispositivo</span>
-              <button onClick={() => navigate("/auth")} className="font-semibold hover:underline shrink-0">Entrar</button>
+              <button onClick={goToAuth} className="font-semibold hover:underline shrink-0">Entrar</button>
             </div>
           </div>
         )}

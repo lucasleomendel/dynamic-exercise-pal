@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Settings, Dumbbell, Sun, Moon } from "lucide-react";
+import { Settings, Dumbbell, Sun, Moon, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasPersonalAccess } from "@/lib/admin";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface TrainingMethod { slug: string; name: string; short_description: string; }
+
 
 interface Props {
   open?: boolean;

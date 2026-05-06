@@ -197,7 +197,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
           <div className="max-w-2xl mx-auto px-4 pb-2">
             <div className="flex items-center justify-between gap-2 text-[11px] px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary">
               <span>👤 Modo visitante · seus dados ficam só nesse dispositivo</span>
-              <button onClick={() => navigate("/auth")} className="font-semibold hover:underline shrink-0">Entrar</button>
+              <button onClick={goToAuth} className="font-semibold hover:underline shrink-0">Entrar</button>
             </div>
           </div>
         )}

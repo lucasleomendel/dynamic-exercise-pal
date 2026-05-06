@@ -58,10 +58,6 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
     if (error) toast.error("Erro ao salvar"); else toast.success("Atualizado");
   };
 
-    document.documentElement.classList.toggle("light", theme === "light");
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("fitforge_theme", theme);
-  }, [theme]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

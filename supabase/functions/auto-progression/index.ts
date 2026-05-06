@@ -24,10 +24,13 @@ async function analyzeUser(supabase: ReturnType<typeof createClient>, userId: st
     supabase.from("workout_history").select("*").eq("user_id", userId).gte("workout_date", since),
     supabase.from("weight_logs").select("*").eq("user_id", userId).gte("logged_at", since).order("logged_at"),
     supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-    supabase.from("workout_plans").select("*").eq("user_id", userId).eq("is_active", true).maybeSingle(),
+    supabase.from("workout_plans").select("*").eq("user_id", userId).eq("is_active", true).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
-  if (!profile || !plan) return { skipped: true };
+  if (!profile || !plan) {
+    console.log(`[auto-prog] skip ${userId} profile=${!!profile} plan=${!!plan}`);
+    return { skipped: true };
+  }
 
   const workoutsCompleted = history?.length ?? 0;
   const avgCompletion =

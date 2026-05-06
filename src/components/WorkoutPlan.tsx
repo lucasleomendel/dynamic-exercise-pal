@@ -181,7 +181,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
                   <Settings className="w-4 h-4 mr-2" /> Configurações
                 </DropdownMenuItem>
                 {isGuest ? (
-                  <DropdownMenuItem onClick={() => navigate("/auth")} className="text-primary focus:text-primary">
+                  <DropdownMenuItem onClick={goToAuth} className="text-primary focus:text-primary">
                     <LogOut className="w-4 h-4 mr-2" /> Entrar / Cadastrar
                   </DropdownMenuItem>
                 ) : (

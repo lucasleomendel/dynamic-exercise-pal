@@ -47,8 +47,12 @@ interface Props {
 }
 
 const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) => {
-  const { signOut, isGuest } = useAuth();
+  const { signOut, isGuest, exitGuestMode } = useAuth();
   const navigate = useNavigate();
+  const goToAuth = useCallback(() => {
+    exitGuestMode();
+    navigate("/auth");
+  }, [exitGuestMode, navigate]);
   const [expandedDay, setExpandedDay] = useState<number>(0);
   const [checked, setChecked] = useState<Record<string, boolean>>(loadChecked);
   const [weights, setWeights] = useState<Record<string, number>>(() => {

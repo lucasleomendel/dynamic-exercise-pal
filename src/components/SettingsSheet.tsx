@@ -27,10 +27,37 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     return (localStorage.getItem("fitforge_theme") as "dark" | "light") || "dark";
   });
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [methods, setMethods] = useState<TrainingMethod[]>([]);
+  const [trainingMethod, setTrainingMethod] = useState<string>("");
 
   const showPersonal = hasPersonalAccess(user);
 
   useEffect(() => {
+    document.documentElement.classList.toggle("light", theme === "light");
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("fitforge_theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.from("training_methods").select("slug,name,short_description").eq("active", true)
+      .then(({ data }) => setMethods((data ?? []) as TrainingMethod[]));
+    if (user) {
+      supabase.from("profiles").select("advanced_mode,training_method").eq("user_id", user.id).maybeSingle()
+        .then(({ data }) => {
+          setAdvancedMode(!!data?.advanced_mode);
+          setTrainingMethod(data?.training_method ?? "");
+        });
+    }
+  }, [open, user]);
+
+  const updateProfile = async (patch: { advanced_mode?: boolean; training_method?: string | null }) => {
+    if (!user) { toast.error("Faça login para salvar preferências"); return; }
+    const { error } = await supabase.from("profiles").update(patch).eq("user_id", user.id);
+    if (error) toast.error("Erro ao salvar"); else toast.success("Atualizado");
+  };
+
     document.documentElement.classList.toggle("light", theme === "light");
     document.documentElement.classList.toggle("dark", theme === "dark");
     localStorage.setItem("fitforge_theme", theme);

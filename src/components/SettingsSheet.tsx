@@ -146,18 +146,6 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
               </div>
             </button>
           )}
-
-              className="w-full flex items-center gap-3 p-4 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"
-            >
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Dumbbell className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground text-sm">Modo Personal</h3>
-                <p className="text-xs text-muted-foreground">Monte o treino do aluno manualmente</p>
-              </div>
-            </button>
-          )}
         </div>
       </SheetContent>
     </Sheet>

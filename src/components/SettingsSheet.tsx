@@ -52,10 +52,39 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
     }
   }, [open, user]);
 
-  const updateProfile = async (patch: { advanced_mode?: boolean; training_method?: string | null }) => {
+  const [regenerating, setRegenerating] = useState(false);
+
+  const regeneratePlan = async (methodSlug: string | null) => {
+    setRegenerating(true);
+    const t = toast.loading(methodSlug ? "Aplicando método e regenerando treino..." : "Voltando ao treino padrão...");
+    try {
+      const { data, error } = await supabase.functions.invoke("apply-training-method", {
+        body: { method: methodSlug ?? "" },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
+      // Atualiza cache local + notifica app
+      if ((data as any)?.plan) {
+        const plan = (data as any).plan;
+        localStorage.setItem("fitforge_plan", JSON.stringify(plan));
+        localStorage.setItem("fitforge_plan_ts", String(Date.now()));
+        window.dispatchEvent(new CustomEvent("fitforge:plan-updated", { detail: plan }));
+      }
+      toast.success("Treino atualizado!", { id: t });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao regenerar treino", { id: t });
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const updateProfile = async (
+    patch: { advanced_mode?: boolean; training_method?: string | null },
+    opts: { regenerate?: boolean; methodForRegen?: string | null } = {}
+  ) => {
     if (!user) { toast.error("Faça login para salvar preferências"); return; }
     const { error } = await supabase.from("profiles").update(patch).eq("user_id", user.id);
-    if (error) toast.error("Erro ao salvar"); else toast.success("Atualizado");
+    if (error) { toast.error("Erro ao salvar"); return; }
+    if (opts.regenerate) await regeneratePlan(opts.methodForRegen ?? null);
   };
 
 
@@ -101,7 +130,16 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
               </div>
               <Switch
                 checked={advancedMode}
-                onCheckedChange={(v) => { setAdvancedMode(v); updateProfile({ advanced_mode: v }); }}
+                disabled={regenerating}
+                onCheckedChange={(v) => {
+                  setAdvancedMode(v);
+                  if (!v) {
+                    setTrainingMethod("");
+                    updateProfile({ advanced_mode: false, training_method: null }, { regenerate: true, methodForRegen: null });
+                  } else {
+                    updateProfile({ advanced_mode: true }, { regenerate: true, methodForRegen: trainingMethod || null });
+                  }
+                }}
               />
             </div>
             {advancedMode && (
@@ -109,10 +147,11 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
                 <label className="text-xs text-muted-foreground">Método de treino</label>
                 <Select
                   value={trainingMethod || "default"}
+                  disabled={regenerating}
                   onValueChange={(v) => {
                     const val = v === "default" ? "" : v;
                     setTrainingMethod(val);
-                    updateProfile({ training_method: val || null });
+                    updateProfile({ training_method: val || null }, { regenerate: true, methodForRegen: val || null });
                   }}
                 >
                   <SelectTrigger className="w-full"><SelectValue placeholder="Padrão" /></SelectTrigger>

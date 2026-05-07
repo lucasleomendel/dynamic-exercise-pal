@@ -21,6 +21,16 @@ const Index = () => {
       setPlan(savedPlan);
       setView("plan");
     }
+    const onPlanUpdated = (e: Event) => {
+      const next = (e as CustomEvent).detail as WorkoutPlan;
+      if (next?.days) {
+        setPlan(next);
+        savePlan(next);
+        setView("plan");
+      }
+    };
+    window.addEventListener("fitforge:plan-updated", onPlanUpdated);
+    return () => window.removeEventListener("fitforge:plan-updated", onPlanUpdated);
   }, []);
 
   const handleSubmit = (p: UserProfile) => {

@@ -130,7 +130,16 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
               </div>
               <Switch
                 checked={advancedMode}
-                onCheckedChange={(v) => { setAdvancedMode(v); updateProfile({ advanced_mode: v }); }}
+                disabled={regenerating}
+                onCheckedChange={(v) => {
+                  setAdvancedMode(v);
+                  if (!v) {
+                    setTrainingMethod("");
+                    updateProfile({ advanced_mode: false, training_method: null }, { regenerate: true, methodForRegen: null });
+                  } else {
+                    updateProfile({ advanced_mode: true }, { regenerate: true, methodForRegen: trainingMethod || null });
+                  }
+                }}
               />
             </div>
             {advancedMode && (
@@ -138,10 +147,11 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
                 <label className="text-xs text-muted-foreground">Método de treino</label>
                 <Select
                   value={trainingMethod || "default"}
+                  disabled={regenerating}
                   onValueChange={(v) => {
                     const val = v === "default" ? "" : v;
                     setTrainingMethod(val);
-                    updateProfile({ training_method: val || null });
+                    updateProfile({ training_method: val || null }, { regenerate: true, methodForRegen: val || null });
                   }}
                 >
                   <SelectTrigger className="w-full"><SelectValue placeholder="Padrão" /></SelectTrigger>

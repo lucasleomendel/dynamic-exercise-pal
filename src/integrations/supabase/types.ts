@@ -158,6 +158,45 @@ export type Database = {
         }
         Relationships: []
       }
+      job_runs: {
+        Row: {
+          alert_raised: boolean
+          attempt: number
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          job_name: string
+          payload: Json | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          alert_raised?: boolean
+          attempt?: number
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name: string
+          payload?: Json | null
+          started_at?: string
+          status: string
+        }
+        Update: {
+          alert_raised?: boolean
+          attempt?: number
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name?: string
+          payload?: Json | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       library_updates: {
         Row: {
           exercises_added: number | null
@@ -708,7 +747,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      job_alerts: {
+        Row: {
+          attempt: number | null
+          error_message: string | null
+          finished_at: string | null
+          id: string | null
+          job_name: string | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          attempt?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string | null
+          job_name?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          attempt?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string | null
+          job_name?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       daily_health_check: { Args: never; Returns: Json }

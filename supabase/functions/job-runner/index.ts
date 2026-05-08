@@ -11,7 +11,15 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const RUNNER_SECRET = Deno.env.get("JOB_RUNNER_SECRET") ?? SERVICE_ROLE;
+
+let cachedSecret: string | null = null;
+async function getRunnerSecret(): Promise<string> {
+  if (cachedSecret) return cachedSecret;
+  const { data, error } = await admin.rpc("get_job_runner_secret");
+  if (error || !data) throw new Error(`runner secret unavailable: ${error?.message ?? "empty"}`);
+  cachedSecret = String(data);
+  return cachedSecret;
+}
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { persistSession: false },

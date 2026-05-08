@@ -784,6 +784,7 @@ export type Database = {
         Args: { p_year: number }
         Returns: undefined
       }
+      get_job_runner_secret: { Args: never; Returns: string }
       is_personal_trainer: { Args: { uid: string }; Returns: boolean }
     }
     Enums: {

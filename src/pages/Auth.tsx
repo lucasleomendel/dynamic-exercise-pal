@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -52,12 +53,27 @@ const Auth = () => {
   };
 
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) {
-      toast({ title: "Erro ao conectar com Google", description: error.message, variant: "destructive" });
+    setLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        toast({
+          title: "Erro ao conectar com Google",
+          description: result.error.message ?? "Tente novamente em instantes.",
+          variant: "destructive",
+        });
+      }
+      // Se result.redirected = true, o navegador será redirecionado.
+    } catch (e) {
+      toast({
+        title: "Erro inesperado",
+        description: e instanceof Error ? e.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 

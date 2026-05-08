@@ -37,6 +37,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <CompleteProfileDialog />
           <Routes>
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
             <Route path="/cref-validation" element={<ProtectedRoute><CREFValidation /></ProtectedRoute>} />

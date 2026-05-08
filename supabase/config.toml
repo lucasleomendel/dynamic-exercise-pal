@@ -1,1 +1,4 @@
 project_id = "lepswwvnbbyilijjldga"
+
+[functions.job-runner]
+verify_jwt = false

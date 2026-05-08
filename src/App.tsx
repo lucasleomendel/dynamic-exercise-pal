@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import CREFValidation from "./pages/CREFValidation";
 import Progress from "./pages/Progress";
 import AdminRouteGuard from "./components/AdminRouteGuard";
+import CompleteProfileDialog from "./components/CompleteProfileDialog";
 
 const queryClient = new QueryClient();
 

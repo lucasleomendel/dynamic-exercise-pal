@@ -69,9 +69,11 @@ async function logRun(row: Record<string, unknown>) {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Autenticação: aceita o JWT da service-role OU um secret dedicado
+  // Autenticação: aceita o JWT da service-role OU o segredo dedicado do runner
   const auth = req.headers.get("authorization")?.replace("Bearer ", "") ?? "";
-  if (auth !== SERVICE_ROLE && auth !== RUNNER_SECRET) {
+  let runnerSecret = "";
+  try { runnerSecret = await getRunnerSecret(); } catch (_) { /* fallback abaixo */ }
+  if (auth !== SERVICE_ROLE && (!runnerSecret || auth !== runnerSecret)) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

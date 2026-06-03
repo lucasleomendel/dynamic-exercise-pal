@@ -20,7 +20,7 @@ interface SyncPayload {
 }
 
 class SimpleLovableSyncService {
-  private syncInterval: NodeJS.Timer | null = null;
+  private syncInterval: ReturnType<typeof setInterval> | null = null;
   private syncIntervalMs = 3000; // 3 segundos
   private storageKey = 'lovable_sync_data';
   private lastSyncKey = 'lovable_last_sync';

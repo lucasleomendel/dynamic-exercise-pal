@@ -138,7 +138,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={logoImg} alt="FitForge" className="w-9 h-9 rounded-lg object-contain" />
             <span className="font-display font-bold text-lg hidden sm:inline" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
@@ -194,7 +194,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
           </div>
         </div>
         {isGuest && (
-          <div className="max-w-2xl mx-auto px-4 pb-2">
+          <div className="max-w-4xl mx-auto px-4 pb-2">
             <div className="flex items-center justify-between gap-2 text-[11px] px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary">
               <span>👤 Modo visitante · seus dados ficam só nesse dispositivo</span>
               <button onClick={goToAuth} className="font-semibold hover:underline shrink-0">Entrar</button>

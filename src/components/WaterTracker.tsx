@@ -66,7 +66,7 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
             <Droplets className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Hidratação</h3>
+            <h3 className="font-bold text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>Hidratação</h3>
             <p className="text-xs text-muted-foreground">Meta: {dailyTarget.toFixed(1)}L/dia</p>
           </div>
         </div>

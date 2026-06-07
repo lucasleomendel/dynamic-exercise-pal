@@ -296,7 +296,7 @@ const BodyCompositionSheet = ({ sex, age, weight, height, open, onOpenChange }: 
       )}
       <SheetContent side="right" className="bg-background border-border overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <SheetTitle className="text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             Composição Corporal
           </SheetTitle>
         </SheetHeader>

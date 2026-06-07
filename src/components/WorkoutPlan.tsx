@@ -141,7 +141,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={logoImg} alt="FitForge" className="w-9 h-9 rounded-lg object-contain" />
-            <span className="font-display font-bold text-lg hidden sm:inline" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FitForge</span>
+            <span className="font-display font-bold text-lg hidden sm:inline" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>FitForge</span>
           </div>
           <div className="flex items-center gap-1.5">
             <button
@@ -460,7 +460,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
                     <Calendar className="w-5 h-5 text-primary" />
                   </div>
                   <div className="text-left">
-                    <h3 className="font-display font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{day.day}</h3>
+                    <h3 className="font-display font-bold text-lg" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>{day.day}</h3>
                     <p className="text-sm text-muted-foreground">{day.focus} • {day.exercises.length} exercícios</p>
                   </div>
                 </div>

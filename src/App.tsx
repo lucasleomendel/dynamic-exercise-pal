@@ -11,6 +11,8 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import CREFValidation from "./pages/CREFValidation";
 import Progress from "./pages/Progress";
+import ResetPassword from "./pages/ResetPassword";
+import Diagnostico from "./pages/Diagnostico";
 import AdminRouteGuard from "./components/AdminRouteGuard";
 import CompleteProfileDialog from "./components/CompleteProfileDialog";
 
@@ -40,6 +42,8 @@ const App = () => (
           <CompleteProfileDialog />
           <Routes>
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/diagnostico" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
             <Route path="/cref-validation" element={<ProtectedRoute><CREFValidation /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />

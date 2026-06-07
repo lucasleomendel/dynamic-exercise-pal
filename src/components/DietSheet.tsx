@@ -86,7 +86,7 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
       )}
       <SheetContent side="right" className="bg-background border-border overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <SheetTitle className="text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             Planejador de Dieta
           </SheetTitle>
         </SheetHeader>

@@ -78,7 +78,7 @@ const ProgressSheet = () => {
       </SheetTrigger>
       <SheetContent side="right" className="bg-background border-border overflow-y-auto w-full sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <SheetTitle className="text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             Análise de Progressão
           </SheetTitle>
         </SheetHeader>

@@ -103,7 +103,7 @@ const Progress = () => {
             <ArrowLeft className="w-5 h-5" />
             <span className="font-semibold">Voltar</span>
           </button>
-          <h1 className="font-display font-bold text-lg flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h1 className="font-display font-bold text-lg flex items-center gap-2" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             <BarChart3 className="w-5 h-5 text-primary" /> Painel de Progresso
           </h1>
           <button
@@ -170,7 +170,7 @@ const Progress = () => {
             transition={{ delay: 0.1 }}
             className="rounded-2xl border border-border bg-card p-5"
           >
-            <h3 className="font-display font-bold text-base mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <h3 className="font-display font-bold text-base mb-4" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
               Treinos por semana
             </h3>
             <ResponsiveContainer width="100%" height={200}>
@@ -201,7 +201,7 @@ const Progress = () => {
             transition={{ delay: 0.15 }}
             className="rounded-2xl border border-border bg-card p-5"
           >
-            <h3 className="font-display font-bold text-base mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <h3 className="font-display font-bold text-base mb-4" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
               Volume por grupo muscular
             </h3>
             <ResponsiveContainer width="100%" height={200}>
@@ -232,7 +232,7 @@ const Progress = () => {
             transition={{ delay: 0.2 }}
             className="rounded-2xl border border-border bg-card p-5"
           >
-            <h3 className="font-display font-bold text-base mb-4 flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <h3 className="font-display font-bold text-base mb-4 flex items-center gap-2" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
               <Award className="w-5 h-5 text-primary" /> Recordes Pessoais
             </h3>
             <div className="space-y-2">
@@ -262,7 +262,7 @@ const Progress = () => {
             transition={{ delay: 0.25 }}
             className="rounded-2xl border border-border bg-card p-5"
           >
-            <h3 className="font-display font-bold text-base mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <h3 className="font-display font-bold text-base mb-4" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
               Evolução por exercício
             </h3>
 

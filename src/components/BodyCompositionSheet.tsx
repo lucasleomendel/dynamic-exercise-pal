@@ -295,13 +295,14 @@ const BodyCompositionSheet = ({ sex, age, weight, height, open, onOpenChange }: 
         </SheetTrigger>
       )}
       <SheetContent side="right" className="bg-background border-border overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
-            Composição Corporal
+        <SheetHeader className="border-b border-border pb-3">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">Medições</span>
+          <SheetTitle className="text-foreground font-display text-2xl tracking-wide leading-none" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
+            COMPOSIÇÃO CORPORAL
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-5 space-y-4">
           <Tabs defaultValue="skinfolds" className="w-full">
             <TabsList className="w-full">
               <TabsTrigger value="skinfolds" className="flex-1 text-xs">Dobras</TabsTrigger>

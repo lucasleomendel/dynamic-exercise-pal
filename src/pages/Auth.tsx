@@ -110,12 +110,23 @@ const Auth = () => {
     "Enviaremos um link para seu email";
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <img src={logoImg} alt="FitForge" className="w-16 h-16 mx-auto rounded-2xl" />
-          <h1 className="font-display text-3xl text-foreground tracking-wide">{title}</h1>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
+    <div className="min-h-screen bg-background">
+      <div className="w-full max-w-sm mx-auto px-4 pt-8 pb-8 space-y-5">
+        {/* Industrial Compact header */}
+        <div className="flex items-center gap-3 pb-3 border-b border-border">
+          <img src={logoImg} alt="FitForge" className="w-11 h-11 rounded-lg" />
+          <div className="leading-tight">
+            <span className="font-display text-xl tracking-wider text-foreground block">FITFORGE</span>
+            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Forge your body · Build the plan</span>
+          </div>
+        </div>
+
+        <div>
+          <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">
+            {mode === "login" ? "Acesso" : mode === "signup" ? "Cadastro" : "Recuperação"}
+          </span>
+          <h1 className="font-display text-3xl text-foreground tracking-wide leading-none mt-1">{title}</h1>
+          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
         </div>
 
         {mode === "signup" && (

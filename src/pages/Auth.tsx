@@ -6,17 +6,46 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Mail, Lock, Eye, EyeOff, LogIn, UserCircle2, ShieldCheck, Dumbbell } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, LogIn, UserCircle2, ShieldCheck, Dumbbell, User, IdCard, Calendar, Phone } from "lucide-react";
 import logoImg from "@/assets/logo-fitforge.png";
 
 type Mode = "login" | "signup" | "forgot";
 type Role = "aluno" | "personal";
 
+const isValidCPF = (cpf: string): boolean => {
+  const c = cpf.replace(/\D/g, "");
+  if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(c[i]) * (10 - i);
+  let d1 = 11 - (sum % 11); if (d1 >= 10) d1 = 0;
+  if (d1 !== parseInt(c[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(c[i]) * (11 - i);
+  let d2 = 11 - (sum % 11); if (d2 >= 10) d2 = 0;
+  return d2 === parseInt(c[10]);
+};
+const formatCPF = (v: string) =>
+  v.replace(/\D/g, "").slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+const formatPhone = (v: string) =>
+  v.replace(/\D/g, "").slice(0, 11)
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+
 const Auth = () => {
+  // tab: login | signup_aluno | signup_personal
+  const [tab, setTab] = useState<"login" | "signup_aluno" | "signup_personal">("login");
   const [mode, setMode] = useState<Mode>("login");
-  const [role, setRole] = useState<Role>("aluno");
+  const role: Role = tab === "signup_personal" ? "personal" : "aluno";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [phone, setPhone] = useState("");
   const [cref, setCref] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,33 +53,51 @@ const Auth = () => {
   const { enterGuestMode } = useAuth();
   const navigate = useNavigate();
 
+  const isSignup = tab !== "login" && mode !== "forgot";
+  const isLogin = tab === "login" && mode !== "forgot";
+
+  const switchTab = (t: typeof tab) => {
+    setTab(t);
+    setMode(t === "login" ? "login" : "signup");
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast({ title: "Login realizado com sucesso!" });
       } else if (mode === "signup") {
+        // Validações de signup
+        if (!name.trim()) { toast({ title: "Informe seu nome", variant: "destructive" }); setLoading(false); return; }
+        if (!isValidCPF(cpf)) { toast({ title: "CPF inválido", variant: "destructive" }); setLoading(false); return; }
+        if (!birthDate) { toast({ title: "Informe sua data de nascimento", variant: "destructive" }); setLoading(false); return; }
+        if (phone.replace(/\D/g, "").length < 10) { toast({ title: "Telefone inválido", variant: "destructive" }); setLoading(false); return; }
         if (role === "personal" && cref.trim().length < 9) {
           toast({ title: "CREF obrigatório", description: "Informe o registro completo (ex: 012345-G/SP).", variant: "destructive" });
-          setLoading(false);
-          return;
+          setLoading(false); return;
+        }
+
+        const metadata: Record<string, unknown> = {
+          name: name.trim(),
+          cpf: cpf.replace(/\D/g, ""),
+          phone: phone.replace(/\D/g, ""),
+          birth_date: birthDate,
+        };
+        if (role === "personal") {
+          metadata.pending_cref = cref.trim().toUpperCase();
+          metadata.requested_role = "personal";
         }
 
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: role === "personal" ? { pending_cref: cref.trim().toUpperCase(), requested_role: "personal" } : {},
-          },
+          options: { emailRedirectTo: window.location.origin, data: metadata },
         });
         if (error) throw error;
 
-        // Se for personal e a sessão já existe (auto-confirm), valida CREF agora.
         if (role === "personal" && data.session?.user) {
           try {
             const { data: vd } = await supabase.functions.invoke("validate-cref", {
@@ -68,18 +115,14 @@ const Auth = () => {
             return;
           }
         }
-
-        toast({
-          title: "Cadastro realizado!",
-          description: "Verifique seu email para confirmar a conta.",
-        });
+        toast({ title: "Cadastro realizado!", description: "Verifique seu email para confirmar a conta." });
       } else if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
         toast({ title: "Email enviado", description: "Confira sua caixa para redefinir a senha." });
-        setMode("login");
+        setMode("login"); setTab("login");
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Erro desconhecido";
@@ -93,25 +136,28 @@ const Auth = () => {
     setLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-      if (result.error) {
-        toast({ title: "Erro ao conectar com Google", description: result.error.message ?? "Tente novamente.", variant: "destructive" });
-      }
+      if (result.error) toast({ title: "Erro ao conectar com Google", description: result.error.message ?? "Tente novamente.", variant: "destructive" });
     } catch (e) {
       toast({ title: "Erro inesperado", description: e instanceof Error ? e.message : "Tente novamente.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  const title = mode === "login" ? "Entrar" : mode === "signup" ? "Criar Conta" : "Recuperar senha";
-  const subtitle =
-    mode === "login" ? "Acesse seu treino personalizado" :
-    mode === "signup" ? "Comece sua jornada fitness" :
-    "Enviaremos um link para seu email";
+  const title = mode === "forgot" ? "Recuperar senha"
+    : tab === "login" ? "Entrar"
+    : tab === "signup_personal" ? "Cadastro Personal"
+    : "Cadastro Aluno";
+  const subtitle = mode === "forgot" ? "Enviaremos um link para seu email"
+    : tab === "login" ? "Acesse seu treino personalizado"
+    : tab === "signup_personal" ? "Cadastre-se com CREF para gerenciar alunos"
+    : "Comece sua jornada fitness";
+  const eyebrow = mode === "forgot" ? "Recuperação"
+    : tab === "login" ? "Acesso"
+    : tab === "signup_personal" ? "Profissional"
+    : "Novo aluno";
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="w-full max-w-sm mx-auto px-4 pt-8 pb-8 space-y-5">
+      <div className="w-full max-w-sm mx-auto px-4 pt-6 pb-8 space-y-4">
         {/* Industrial Compact header */}
         <div className="flex items-center gap-3 pb-3 border-b border-border">
           <img src={logoImg} alt="FitForge" className="w-11 h-11 rounded-lg" />
@@ -121,38 +167,38 @@ const Auth = () => {
           </div>
         </div>
 
-        <div>
-          <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">
-            {mode === "login" ? "Acesso" : mode === "signup" ? "Cadastro" : "Recuperação"}
-          </span>
-          <h1 className="font-display text-3xl text-foreground tracking-wide leading-none mt-1">{title}</h1>
-          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
-        </div>
-
-        {mode === "signup" && (
-          <div className="grid grid-cols-2 gap-2 p-1 bg-secondary rounded-lg">
-            <button
-              type="button"
-              onClick={() => setRole("aluno")}
-              className={`flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition ${
-                role === "aluno" ? "bg-background text-foreground shadow" : "text-muted-foreground"
-              }`}
-            >
-              <Dumbbell className="w-4 h-4" /> Aluno
+        {/* 3-tab segmented control (always visible exceto em forgot) */}
+        {mode !== "forgot" && (
+          <div className="grid grid-cols-3 gap-1 p-1 bg-secondary/60 rounded-lg border border-border">
+            <button type="button" onClick={() => switchTab("login")}
+              className={`flex items-center justify-center gap-1.5 py-2 rounded-md text-[11px] font-display tracking-wider uppercase transition ${tab === "login" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              <LogIn className="w-3.5 h-3.5" /> Entrar
             </button>
-            <button
-              type="button"
-              onClick={() => setRole("personal")}
-              className={`flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition ${
-                role === "personal" ? "bg-background text-foreground shadow" : "text-muted-foreground"
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" /> Personal
+            <button type="button" onClick={() => switchTab("signup_aluno")}
+              className={`flex items-center justify-center gap-1.5 py-2 rounded-md text-[11px] font-display tracking-wider uppercase transition ${tab === "signup_aluno" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              <Dumbbell className="w-3.5 h-3.5" /> Aluno
+            </button>
+            <button type="button" onClick={() => switchTab("signup_personal")}
+              className={`flex items-center justify-center gap-1.5 py-2 rounded-md text-[11px] font-display tracking-wider uppercase transition ${tab === "signup_personal" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              <ShieldCheck className="w-3.5 h-3.5" /> Personal
             </button>
           </div>
         )}
 
-        <form onSubmit={handleEmailAuth} className="space-y-4">
+        <div>
+          <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">{eyebrow}</span>
+          <h1 className="font-display text-3xl text-foreground tracking-wide leading-none mt-1">{title}</h1>
+          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+        </div>
+
+        <form onSubmit={handleEmailAuth} className="space-y-3">
+          {isSignup && (
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} className="pl-10" required />
+            </div>
+          )}
+
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" required />
@@ -161,56 +207,58 @@ const Auth = () => {
           {mode !== "forgot" && (
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 pr-10"
-                required
-                minLength={6}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
+              <Input type={showPassword ? "text" : "password"} placeholder="Senha" value={password}
+                onChange={(e) => setPassword(e.target.value)} className="pl-10 pr-10" required minLength={6} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           )}
 
-          {mode === "signup" && role === "personal" && (
-            <div className="space-y-1">
+          {isSignup && (
+            <>
               <div className="relative">
-                <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={cref}
-                  onChange={(e) => setCref(e.target.value.toUpperCase())}
-                  placeholder="CREF (ex: 012345-G/SP)"
-                  className="pl-10 tracking-wider"
-                  maxLength={12}
-                  required
-                />
+                <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input inputMode="numeric" placeholder="CPF (000.000.000-00)" value={cpf}
+                  onChange={(e) => setCpf(formatCPF(e.target.value))} className="pl-10" required />
               </div>
-              <p className="text-[10px] text-muted-foreground px-1">
-                6 dígitos + G (graduado) ou P (provisionado) + UF
-              </p>
-            </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <Input type="date" value={birthDate} max={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => setBirthDate(e.target.value)} className="pl-9" required />
+                </div>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input inputMode="tel" placeholder="(11) 99999-9999" value={phone}
+                    onChange={(e) => setPhone(formatPhone(e.target.value))} className="pl-10" required />
+                </div>
+              </div>
+
+              {role === "personal" && (
+                <div className="space-y-1 rounded-lg border border-primary/40 bg-primary/5 p-3">
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-primary font-semibold">Validação CREF</span>
+                  <div className="relative mt-1">
+                    <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+                    <Input value={cref} onChange={(e) => setCref(e.target.value.toUpperCase())}
+                      placeholder="CREF (ex: 012345-G/SP)" className="pl-10 tracking-wider" maxLength={12} required />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">6 dígitos + G (graduado) ou P (provisionado) + UF. Validação imediata.</p>
+                </div>
+              )}
+            </>
           )}
 
-          <Button type="submit" className="w-full gap-2" disabled={loading}>
+          <Button type="submit" className="w-full gap-2 font-display tracking-wider text-base h-11" disabled={loading}>
             <LogIn className="w-4 h-4" />
-            {loading ? "Carregando..." : mode === "login" ? "Entrar" : mode === "signup" ? "Cadastrar" : "Enviar link"}
+            {loading ? "CARREGANDO..." : mode === "login" ? "ENTRAR" : mode === "signup" ? (role === "personal" ? "CADASTRAR COMO PERSONAL" : "CRIAR CONTA") : "ENVIAR LINK"}
           </Button>
         </form>
 
-        {mode === "login" && (
+        {isLogin && (
           <div className="text-center">
-            <button
-              onClick={() => setMode("forgot")}
-              className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
-            >
+            <button onClick={() => setMode("forgot")} className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
               Esqueci minha senha
             </button>
           </div>
@@ -218,10 +266,10 @@ const Auth = () => {
 
         {mode !== "forgot" && (
           <>
-            <div className="relative">
+            <div className="relative pt-1">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">ou</span>
+                <span className="bg-background px-2 text-muted-foreground tracking-[0.2em] text-[10px]">ou</span>
               </div>
             </div>
 
@@ -235,40 +283,23 @@ const Auth = () => {
               Entrar com Google
             </Button>
 
-            <Button
-              variant="ghost"
-              className="w-full gap-2 text-muted-foreground hover:text-foreground"
-              onClick={() => { enterGuestMode(); navigate("/", { replace: true }); }}
-            >
-              <UserCircle2 className="w-4 h-4" />
-              Continuar como visitante
-            </Button>
+            {isLogin && (
+              <Button variant="ghost" className="w-full gap-2 text-muted-foreground hover:text-foreground"
+                onClick={() => { enterGuestMode(); navigate("/", { replace: true }); }}>
+                <UserCircle2 className="w-4 h-4" />
+                Continuar como visitante
+              </Button>
+            )}
           </>
         )}
 
-        <p className="text-center text-sm text-muted-foreground">
-          {mode === "login" && (
-            <>
-              Não tem conta?{" "}
-              <button onClick={() => setMode("signup")} className="text-primary font-medium hover:underline">
-                Cadastre-se
-              </button>
-            </>
-          )}
-          {mode === "signup" && (
-            <>
-              Já tem conta?{" "}
-              <button onClick={() => setMode("login")} className="text-primary font-medium hover:underline">
-                Faça login
-              </button>
-            </>
-          )}
-          {mode === "forgot" && (
-            <button onClick={() => setMode("login")} className="text-primary font-medium hover:underline">
+        {mode === "forgot" && (
+          <p className="text-center text-sm">
+            <button onClick={() => { setMode("login"); setTab("login"); }} className="text-primary font-medium hover:underline">
               Voltar ao login
             </button>
-          )}
-        </p>
+          </p>
+        )}
       </div>
     </div>
   );

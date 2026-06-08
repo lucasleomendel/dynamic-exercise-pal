@@ -98,13 +98,14 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
         </SheetTrigger>
       )}
       <SheetContent side="right" className="bg-background border-border overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
-            Configurações
+        <SheetHeader className="border-b border-border pb-3">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">Sistema</span>
+          <SheetTitle className="text-foreground font-display text-2xl tracking-wide leading-none" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
+            CONFIGURAÇÕES
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-5 space-y-3">
           {/* Theme toggle */}
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

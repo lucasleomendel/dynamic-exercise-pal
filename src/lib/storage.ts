@@ -132,4 +132,9 @@ export function clearAll() {
   localStorage.removeItem(WEIGHTS_KEY);
   localStorage.removeItem(REPORT_KEY);
   localStorage.removeItem(BODY_COMP_KEY);
+  localStorage.removeItem(WORKOUT_HISTORY_KEY);
+  localStorage.removeItem("fitforge_water");
+  localStorage.removeItem("fitforge_profile_ts");
+  localStorage.removeItem("fitforge_plan_ts");
+  localStorage.removeItem("fitforge_last_sync");
 }

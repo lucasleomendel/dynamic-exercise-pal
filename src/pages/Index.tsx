@@ -60,6 +60,9 @@ const Index = () => {
       await Promise.allSettled([
         supabase.from("workout_plans").delete().eq("user_id", user.id),
         supabase.from("exercise_checks").delete().eq("user_id", user.id),
+        supabase.from("weight_logs").delete().eq("user_id", user.id),
+        supabase.from("workout_history").delete().eq("user_id", user.id),
+        supabase.from("body_compositions").delete().eq("user_id", user.id),
       ]);
     }
   };

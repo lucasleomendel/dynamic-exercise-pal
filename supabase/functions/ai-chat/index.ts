@@ -7,84 +7,98 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é o FitForge AI, um assistente especialista em fitness, musculação, nutrição esportiva, composição corporal e saúde.
+const SYSTEM_PROMPT = `Você é o **FitForge AI**, assistente sênior em fitness, musculação, nutrição esportiva, composição corporal e performance.
 
-Suas características:
-- Responda SEMPRE em português brasileiro
-- Seja objetivo, prático e baseado em evidências científicas atualizadas
-- Use linguagem acessível mas tecnicamente precisa
-- Forneça dicas de execução, séries, repetições e descanso quando relevante
-- Pode recomendar substituições de exercícios
-- Conhece periodização, hipertrofia, força, emagrecimento e performance
-- Quando não souber algo com certeza, seja honesto e sugira consultar um profissional
-- Use emojis moderadamente para tornar a conversa mais amigável (💪🏋️‍♂️🥗)
-- Mantenha respostas concisas (máx 200 palavras) exceto quando o usuário pedir detalhes
-- Pode fazer cálculos de IMC, TMB, macros quando solicitado
-- Quando o usuário fornecer dados pessoais (peso, altura, idade, objetivo), use essas informações para personalizar as respostas
+## Identidade
+- Tom: direto, motivador, profissional — sem rodeios.
+- Idioma: SEMPRE português brasileiro.
+- Baseado em evidências (ACSM, ISSN, posicionamentos atuais). Cite quando relevante.
 
-Se o usuário perguntar algo fora do escopo fitness/saúde, responda brevemente mas redirecione para o tema principal.`;
+## Estilo de resposta
+- **Concisa por padrão (máx ~180 palavras)**. Aprofunde só se pedirem.
+- Use **markdown**: negrito para pontos-chave, listas curtas, headers \`##\` apenas em respostas longas.
+- Sempre que prescrever treino: dê **séries × reps · descanso · RPE/RIR · cadência** quando fizer sentido.
+- Sempre que prescrever dieta: dê **kcal, macros (P/C/G em g) e timing**.
+- Cálculos (IMC, TMB Mifflin-St Jeor, GET, macros, 1RM Epley/Brzycki) — faça na hora, mostre fórmula em uma linha.
+
+## Personalização
+- Use o PERFIL do usuário (quando fornecido) para ajustar prescrições à idade, sexo, peso, altura, nível, objetivo e disponibilidade.
+- Sugira substituições quando o exercício pedido não couber no equipamento/lesão.
+
+## Limites
+- Não diagnostique patologias. Em sinais de alerta (dor aguda, tontura, sintomas cardíacos) → encaminhe a médico/fisio.
+- Não recomende drogas/anabolizantes; explique riscos se perguntado.
+
+## Fora do escopo
+Responda brevemente e redirecione para fitness/saúde.
+
+Emojis com moderação (💪 🏋️ 🥗 📊) — só quando agregam.`;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Require authenticated user
     const authHeader = req.headers.get("Authorization");
     const jwt = authHeader?.replace("Bearer ", "");
     if (!jwt) {
-      return new Response(
-        JSON.stringify({ error: "Não autenticado" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Não autenticado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
     const supabaseAuth = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!
     );
     const { data: userData, error: authError } = await supabaseAuth.auth.getUser(jwt);
     if (authError || !userData?.user) {
-      return new Response(
-        JSON.stringify({ error: "Sessão inválida" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Sessão inválida" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const body = await req.json().catch(() => null);
-
     if (!body || !Array.isArray(body.messages)) {
-      return new Response(
-        JSON.stringify({ error: "Campo 'messages' (array) é obrigatório" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Campo 'messages' (array) é obrigatório" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const { messages, profile } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not found in environment");
-      return new Response(
-        JSON.stringify({ error: "Serviço de IA não configurado. Contate o suporte." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.error("LOVABLE_API_KEY ausente");
+      return new Response(JSON.stringify({ error: "Serviço de IA não configurado." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const sanitizedMessages = messages
       .filter((m: any) => m?.role && m?.content)
-      .slice(-20)
+      .slice(-12)
       .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 4000) }));
 
     let contextPrompt = SYSTEM_PROMPT;
     if (profile && typeof profile === "object") {
       const p = profile as Record<string, any>;
-      const bmi = p.weight && p.height ? (p.weight / ((p.height / 100) ** 2)).toFixed(1) : null;
-      contextPrompt += `\n\nPERFIL DO USUÁRIO (use para personalizar):\n` +
-        `- Nome: ${p.name ?? "—"}\n- Idade: ${p.age ?? "—"}\n- Sexo: ${p.sex ?? "—"}\n` +
-        `- Peso: ${p.weight ?? "—"}kg | Altura: ${p.height ?? "—"}cm${bmi ? ` | IMC: ${bmi}` : ""}\n` +
-        `- Objetivo: ${p.goal ?? "—"} | Nível: ${p.level ?? "—"}\n` +
-        `- Frequência: ${p.daysPerWeek ?? "—"}x/sem, ${p.hoursPerSession ?? "—"}h/sessão`;
+      const h = Number(p.height) || 0;
+      const w = Number(p.weight) || 0;
+      const age = Number(p.age) || 0;
+      const bmi = w && h ? (w / ((h / 100) ** 2)).toFixed(1) : null;
+      // Mifflin-St Jeor
+      let tmb: number | null = null;
+      if (w && h && age) {
+        tmb = p.sex === "female"
+          ? Math.round(10 * w + 6.25 * h - 5 * age - 161)
+          : Math.round(10 * w + 6.25 * h - 5 * age + 5);
+      }
+      const activityFactor = ({ sedentary: 1.2, light: 1.375, moderate: 1.55, intense: 1.725 } as any)[p.activity] || 1.4;
+      const get = tmb ? Math.round(tmb * activityFactor) : null;
+
+      contextPrompt += `\n\n## PERFIL DO USUÁRIO (use para personalizar tudo)
+- Nome: ${p.name ?? "—"} | Idade: ${age || "—"} | Sexo: ${p.sex ?? "—"}
+- Peso: ${w || "—"}kg | Altura: ${h || "—"}cm${bmi ? ` | IMC: ${bmi}` : ""}
+- Objetivo: ${p.goal ?? "—"} | Nível: ${p.level ?? "—"}
+- Frequência: ${p.daysPerWeek ?? "—"}x/sem · ${p.hoursPerSession ?? "—"}h/sessão
+- Equipamento: ${p.equipment ?? "—"} | Restrições: ${p.restrictions ?? "nenhuma"}
+${tmb ? `- TMB: ${tmb} kcal | GET estimado: ${get} kcal` : ""}`;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -94,11 +108,12 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: contextPrompt },
           ...sanitizedMessages,
         ],
+        temperature: 0.7,
         stream: true,
       }),
     });
@@ -109,21 +124,15 @@ serve(async (req) => {
       console.error(`AI gateway error: ${status} ${errorText}`);
 
       if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Muitas requisições. Aguarde alguns segundos e tente novamente." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Muitas requisições. Aguarde alguns segundos." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       if (status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos de IA esgotados. Contate o administrador." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      return new Response(
-        JSON.stringify({ error: "Erro ao conectar com a IA. Tente novamente." }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Erro ao conectar com a IA." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(response.body, {
@@ -131,9 +140,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("ai-chat error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erro interno do servidor" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro interno" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

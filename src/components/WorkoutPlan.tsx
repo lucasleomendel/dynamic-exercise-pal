@@ -102,16 +102,21 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
           setActiveTimer(exercise.rest);
         }
 
-        // Save to workout history
+        // Save to workout history APENAS quando o dia for 100% concluído
         const day = plan.days[dayIdx];
         if (day) {
           const completedCount = Object.entries(next).filter(([k, v]) => v && k.startsWith(`${dayIdx}-`)).length;
-          saveWorkoutHistory({
-            date: new Date().toISOString(),
-            completedExercises: completedCount,
-            totalExercises: day.exercises.length,
-            dayFocus: day.focus,
-          });
+          if (completedCount === day.exercises.length) {
+            saveWorkoutHistory({
+              date: new Date().toISOString(),
+              completedExercises: completedCount,
+              totalExercises: day.exercises.length,
+              dayFocus: day.focus,
+            });
+            toast.success("Parabéns! Treino concluído! 🎉", {
+              description: `Você completou todos os ${day.exercises.length} exercícios de ${day.focus}.`,
+            });
+          }
         }
       }
 

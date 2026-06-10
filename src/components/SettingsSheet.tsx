@@ -7,6 +7,7 @@ import { hasPersonalAccess } from "@/lib/admin";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { savePlan } from "@/lib/storage";
 import { toast } from "sonner";
 
 interface TrainingMethod { slug: string; name: string; short_description: string; }

@@ -146,7 +146,7 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
     setInput("");
 
     const userMsg: Message = { role: "user", content: text.trim(), timestamp: Date.now() };
-    const currentMessages = [...messages, userMsg];
+    const currentMessages = [...messagesRef.current, userMsg];
     setMessages(currentMessages);
     setIsStreaming(true);
 
@@ -187,7 +187,7 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
       },
       signal: controller.signal,
     });
-  }, [messages, isStreaming, profile]);
+  }, [isStreaming, profile]);
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();

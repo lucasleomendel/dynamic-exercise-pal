@@ -66,8 +66,7 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
       // Atualiza cache local + notifica app
       if ((data as any)?.plan) {
         const plan = (data as any).plan;
-        localStorage.setItem("fitforge_plan", JSON.stringify(plan));
-        localStorage.setItem("fitforge_plan_ts", String(Date.now()));
+        savePlan(plan);
         window.dispatchEvent(new CustomEvent("fitforge:plan-updated", { detail: plan }));
       }
       toast.success("Treino atualizado!", { id: t });

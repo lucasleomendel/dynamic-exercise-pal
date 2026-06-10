@@ -7,6 +7,7 @@ import { hasPersonalAccess } from "@/lib/admin";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { savePlan } from "@/lib/storage";
 import { toast } from "sonner";
 
 interface TrainingMethod { slug: string; name: string; short_description: string; }
@@ -65,8 +66,7 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
       // Atualiza cache local + notifica app
       if ((data as any)?.plan) {
         const plan = (data as any).plan;
-        localStorage.setItem("fitforge_plan", JSON.stringify(plan));
-        localStorage.setItem("fitforge_plan_ts", String(Date.now()));
+        savePlan(plan);
         window.dispatchEvent(new CustomEvent("fitforge:plan-updated", { detail: plan }));
       }
       toast.success("Treino atualizado!", { id: t });

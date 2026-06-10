@@ -39,9 +39,7 @@ const Index = () => {
     saveProfile(p);
     savePlan(newPlan);
     setView("plan");
-    // Persiste no banco em background (apenas se autenticado)
-    syncProfile(p).catch(() => {});
-    syncPlan(newPlan).catch(() => {});
+    // saveProfile/savePlan já fazem sync em background
   };
 
   const handleEdit = () => {

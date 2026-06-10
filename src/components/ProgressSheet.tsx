@@ -33,13 +33,19 @@ const ProgressSheet = () => {
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Regenerate on open for real-time updates
+  // Regenerate on open, mas usa cache se ainda fresco (5 min)
   useEffect(() => {
     if (isOpen) {
       const weights = loadWeights();
       setTotalEntries(weights.length);
-      const fresh = generateProgressReport();
-      setReport(fresh);
+      const cached = loadReport();
+      if (shouldRegenerateReport(cached)) {
+        const fresh = generateProgressReport();
+        setReport(fresh);
+        if (fresh) saveReport(fresh);
+      } else {
+        setReport(cached);
+      }
     }
   }, [isOpen]);
 

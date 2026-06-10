@@ -123,8 +123,10 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const openRef = useRef(open);
+  const messagesRef = useRef<Message[]>(messages);
 
   useEffect(() => { openRef.current = open; }, [open]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   useEffect(() => {
     if (open) {

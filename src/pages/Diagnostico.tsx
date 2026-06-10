@@ -132,7 +132,7 @@ const Diagnostico = () => {
   }, [user?.id]);
 
   if (loading) return null;
-  if (!user || !isMasterAdmin(user.email)) return <Navigate to="/" replace />;
+  if (!user || !isMasterAdmin(user)) return <Navigate to="/" replace />;
 
   const okCount = checks.filter((c) => c.status === "ok").length;
   const failCount = checks.filter((c) => c.status === "fail").length;

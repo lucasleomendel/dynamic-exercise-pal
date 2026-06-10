@@ -94,7 +94,9 @@ const Progress = () => {
   const handleSync = async () => {
     setSyncing(true);
     await fullSync();
-    setReport(generateProgressReport());
+    const fresh = generateProgressReport();
+    setReport(fresh);
+    if (fresh) saveReport(fresh);
     setSyncing(false);
   };
 

@@ -82,6 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = useCallback(async () => {
     try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
     setIsGuest(false);
+    hydratedRef.current = false;
     await supabase.auth.signOut();
   }, []);
 

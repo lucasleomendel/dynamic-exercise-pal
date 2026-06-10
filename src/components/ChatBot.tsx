@@ -123,8 +123,10 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const openRef = useRef(open);
+  const messagesRef = useRef<Message[]>(messages);
 
   useEffect(() => { openRef.current = open; }, [open]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   useEffect(() => {
     if (open) {
@@ -144,7 +146,7 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
     setInput("");
 
     const userMsg: Message = { role: "user", content: text.trim(), timestamp: Date.now() };
-    const currentMessages = [...messages, userMsg];
+    const currentMessages = [...messagesRef.current, userMsg];
     setMessages(currentMessages);
     setIsStreaming(true);
 
@@ -185,7 +187,7 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
       },
       signal: controller.signal,
     });
-  }, [messages, isStreaming, profile]);
+  }, [isStreaming, profile]);
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();

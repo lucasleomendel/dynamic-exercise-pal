@@ -9,8 +9,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, BarChart, Bar, Legend,
 } from "recharts";
-import { generateProgressReport, ProgressReport } from "@/lib/progress";
-import { loadWeights, loadWorkoutHistory, loadProfile } from "@/lib/storage";
+import { generateProgressReport, shouldRegenerateReport, ProgressReport } from "@/lib/progress";
+import { loadWeights, loadWorkoutHistory, loadProfile, loadReport, saveReport } from "@/lib/storage";
 import { fullSync } from "@/lib/cloud-sync";
 
 const trendIcon = {
@@ -28,7 +28,14 @@ const Progress = () => {
   const profile = useMemo(() => loadProfile(), []);
 
   useEffect(() => {
-    setReport(generateProgressReport());
+    const cached = loadReport();
+    if (shouldRegenerateReport(cached)) {
+      const fresh = generateProgressReport();
+      setReport(fresh);
+      if (fresh) saveReport(fresh);
+    } else {
+      setReport(cached);
+    }
   }, []);
 
   // Histórico para gráfico semanal (últimas 8 semanas)
@@ -87,7 +94,9 @@ const Progress = () => {
   const handleSync = async () => {
     setSyncing(true);
     await fullSync();
-    setReport(generateProgressReport());
+    const fresh = generateProgressReport();
+    setReport(fresh);
+    if (fresh) saveReport(fresh);
     setSyncing(false);
   };
 

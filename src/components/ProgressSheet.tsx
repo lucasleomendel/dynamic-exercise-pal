@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { TrendingUp, TrendingDown, Minus, BarChart3, AlertCircle, Flame, Trophy, Target, Zap, Calendar, Award, Dumbbell } from "lucide-react";
-import { ProgressReport, generateProgressReport } from "@/lib/progress";
-import { loadWeights } from "@/lib/storage";
+import { ProgressReport, generateProgressReport, shouldRegenerateReport } from "@/lib/progress";
+import { loadWeights, loadReport, saveReport } from "@/lib/storage";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 

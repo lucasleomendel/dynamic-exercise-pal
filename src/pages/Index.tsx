@@ -73,7 +73,7 @@ const Index = () => {
         onClear={handleClear}
         onPlanUpdate={(updatedPlan) => {
           setPlan(updatedPlan);
-          syncPlan(updatedPlan).catch(() => {});
+          savePlan(updatedPlan);
         }}
       />
     );

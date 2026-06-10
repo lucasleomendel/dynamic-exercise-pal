@@ -28,7 +28,14 @@ const Progress = () => {
   const profile = useMemo(() => loadProfile(), []);
 
   useEffect(() => {
-    setReport(generateProgressReport());
+    const cached = loadReport();
+    if (shouldRegenerateReport(cached)) {
+      const fresh = generateProgressReport();
+      setReport(fresh);
+      if (fresh) saveReport(fresh);
+    } else {
+      setReport(cached);
+    }
   }, []);
 
   // Histórico para gráfico semanal (últimas 8 semanas)

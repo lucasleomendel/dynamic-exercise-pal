@@ -9,8 +9,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, BarChart, Bar, Legend,
 } from "recharts";
-import { generateProgressReport, ProgressReport } from "@/lib/progress";
-import { loadWeights, loadWorkoutHistory, loadProfile } from "@/lib/storage";
+import { generateProgressReport, shouldRegenerateReport, ProgressReport } from "@/lib/progress";
+import { loadWeights, loadWorkoutHistory, loadProfile, loadReport, saveReport } from "@/lib/storage";
 import { fullSync } from "@/lib/cloud-sync";
 
 const trendIcon = {

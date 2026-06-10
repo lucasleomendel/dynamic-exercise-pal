@@ -1,4 +1,20 @@
-import { knowledgeBase, KnowledgeEntry, categoryMap } from "./chatbot-knowledge";
+import type { KnowledgeEntry } from "./chatbot-knowledge";
+
+type KBModule = typeof import("./chatbot-knowledge");
+
+let _kb: KBModule | null = null;
+let _kbPromise: Promise<KBModule> | null = null;
+
+async function getKB(): Promise<KBModule> {
+  if (_kb) return _kb;
+  if (!_kbPromise) {
+    _kbPromise = import("./chatbot-knowledge").then((mod) => {
+      _kb = mod;
+      return mod;
+    });
+  }
+  return _kbPromise;
+}
 
 function normalize(text: string): string {
   return text
@@ -18,18 +34,18 @@ interface ScoredEntry {
   score: number;
 }
 
-export function searchKnowledge(query: string): KnowledgeEntry | null {
+export async function searchKnowledge(query: string): Promise<KnowledgeEntry | null> {
   const normalizedQuery = normalize(query);
   const tokens = tokenize(query);
 
   if (tokens.length === 0) return null;
 
+  const { knowledgeBase } = await getKB();
   const scored: ScoredEntry[] = [];
 
   for (const entry of knowledgeBase) {
     let score = 0;
 
-    // Exact keyword match (highest priority)
     for (const kw of entry.keywords) {
       const nkw = normalize(kw);
       if (normalizedQuery.includes(nkw)) {
@@ -37,7 +53,6 @@ export function searchKnowledge(query: string): KnowledgeEntry | null {
       }
     }
 
-    // Token match against keywords
     for (const token of tokens) {
       for (const kw of entry.keywords) {
         const nkw = normalize(kw);
@@ -46,13 +61,11 @@ export function searchKnowledge(query: string): KnowledgeEntry | null {
       }
     }
 
-    // Token match against question
     const nq = normalize(entry.question);
     for (const token of tokens) {
       if (nq.includes(token)) score += 2;
     }
 
-    // Token match against subcategory
     const nsub = normalize(entry.subcategory);
     for (const token of tokens) {
       if (nsub.includes(token)) score += 1;
@@ -67,13 +80,15 @@ export function searchKnowledge(query: string): KnowledgeEntry | null {
   return scored.length > 0 ? scored[0].entry : null;
 }
 
-export function getEntriesByCategory(categoryKey: string): KnowledgeEntry[] {
+export async function getEntriesByCategory(categoryKey: string): Promise<KnowledgeEntry[]> {
+  const { knowledgeBase, categoryMap } = await getKB();
   const categoryName = categoryMap[categoryKey];
   if (!categoryName) return [];
   return knowledgeBase.filter(e => e.category === categoryName);
 }
 
-export function getPopularQuestions(): KnowledgeEntry[] {
+export async function getPopularQuestions(): Promise<KnowledgeEntry[]> {
+  const { knowledgeBase } = await getKB();
   const ids = ["t001", "d001", "d005", "c001", "s001", "t030", "d012", "d013", "a001", "m001"];
   return ids.map(id => knowledgeBase.find(e => e.id === id)!).filter(Boolean);
 }

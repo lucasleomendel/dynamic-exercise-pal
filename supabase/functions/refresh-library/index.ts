@@ -83,10 +83,27 @@ async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
   }
 }
 
+async function getRunnerSecret(admin: ReturnType<typeof createClient>): Promise<string | null> {
+  try {
+    const { data } = await admin.rpc("get_job_runner_secret");
+    return data ? String(data) : null;
+  } catch { return null; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    // Somente service-role ou runner-secret podem invocar (função admin/cron).
+    const auth = req.headers.get("authorization")?.replace("Bearer ", "") ?? "";
+    const runnerSecret = await getRunnerSecret(supabase);
+    if (auth !== SERVICE_ROLE && (!runnerSecret || auth !== runnerSecret)) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let added = 0, updated = 0;
 
     for (const muscle of MUSCLES) {
@@ -134,13 +151,13 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error(e);
+    console.error("refresh-library error:", e);
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     await supabase.from("library_updates").insert({
       status: "error",
-      notes: e instanceof Error ? e.message : "unknown",
+      notes: "internal error",
     });
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "err" }), {
+    return new Response(JSON.stringify({ error: "Erro interno do servidor" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

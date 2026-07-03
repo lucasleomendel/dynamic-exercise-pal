@@ -9,7 +9,7 @@ import WaterTracker from "./WaterTracker";
 import ChatBot from "./ChatBot";
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
-import { Calendar, ChevronDown, LogOut, BarChart3, MoreVertical, Download, UtensilsCrossed, Ruler, Settings, User, Loader2 } from "lucide-react";
+import { Calendar, ChevronDown, LogOut, BarChart3, MoreVertical, Download, UtensilsCrossed, Ruler, Settings, User, Loader2, Library } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import logoImg from "@/assets/logo-fitforge.png";
@@ -176,6 +176,9 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setOpenSheet("body")}>
                   <Ruler className="w-4 h-4 mr-2" /> Composição corporal
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/exercicios")}>
+                  <Library className="w-4 h-4 mr-2" /> Biblioteca de exercícios
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExport} disabled={exporting}>
                   {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}

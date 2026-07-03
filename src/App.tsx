@@ -18,6 +18,7 @@ const CREFValidation = lazy(() => import("./pages/CREFValidation"));
 const Progress = lazy(() => import("./pages/Progress"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Diagnostico = lazy(() => import("./pages/Diagnostico"));
+const ExerciseLibrary = lazy(() => import("./pages/ExerciseLibrary"));
 
 const queryClient = new QueryClient();
 

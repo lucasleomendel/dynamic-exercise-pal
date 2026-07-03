@@ -177,6 +177,9 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
                 <DropdownMenuItem onClick={() => setOpenSheet("body")}>
                   <Ruler className="w-4 h-4 mr-2" /> Composição corporal
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/exercicios")}>
+                  <Library className="w-4 h-4 mr-2" /> Biblioteca de exercícios
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExport} disabled={exporting}>
                   {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
                   Baixar PDF do treino

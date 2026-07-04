@@ -76,12 +76,14 @@ export default function ExerciseLibrary() {
     (async () => {
       const { data, error } = await supabase
         .from("exercise_library")
-        .select("id,name,muscle_group,secondary_muscles,equipment,difficulty,default_sets,default_reps,default_rest,technique_tip")
+        .select("id,name,muscle_group,secondary_muscles,equipment,difficulty,default_sets,default_reps,default_rest,technique_tip,image_url,video_url,description,steps")
         .eq("active", true).order("muscle_group").order("name");
+      if (error) console.error("[ExerciseLibrary] load error:", error.message);
       if (!error && data) setItems(data as LibraryExercise[]);
       setLoading(false);
     })();
   }, []);
+
 
   const muscles = useMemo(() => {
     const set = new Set(items.map((i) => i.muscle_group));

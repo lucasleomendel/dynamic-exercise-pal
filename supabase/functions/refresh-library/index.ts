@@ -36,8 +36,8 @@ async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "Você é um especialista em musculação. Retorne exercícios validados cientificamente para o grupo muscular pedido." },
-        { role: "user", content: `Liste 8-12 exercícios eficazes para ${muscle}, incluindo variações modernas e clássicas. Para cada um: nome em português, equipamento, dificuldade (iniciante/intermediario/avancado), séries, reps, descanso e dica técnica curta.` },
+        { role: "system", content: "Você é um especialista em musculação. Retorne exercícios validados cientificamente. Para video_url use APENAS URLs reais e verificadas do YouTube (canais reconhecidos como Jeff Nippard, ATHLEAN-X, Renaissance Periodization, Leandro Twin). Para image_url use URLs de Unsplash ou Wikimedia Commons — se não tiver certeza, omita o campo (é melhor omitir do que inventar)." },
+        { role: "user", content: `Liste 10-15 exercícios eficazes para ${muscle}, incluindo variações modernas e clássicas. Para cada um retorne: nome em português, músculos secundários, equipamento, dificuldade (iniciante/intermediario/avancado), séries, reps, descanso, dica técnica curta, descrição completa (2-3 frases), 6 passos de execução detalhados, e opcionalmente image_url e video_url reais.` },
       ],
       tools: [{
         type: "function",
@@ -60,8 +60,12 @@ async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
                     default_reps: { type: "string" },
                     default_rest: { type: "string" },
                     technique_tip: { type: "string" },
+                    description: { type: "string" },
+                    steps: { type: "array", items: { type: "string" }, minItems: 4, maxItems: 8 },
+                    image_url: { type: "string" },
+                    video_url: { type: "string" },
                   },
-                  required: ["name", "muscle_group"],
+                  required: ["name", "muscle_group", "description", "steps"],
                 },
               },
             },
@@ -72,6 +76,7 @@ async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
       tool_choice: { type: "function", function: { name: "list_exercises" } },
     }),
   });
+
 
   if (!res.ok) {
     console.error(`AI failed for ${muscle}: ${res.status}`);

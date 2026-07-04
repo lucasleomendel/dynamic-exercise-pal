@@ -15,7 +15,12 @@ interface LibraryExercise {
   default_reps: string | null;
   default_rest: string | null;
   technique_tip: string | null;
+  image_url: string | null;
+  video_url: string | null;
+  description: string | null;
+  steps: string[] | null;
 }
+
 
 const MUSCLE_LABEL: Record<string, string> = {
   peito: "Peito", costas: "Costas", quadriceps: "Quadríceps", posterior: "Posterior",

@@ -386,11 +386,16 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
 
           <Section title="Descrição">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Exercício focado em <strong className="text-foreground">{(MUSCLE_LABEL[exercise.muscle_group] ?? exercise.muscle_group).toLowerCase()}</strong>
-              {exercise.equipment ? <> utilizando <strong className="text-foreground">{exercise.equipment.toLowerCase()}</strong></> : null}
-              . Execute com controle total do movimento, priorizando a conexão mente-músculo e a amplitude completa em cada repetição.
+              {exercise.description ?? (
+                <>
+                  Exercício focado em <strong className="text-foreground">{(MUSCLE_LABEL[exercise.muscle_group] ?? exercise.muscle_group).toLowerCase()}</strong>
+                  {exercise.equipment ? <> utilizando <strong className="text-foreground">{exercise.equipment.toLowerCase()}</strong></> : null}
+                  . Execute com controle total do movimento, priorizando a conexão mente-músculo e a amplitude completa em cada repetição.
+                </>
+              )}
             </p>
           </Section>
+
 
           <Section title="Técnica passo a passo">
             <ol className="space-y-2">

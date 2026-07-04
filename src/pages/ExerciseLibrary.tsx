@@ -325,8 +325,9 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
     return () => { document.removeEventListener("keydown", onEsc); document.body.style.overflow = ""; };
   }, [onClose]);
 
-  const steps = buildSteps(exercise);
-  const embedSrc = `https://www.youtube.com/embed?listType=search&list=${searchQuery(exercise.name)}`;
+  const steps = exercise.steps && exercise.steps.length > 0 ? exercise.steps : buildSteps(exercise);
+  const embedSrc = toYouTubeEmbed(exercise.video_url) ?? `https://www.youtube.com/embed?listType=search&list=${searchQuery(exercise.name)}`;
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in" onClick={onClose}>

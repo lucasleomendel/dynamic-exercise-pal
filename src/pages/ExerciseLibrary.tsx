@@ -254,15 +254,23 @@ export default function ExerciseLibrary() {
                   className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/40 transition-colors flex flex-col cursor-pointer group"
                 >
                   <div className={`relative h-32 bg-gradient-to-br ${MUSCLE_GRADIENT[ex.muscle_group] ?? "from-secondary to-background"} overflow-hidden`}>
-                    {MUSCLE_IMAGE[ex.muscle_group] && (
+                    {(ex.image_url || MUSCLE_IMAGE[ex.muscle_group]) && (
                       <img
-                        src={MUSCLE_IMAGE[ex.muscle_group]}
-                        alt=""
+                        src={ex.image_url ?? MUSCLE_IMAGE[ex.muscle_group]}
+                        alt={ex.name}
                         loading="lazy"
-                        className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 group-hover:scale-105 transition-all duration-300"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-105 transition-all duration-300"
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          if (ex.image_url && img.src === ex.image_url && MUSCLE_IMAGE[ex.muscle_group]) {
+                            img.src = MUSCLE_IMAGE[ex.muscle_group];
+                          } else {
+                            img.style.display = "none";
+                          }
+                        }}
                       />
                     )}
+
                     <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
                     <Dumbbell className="absolute right-3 bottom-3 w-8 h-8 text-foreground/60" />
                     <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-background/70 backdrop-blur">

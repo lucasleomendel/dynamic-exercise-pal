@@ -466,3 +466,20 @@ function buildSteps(ex: LibraryExercise): string[] {
     "Mantenha a respiração ritmada: expire na fase de esforço e inspire na fase de retorno.",
   ];
 }
+
+/** Converte uma URL de vídeo (YouTube watch/shorts/youtu.be) em URL de embed. */
+function toYouTubeEmbed(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) return `https://www.youtube.com/embed${u.pathname}`;
+    if (u.hostname.includes("youtube.com")) {
+      const id = u.searchParams.get("v");
+      if (id) return `https://www.youtube.com/embed/${id}`;
+      if (u.pathname.startsWith("/shorts/")) return `https://www.youtube.com/embed/${u.pathname.split("/")[2]}`;
+      if (u.pathname.startsWith("/embed/")) return url;
+    }
+    return null;
+  } catch { return null; }
+}
+

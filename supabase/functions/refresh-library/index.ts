@@ -22,7 +22,12 @@ interface AIExercise {
   default_reps?: string;
   default_rest?: string;
   technique_tip?: string;
+  description?: string;
+  steps?: string[];
+  image_url?: string;
+  video_url?: string;
 }
+
 
 async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

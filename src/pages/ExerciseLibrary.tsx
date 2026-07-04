@@ -15,7 +15,12 @@ interface LibraryExercise {
   default_reps: string | null;
   default_rest: string | null;
   technique_tip: string | null;
+  image_url: string | null;
+  video_url: string | null;
+  description: string | null;
+  steps: string[] | null;
 }
+
 
 const MUSCLE_LABEL: Record<string, string> = {
   peito: "Peito", costas: "Costas", quadriceps: "Quadríceps", posterior: "Posterior",
@@ -71,12 +76,14 @@ export default function ExerciseLibrary() {
     (async () => {
       const { data, error } = await supabase
         .from("exercise_library")
-        .select("id,name,muscle_group,secondary_muscles,equipment,difficulty,default_sets,default_reps,default_rest,technique_tip")
+        .select("id,name,muscle_group,secondary_muscles,equipment,difficulty,default_sets,default_reps,default_rest,technique_tip,image_url,video_url,description,steps")
         .eq("active", true).order("muscle_group").order("name");
+      if (error) console.error("[ExerciseLibrary] load error:", error.message);
       if (!error && data) setItems(data as LibraryExercise[]);
       setLoading(false);
     })();
   }, []);
+
 
   const muscles = useMemo(() => {
     const set = new Set(items.map((i) => i.muscle_group));
@@ -247,15 +254,23 @@ export default function ExerciseLibrary() {
                   className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/40 transition-colors flex flex-col cursor-pointer group"
                 >
                   <div className={`relative h-32 bg-gradient-to-br ${MUSCLE_GRADIENT[ex.muscle_group] ?? "from-secondary to-background"} overflow-hidden`}>
-                    {MUSCLE_IMAGE[ex.muscle_group] && (
+                    {(ex.image_url || MUSCLE_IMAGE[ex.muscle_group]) && (
                       <img
-                        src={MUSCLE_IMAGE[ex.muscle_group]}
-                        alt=""
+                        src={ex.image_url ?? MUSCLE_IMAGE[ex.muscle_group]}
+                        alt={ex.name}
                         loading="lazy"
-                        className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 group-hover:scale-105 transition-all duration-300"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-105 transition-all duration-300"
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          if (ex.image_url && img.src === ex.image_url && MUSCLE_IMAGE[ex.muscle_group]) {
+                            img.src = MUSCLE_IMAGE[ex.muscle_group];
+                          } else {
+                            img.style.display = "none";
+                          }
+                        }}
                       />
                     )}
+
                     <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
                     <Dumbbell className="absolute right-3 bottom-3 w-8 h-8 text-foreground/60" />
                     <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-background/70 backdrop-blur">
@@ -310,8 +325,9 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
     return () => { document.removeEventListener("keydown", onEsc); document.body.style.overflow = ""; };
   }, [onClose]);
 
-  const steps = buildSteps(exercise);
-  const embedSrc = `https://www.youtube.com/embed?listType=search&list=${searchQuery(exercise.name)}`;
+  const steps = exercise.steps && exercise.steps.length > 0 ? exercise.steps : buildSteps(exercise);
+  const embedSrc = toYouTubeEmbed(exercise.video_url) ?? `https://www.youtube.com/embed?listType=search&list=${searchQuery(exercise.name)}`;
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
@@ -370,11 +386,16 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
 
           <Section title="Descrição">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Exercício focado em <strong className="text-foreground">{(MUSCLE_LABEL[exercise.muscle_group] ?? exercise.muscle_group).toLowerCase()}</strong>
-              {exercise.equipment ? <> utilizando <strong className="text-foreground">{exercise.equipment.toLowerCase()}</strong></> : null}
-              . Execute com controle total do movimento, priorizando a conexão mente-músculo e a amplitude completa em cada repetição.
+              {exercise.description ?? (
+                <>
+                  Exercício focado em <strong className="text-foreground">{(MUSCLE_LABEL[exercise.muscle_group] ?? exercise.muscle_group).toLowerCase()}</strong>
+                  {exercise.equipment ? <> utilizando <strong className="text-foreground">{exercise.equipment.toLowerCase()}</strong></> : null}
+                  . Execute com controle total do movimento, priorizando a conexão mente-músculo e a amplitude completa em cada repetição.
+                </>
+              )}
             </p>
           </Section>
+
 
           <Section title="Técnica passo a passo">
             <ol className="space-y-2">
@@ -445,3 +466,20 @@ function buildSteps(ex: LibraryExercise): string[] {
     "Mantenha a respiração ritmada: expire na fase de esforço e inspire na fase de retorno.",
   ];
 }
+
+/** Converte uma URL de vídeo (YouTube watch/shorts/youtu.be) em URL de embed. */
+function toYouTubeEmbed(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) return `https://www.youtube.com/embed${u.pathname}`;
+    if (u.hostname.includes("youtube.com")) {
+      const id = u.searchParams.get("v");
+      if (id) return `https://www.youtube.com/embed/${id}`;
+      if (u.pathname.startsWith("/shorts/")) return `https://www.youtube.com/embed/${u.pathname.split("/")[2]}`;
+      if (u.pathname.startsWith("/embed/")) return url;
+    }
+    return null;
+  } catch { return null; }
+}
+

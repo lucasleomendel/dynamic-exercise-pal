@@ -129,10 +129,15 @@ Deno.serve(async (req) => {
           default_reps: ex.default_reps ?? "10-12",
           default_rest: ex.default_rest ?? "60s",
           technique_tip: ex.technique_tip ?? null,
+          description: ex.description ?? null,
+          steps: ex.steps && ex.steps.length > 0 ? ex.steps : null,
+          image_url: ex.image_url && /^https?:\/\//.test(ex.image_url) ? ex.image_url : null,
+          video_url: ex.video_url && /^https?:\/\//.test(ex.video_url) ? ex.video_url : null,
           source: "ai-refresh",
           last_verified_at: new Date().toISOString(),
           active: true,
         };
+
         const { data: existing } = await supabase
           .from("exercise_library")
           .select("id")

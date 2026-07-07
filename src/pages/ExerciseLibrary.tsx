@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Fuse from "fuse.js";
 import { supabase } from "@/integrations/supabase/client";
+import { getExerciseDetails, primeExerciseDetails, type ExerciseDetail } from "@/lib/exercise-details-cache";
 import { ArrowLeft, Search, Play, Dumbbell, Loader2, Filter, X, Target, Timer, RotateCcw, ExternalLink, Sparkles, Flame } from "lucide-react";
+
 
 interface LibraryExercise {
   id: string;
@@ -78,14 +80,21 @@ export default function ExerciseLibrary() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const bgTimer = useRef<number | null>(null);
 
-  const loadItems = async () => {
-    // Payload enxuto para a listagem — description/steps sob demanda no modal.
+  // Paginação incremental no backend: 1ª página rápida (60) para primeiro paint,
+  // demais em chunks de 200. Campos mínimos — extras vêm sob demanda no modal.
+  const FIRST_PAGE = 60;
+  const CHUNK = 200;
+  const LIST_FIELDS = "id,name,muscle_group,secondary_muscles,equipment,difficulty,default_sets,default_reps,default_rest,technique_tip,image_url,video_url";
+
+  const fetchRange = async (from: number, to: number) => {
     const { data, error } = await supabase
       .from("exercise_library")
-      .select("id,name,muscle_group,secondary_muscles,equipment,difficulty,default_sets,default_reps,default_rest,technique_tip,image_url,video_url")
-      .eq("active", true).order("muscle_group").order("name");
-    if (error) console.error("[ExerciseLibrary] load error:", error.message);
-    if (!error && data) setItems(data as LibraryExercise[]);
+      .select(LIST_FIELDS)
+      .eq("active", true)
+      .order("muscle_group").order("name")
+      .range(from, to);
+    if (error) { console.error("[ExerciseLibrary] range error:", error.message); return []; }
+    return (data ?? []) as LibraryExercise[];
   };
 
   // Atualiza somente a image_url dos itens processados, evitando refetch total.
@@ -98,11 +107,28 @@ export default function ExerciseLibrary() {
   };
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      await loadItems();
+      // 1) Primeira página → mostra UI imediatamente
+      const first = await fetchRange(0, FIRST_PAGE - 1);
+      if (cancelled) return;
+      setItems(first);
       setLoading(false);
+
+      // 2) Resto em background (não bloqueia o render)
+      let offset = FIRST_PAGE;
+      while (!cancelled) {
+        const chunk = await fetchRange(offset, offset + CHUNK - 1);
+        if (cancelled) return;
+        if (chunk.length === 0) break;
+        setItems((prev) => [...prev, ...chunk]);
+        if (chunk.length < CHUNK) break;
+        offset += CHUNK;
+      }
     })();
+    return () => { cancelled = true; };
   }, []);
+
 
   // Gera imagens pendentes em segundo plano, sem recarregar a lista inteira.
   useEffect(() => {
@@ -433,7 +459,7 @@ function ExerciseCard({ exercise, onOpen }: { exercise: LibraryExercise; onOpen:
 // ─── MODAL ─────────────────────────────────────────────────────────────
 
 function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClose: () => void }) {
-  const [detail, setDetail] = useState<{ description: string | null; steps: string[] | null }>({
+  const [detail, setDetail] = useState<ExerciseDetail>({
     description: exercise.description ?? null,
     steps: exercise.steps ?? null,
   });
@@ -445,20 +471,20 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
     return () => { document.removeEventListener("keydown", onEsc); document.body.style.overflow = ""; };
   }, [onClose]);
 
-  // Carrega descrição/passos sob demanda (payload da lista é enxuto).
+  // Carrega descrição/passos com cache (memória + localStorage, TTL 7 dias).
   useEffect(() => {
-    if (detail.description && detail.steps) return;
+    if (detail.description && detail.steps && detail.steps.length > 0) {
+      primeExerciseDetails(exercise.id, detail);
+      return;
+    }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("exercise_library")
-        .select("description,steps")
-        .eq("id", exercise.id)
-        .maybeSingle();
-      if (!cancelled && data) setDetail({ description: data.description ?? null, steps: (data.steps as string[] | null) ?? null });
+      const d = await getExerciseDetails(exercise.id);
+      if (!cancelled) setDetail(d);
     })();
     return () => { cancelled = true; };
   }, [exercise.id]);
+
 
   const steps = detail.steps && detail.steps.length > 0 ? detail.steps : buildSteps(exercise);
   const embedSrc = null; // URLs de vídeo do banco não são verificadas; usar CTA confiável.

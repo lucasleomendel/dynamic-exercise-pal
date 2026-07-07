@@ -531,7 +531,7 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
 
           <Section title="Descrição">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {exercise.description ?? (
+              {detail.description ?? (
                 <>
                   Exercício focado em <strong className="text-foreground">{(MUSCLE_LABEL[exercise.muscle_group] ?? exercise.muscle_group).toLowerCase()}</strong>
                   {exercise.equipment ? <> utilizando <strong className="text-foreground">{exercise.equipment.toLowerCase()}</strong></> : null}

@@ -79,12 +79,22 @@ export default function ExerciseLibrary() {
   const bgTimer = useRef<number | null>(null);
 
   const loadItems = async () => {
+    // Payload enxuto para a listagem — description/steps sob demanda no modal.
     const { data, error } = await supabase
       .from("exercise_library")
-      .select("id,name,muscle_group,secondary_muscles,equipment,difficulty,default_sets,default_reps,default_rest,technique_tip,image_url,video_url,description,steps")
+      .select("id,name,muscle_group,secondary_muscles,equipment,difficulty,default_sets,default_reps,default_rest,technique_tip,image_url,video_url")
       .eq("active", true).order("muscle_group").order("name");
     if (error) console.error("[ExerciseLibrary] load error:", error.message);
     if (!error && data) setItems(data as LibraryExercise[]);
+  };
+
+  // Atualiza somente a image_url dos itens processados, evitando refetch total.
+  const patchImages = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const { data } = await supabase.from("exercise_library").select("id,image_url").in("id", ids);
+    if (!data) return;
+    const map = new Map(data.map((d) => [d.id, d.image_url as string | null]));
+    setItems((prev) => prev.map((it) => (map.has(it.id) ? { ...it, image_url: map.get(it.id) ?? it.image_url } : it)));
   };
 
   useEffect(() => {
@@ -94,25 +104,36 @@ export default function ExerciseLibrary() {
     })();
   }, []);
 
-  // Gerenciamento em segundo plano: a IA gera imagens dos exercícios sem imagem em ondas de 3.
+  // Gera imagens pendentes em segundo plano, sem recarregar a lista inteira.
   useEffect(() => {
     if (loading) return;
-    const missing = items.filter((i) => !i.image_url).length;
-    if (missing === 0) { setAiStatus({ remaining: 0, working: false }); return; }
-    setAiStatus({ remaining: missing, working: true });
+    let cancelled = false;
 
     const tick = async () => {
+      if (cancelled) return;
       const result = await triggerBackgroundImageGen(3);
-      if (result && result.processed > 0) {
-        await loadItems();
-        setAiStatus({ remaining: result.remaining, working: result.remaining > 0 });
-        if (result.remaining === 0) { if (bgTimer.current) window.clearInterval(bgTimer.current); return; }
+      if (cancelled || !result) return;
+      const done = (result as { results?: Array<{ id: string; ok: boolean }> }).results?.filter((r) => r.ok).map((r) => r.id) ?? [];
+      if (done.length) await patchImages(done);
+      setAiStatus({ remaining: result.remaining, working: result.remaining > 0 });
+      if (result.remaining === 0 && bgTimer.current) {
+        window.clearInterval(bgTimer.current);
+        bgTimer.current = null;
       }
     };
-    tick();
-    bgTimer.current = window.setInterval(tick, 20000);
-    return () => { if (bgTimer.current) window.clearInterval(bgTimer.current); };
-  }, [loading, items.length]);
+    // status inicial baseado no estado local (sem query extra)
+    const pending = items.filter((i) => !i.image_url).length;
+    setAiStatus({ remaining: pending, working: pending > 0 });
+    if (pending > 0) {
+      tick();
+      bgTimer.current = window.setInterval(tick, 25000);
+    }
+    return () => {
+      cancelled = true;
+      if (bgTimer.current) { window.clearInterval(bgTimer.current); bgTimer.current = null; }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const muscles = useMemo(() => {
     const set = new Set(items.map((i) => i.muscle_group));
@@ -412,6 +433,11 @@ function ExerciseCard({ exercise, onOpen }: { exercise: LibraryExercise; onOpen:
 // ─── MODAL ─────────────────────────────────────────────────────────────
 
 function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClose: () => void }) {
+  const [detail, setDetail] = useState<{ description: string | null; steps: string[] | null }>({
+    description: exercise.description ?? null,
+    steps: exercise.steps ?? null,
+  });
+
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onEsc);
@@ -419,8 +445,24 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
     return () => { document.removeEventListener("keydown", onEsc); document.body.style.overflow = ""; };
   }, [onClose]);
 
-  const steps = exercise.steps && exercise.steps.length > 0 ? exercise.steps : buildSteps(exercise);
-  const embedSrc = toYouTubeEmbed(exercise.video_url) ?? `https://www.youtube.com/embed?listType=search&list=${searchQuery(exercise.name)}`;
+  // Carrega descrição/passos sob demanda (payload da lista é enxuto).
+  useEffect(() => {
+    if (detail.description && detail.steps) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("exercise_library")
+        .select("description,steps")
+        .eq("id", exercise.id)
+        .maybeSingle();
+      if (!cancelled && data) setDetail({ description: data.description ?? null, steps: (data.steps as string[] | null) ?? null });
+    })();
+    return () => { cancelled = true; };
+  }, [exercise.id]);
+
+  const steps = detail.steps && detail.steps.length > 0 ? detail.steps : buildSteps(exercise);
+  const embedSrc = null; // URLs de vídeo do banco não são verificadas; usar CTA confiável.
+  const ytSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery(exercise.name)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
@@ -431,11 +473,27 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
         </button>
 
         <div className="relative aspect-video bg-black">
-          <iframe src={embedSrc} title={`Vídeo: ${exercise.name}`}
-            className="absolute inset-0 w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen loading="lazy" />
+          {embedSrc ? (
+            <iframe src={embedSrc} title={`Vídeo: ${exercise.name}`}
+              className="absolute inset-0 w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen loading="lazy" />
+          ) : (
+            <button onClick={() => window.open(ytSearchUrl, "_blank")}
+              className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 group cursor-pointer">
+              {exercise.image_url ? (
+                <img src={exercise.image_url} alt={exercise.name} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+              ) : (
+                <div className={`absolute inset-0 bg-gradient-to-br ${MUSCLE_GRADIENT[exercise.muscle_group] ?? "from-secondary to-background"} opacity-60`} />
+              )}
+              <div className="relative w-16 h-16 rounded-full bg-red-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xl">
+                <Play className="w-7 h-7 text-white fill-white ml-1" />
+              </div>
+              <span className="relative text-white text-sm font-semibold drop-shadow-lg">Assistir no YouTube</span>
+            </button>
+          )}
         </div>
+
 
         <div className="p-5 overflow-y-auto">
           <div className="flex items-start justify-between gap-3 mb-3">
@@ -473,7 +531,7 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
 
           <Section title="Descrição">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {exercise.description ?? (
+              {detail.description ?? (
                 <>
                   Exercício focado em <strong className="text-foreground">{(MUSCLE_LABEL[exercise.muscle_group] ?? exercise.muscle_group).toLowerCase()}</strong>
                   {exercise.equipment ? <> utilizando <strong className="text-foreground">{exercise.equipment.toLowerCase()}</strong></> : null}

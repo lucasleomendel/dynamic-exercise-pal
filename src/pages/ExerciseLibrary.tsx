@@ -461,7 +461,7 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
   }, [exercise.id]);
 
   const steps = detail.steps && detail.steps.length > 0 ? detail.steps : buildSteps(exercise);
-  const embedSrc = toYouTubeEmbed(exercise.video_url);
+  const embedSrc = null; // URLs de vídeo do banco não são verificadas; usar CTA confiável.
   const ytSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery(exercise.name)}`;
 
   return (

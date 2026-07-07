@@ -433,6 +433,11 @@ function ExerciseCard({ exercise, onOpen }: { exercise: LibraryExercise; onOpen:
 // ─── MODAL ─────────────────────────────────────────────────────────────
 
 function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClose: () => void }) {
+  const [detail, setDetail] = useState<{ description: string | null; steps: string[] | null }>({
+    description: exercise.description ?? null,
+    steps: exercise.steps ?? null,
+  });
+
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onEsc);
@@ -440,8 +445,24 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
     return () => { document.removeEventListener("keydown", onEsc); document.body.style.overflow = ""; };
   }, [onClose]);
 
-  const steps = exercise.steps && exercise.steps.length > 0 ? exercise.steps : buildSteps(exercise);
-  const embedSrc = toYouTubeEmbed(exercise.video_url) ?? `https://www.youtube.com/embed?listType=search&list=${searchQuery(exercise.name)}`;
+  // Carrega descrição/passos sob demanda (payload da lista é enxuto).
+  useEffect(() => {
+    if (detail.description && detail.steps) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("exercise_library")
+        .select("description,steps")
+        .eq("id", exercise.id)
+        .maybeSingle();
+      if (!cancelled && data) setDetail({ description: data.description ?? null, steps: (data.steps as string[] | null) ?? null });
+    })();
+    return () => { cancelled = true; };
+  }, [exercise.id]);
+
+  const steps = detail.steps && detail.steps.length > 0 ? detail.steps : buildSteps(exercise);
+  const embedSrc = toYouTubeEmbed(exercise.video_url);
+  const ytSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery(exercise.name)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
@@ -452,11 +473,27 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
         </button>
 
         <div className="relative aspect-video bg-black">
-          <iframe src={embedSrc} title={`Vídeo: ${exercise.name}`}
-            className="absolute inset-0 w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen loading="lazy" />
+          {embedSrc ? (
+            <iframe src={embedSrc} title={`Vídeo: ${exercise.name}`}
+              className="absolute inset-0 w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen loading="lazy" />
+          ) : (
+            <button onClick={() => window.open(ytSearchUrl, "_blank")}
+              className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 group cursor-pointer">
+              {exercise.image_url ? (
+                <img src={exercise.image_url} alt={exercise.name} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+              ) : (
+                <div className={`absolute inset-0 bg-gradient-to-br ${MUSCLE_GRADIENT[exercise.muscle_group] ?? "from-secondary to-background"} opacity-60`} />
+              )}
+              <div className="relative w-16 h-16 rounded-full bg-red-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xl">
+                <Play className="w-7 h-7 text-white fill-white ml-1" />
+              </div>
+              <span className="relative text-white text-sm font-semibold drop-shadow-lg">Assistir no YouTube</span>
+            </button>
+          )}
         </div>
+
 
         <div className="p-5 overflow-y-auto">
           <div className="flex items-start justify-between gap-3 mb-3">

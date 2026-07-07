@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Fuse from "fuse.js";
 import { supabase } from "@/integrations/supabase/client";
+import { getExerciseDetails, primeExerciseDetails, type ExerciseDetail } from "@/lib/exercise-details-cache";
 import { ArrowLeft, Search, Play, Dumbbell, Loader2, Filter, X, Target, Timer, RotateCcw, ExternalLink, Sparkles, Flame } from "lucide-react";
+
 
 interface LibraryExercise {
   id: string;

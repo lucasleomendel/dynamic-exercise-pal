@@ -459,7 +459,7 @@ function ExerciseCard({ exercise, onOpen }: { exercise: LibraryExercise; onOpen:
 // ─── MODAL ─────────────────────────────────────────────────────────────
 
 function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClose: () => void }) {
-  const [detail, setDetail] = useState<{ description: string | null; steps: string[] | null }>({
+  const [detail, setDetail] = useState<ExerciseDetail>({
     description: exercise.description ?? null,
     steps: exercise.steps ?? null,
   });
@@ -471,20 +471,20 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
     return () => { document.removeEventListener("keydown", onEsc); document.body.style.overflow = ""; };
   }, [onClose]);
 
-  // Carrega descrição/passos sob demanda (payload da lista é enxuto).
+  // Carrega descrição/passos com cache (memória + localStorage, TTL 7 dias).
   useEffect(() => {
-    if (detail.description && detail.steps) return;
+    if (detail.description && detail.steps && detail.steps.length > 0) {
+      primeExerciseDetails(exercise.id, detail);
+      return;
+    }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("exercise_library")
-        .select("description,steps")
-        .eq("id", exercise.id)
-        .maybeSingle();
-      if (!cancelled && data) setDetail({ description: data.description ?? null, steps: (data.steps as string[] | null) ?? null });
+      const d = await getExerciseDetails(exercise.id);
+      if (!cancelled) setDetail(d);
     })();
     return () => { cancelled = true; };
   }, [exercise.id]);
+
 
   const steps = detail.steps && detail.steps.length > 0 ? detail.steps : buildSteps(exercise);
   const embedSrc = null; // URLs de vídeo do banco não são verificadas; usar CTA confiável.

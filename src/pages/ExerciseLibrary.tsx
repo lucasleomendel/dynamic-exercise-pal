@@ -488,7 +488,11 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
 
   const steps = detail.steps && detail.steps.length > 0 ? detail.steps : buildSteps(exercise);
   const embedSrc = null; // URLs de vídeo do banco não são verificadas; usar CTA confiável.
-  const ytSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery(exercise.name)}`;
+  const q = searchQuery(`${exercise.name} exercício execução`);
+  // Usa Google Vídeos como principal (não é bloqueado por filtros que barram youtube.com direto)
+  // e mantém YouTube mobile como fallback.
+  const videoSearchUrl = `https://www.google.com/search?tbm=vid&q=${q}`;
+  const ytSearchUrl = `https://m.youtube.com/results?search_query=${q}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
@@ -505,7 +509,7 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen loading="lazy" />
           ) : (
-            <button onClick={() => window.open(ytSearchUrl, "_blank")}
+            <button onClick={() => window.open(videoSearchUrl, "_blank", "noopener,noreferrer")}
               className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 group cursor-pointer">
               {exercise.image_url ? (
                 <img src={exercise.image_url} alt={exercise.name} className="absolute inset-0 w-full h-full object-cover opacity-40" />
@@ -515,7 +519,7 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
               <div className="relative w-16 h-16 rounded-full bg-red-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xl">
                 <Play className="w-7 h-7 text-white fill-white ml-1" />
               </div>
-              <span className="relative text-white text-sm font-semibold drop-shadow-lg">Assistir no YouTube</span>
+              <span className="relative text-white text-sm font-semibold drop-shadow-lg">Ver vídeos de execução</span>
             </button>
           )}
         </div>
@@ -587,9 +591,13 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
           )}
 
           <div className="flex gap-2 pt-2">
-            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${searchQuery(exercise.name)}`, "_blank")}
+            <button onClick={() => window.open(videoSearchUrl, "_blank", "noopener,noreferrer")}
               className="flex-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-primary/90">
-              <ExternalLink className="w-4 h-4" /> Mais vídeos
+              <ExternalLink className="w-4 h-4" /> Google Vídeos
+            </button>
+            <button onClick={() => window.open(ytSearchUrl, "_blank", "noopener,noreferrer")}
+              className="h-10 px-4 rounded-lg bg-secondary text-sm font-semibold hover:bg-secondary/80 inline-flex items-center gap-1.5">
+              <Play className="w-3.5 h-3.5" /> YouTube
             </button>
             <button onClick={() => openImage(exercise.name)} className="h-10 px-4 rounded-lg bg-secondary text-sm font-semibold hover:bg-secondary/80">
               Fotos

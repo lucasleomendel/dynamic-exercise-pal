@@ -539,7 +539,7 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen loading="lazy" />
           ) : (
-            <button onClick={() => window.open(videoSearchUrl, "_blank", "noopener,noreferrer")}
+            <button onClick={() => openVideoSearch(exercise.name)}
               className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 group cursor-pointer">
               {exercise.image_url ? (
                 <img src={exercise.image_url} alt={exercise.name} className="absolute inset-0 w-full h-full object-cover opacity-40" />

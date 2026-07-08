@@ -523,11 +523,6 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
 
   const steps = detail.steps && detail.steps.length > 0 ? detail.steps : buildSteps(exercise);
   const embedSrc = null; // URLs de vídeo do banco não são verificadas; usar CTA confiável.
-  const q = searchQuery(`${exercise.name} exercício execução`);
-  // Usa Google Vídeos como principal (não é bloqueado por filtros que barram youtube.com direto)
-  // e mantém YouTube mobile como fallback.
-  const videoSearchUrl = `https://www.google.com/search?tbm=vid&q=${q}`;
-  const ytSearchUrl = `https://m.youtube.com/results?search_query=${q}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={onClose}>

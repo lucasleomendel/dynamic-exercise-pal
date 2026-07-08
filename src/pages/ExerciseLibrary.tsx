@@ -51,7 +51,42 @@ const DIFFICULTY_COLOR: Record<string, string> = {
 const PAGE_SIZE = 24;
 const searchQuery = (name: string) => encodeURIComponent(`como fazer ${name} exercício academia técnica`);
 const openImage = (name: string) =>
-  window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${name} exercício musculação execução`)}`, "_blank");
+  window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${name} exercício musculação execução`)}`, "_blank", "noopener,noreferrer");
+
+// Detecta mobile de forma leve (sem depender de UA parsing).
+const isMobile = () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+const isAndroid = () => typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
+const isIOS = () => typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+/**
+ * Abre um vídeo de exercício priorizando o formato mais compatível:
+ *  - Mobile: tenta abrir o app do YouTube (vnd.youtube:) e cai para m.youtube.com.
+ *  - Desktop: abre Google Vídeos (não é barrado por filtros que recusam youtube.com direto).
+ * Sempre inclui fallback silencioso caso o pop-up seja bloqueado.
+ */
+const openVideoSearch = (name: string, provider: "auto" | "youtube" | "google" = "auto") => {
+  const q = searchQuery(name);
+  const yt = `https://m.youtube.com/results?search_query=${q}`;
+  const google = `https://www.google.com/search?tbm=vid&q=${q}`;
+
+  let target = google;
+  if (provider === "youtube") target = yt;
+  else if (provider === "auto" && isMobile()) target = yt;
+
+  // Deep-link para o app do YouTube quando disponível (Android/iOS).
+  if (provider !== "google" && (isAndroid() || isIOS())) {
+    const scheme = isAndroid()
+      ? `vnd.youtube://results?search_query=${q}`
+      : `youtube://results?search_query=${q}`;
+    const win = window.open(scheme, "_blank");
+    // Se o esquema falhar (app não instalado), garante fallback web.
+    setTimeout(() => {
+      if (!win || win.closed) window.open(target, "_blank", "noopener,noreferrer");
+    }, 350);
+    return;
+  }
+  window.open(target, "_blank", "noopener,noreferrer");
+};
 
 // Dispara a IA em segundo plano para gerar imagens dos exercícios que ainda não têm.
 const SUPABASE_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-exercise-images`;

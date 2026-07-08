@@ -51,7 +51,42 @@ const DIFFICULTY_COLOR: Record<string, string> = {
 const PAGE_SIZE = 24;
 const searchQuery = (name: string) => encodeURIComponent(`como fazer ${name} exercício academia técnica`);
 const openImage = (name: string) =>
-  window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${name} exercício musculação execução`)}`, "_blank");
+  window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${name} exercício musculação execução`)}`, "_blank", "noopener,noreferrer");
+
+// Detecta mobile de forma leve (sem depender de UA parsing).
+const isMobile = () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+const isAndroid = () => typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
+const isIOS = () => typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+/**
+ * Abre um vídeo de exercício priorizando o formato mais compatível:
+ *  - Mobile: tenta abrir o app do YouTube (vnd.youtube:) e cai para m.youtube.com.
+ *  - Desktop: abre Google Vídeos (não é barrado por filtros que recusam youtube.com direto).
+ * Sempre inclui fallback silencioso caso o pop-up seja bloqueado.
+ */
+const openVideoSearch = (name: string, provider: "auto" | "youtube" | "google" = "auto") => {
+  const q = searchQuery(name);
+  const yt = `https://m.youtube.com/results?search_query=${q}`;
+  const google = `https://www.google.com/search?tbm=vid&q=${q}`;
+
+  let target = google;
+  if (provider === "youtube") target = yt;
+  else if (provider === "auto" && isMobile()) target = yt;
+
+  // Deep-link para o app do YouTube quando disponível (Android/iOS).
+  if (provider !== "google" && (isAndroid() || isIOS())) {
+    const scheme = isAndroid()
+      ? `vnd.youtube://results?search_query=${q}`
+      : `youtube://results?search_query=${q}`;
+    const win = window.open(scheme, "_blank");
+    // Se o esquema falhar (app não instalado), garante fallback web.
+    setTimeout(() => {
+      if (!win || win.closed) window.open(target, "_blank", "noopener,noreferrer");
+    }, 350);
+    return;
+  }
+  window.open(target, "_blank", "noopener,noreferrer");
+};
 
 // Dispara a IA em segundo plano para gerar imagens dos exercícios que ainda não têm.
 const SUPABASE_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-exercise-images`;
@@ -488,11 +523,6 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
 
   const steps = detail.steps && detail.steps.length > 0 ? detail.steps : buildSteps(exercise);
   const embedSrc = null; // URLs de vídeo do banco não são verificadas; usar CTA confiável.
-  const q = searchQuery(`${exercise.name} exercício execução`);
-  // Usa Google Vídeos como principal (não é bloqueado por filtros que barram youtube.com direto)
-  // e mantém YouTube mobile como fallback.
-  const videoSearchUrl = `https://www.google.com/search?tbm=vid&q=${q}`;
-  const ytSearchUrl = `https://m.youtube.com/results?search_query=${q}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
@@ -509,7 +539,7 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen loading="lazy" />
           ) : (
-            <button onClick={() => window.open(videoSearchUrl, "_blank", "noopener,noreferrer")}
+            <button onClick={() => openVideoSearch(exercise.name)}
               className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 group cursor-pointer">
               {exercise.image_url ? (
                 <img src={exercise.image_url} alt={exercise.name} className="absolute inset-0 w-full h-full object-cover opacity-40" />
@@ -591,11 +621,11 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
           )}
 
           <div className="flex gap-2 pt-2">
-            <button onClick={() => window.open(videoSearchUrl, "_blank", "noopener,noreferrer")}
+            <button onClick={() => openVideoSearch(exercise.name, "google")}
               className="flex-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-primary/90">
               <ExternalLink className="w-4 h-4" /> Google Vídeos
             </button>
-            <button onClick={() => window.open(ytSearchUrl, "_blank", "noopener,noreferrer")}
+            <button onClick={() => openVideoSearch(exercise.name, "youtube")}
               className="h-10 px-4 rounded-lg bg-secondary text-sm font-semibold hover:bg-secondary/80 inline-flex items-center gap-1.5">
               <Play className="w-3.5 h-3.5" /> YouTube
             </button>

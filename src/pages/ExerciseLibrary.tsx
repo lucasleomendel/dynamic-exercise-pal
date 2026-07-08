@@ -591,9 +591,13 @@ function ExerciseModal({ exercise, onClose }: { exercise: LibraryExercise; onClo
           )}
 
           <div className="flex gap-2 pt-2">
-            <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${searchQuery(exercise.name)}`, "_blank")}
+            <button onClick={() => window.open(videoSearchUrl, "_blank", "noopener,noreferrer")}
               className="flex-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-primary/90">
-              <ExternalLink className="w-4 h-4" /> Mais vídeos
+              <ExternalLink className="w-4 h-4" /> Google Vídeos
+            </button>
+            <button onClick={() => window.open(ytSearchUrl, "_blank", "noopener,noreferrer")}
+              className="h-10 px-4 rounded-lg bg-secondary text-sm font-semibold hover:bg-secondary/80 inline-flex items-center gap-1.5">
+              <Play className="w-3.5 h-3.5" /> YouTube
             </button>
             <button onClick={() => openImage(exercise.name)} className="h-10 px-4 rounded-lg bg-secondary text-sm font-semibold hover:bg-secondary/80">
               Fotos

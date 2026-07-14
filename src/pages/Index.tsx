@@ -3,7 +3,6 @@ import UserProfileForm from "@/components/UserProfileForm";
 import WorkoutPlanView from "@/components/WorkoutPlan";
 import { UserProfile, WorkoutPlan, generateWorkout } from "@/lib/workout-generator";
 import { saveProfile, loadProfile, savePlan, loadPlan, clearAll } from "@/lib/storage";
-import { syncProfile, syncPlan } from "@/lib/cloud-sync";
 import { supabase } from "@/integrations/supabase/client";
 
 type View = "form" | "plan";
@@ -40,9 +39,7 @@ const Index = () => {
     saveProfile(p);
     savePlan(newPlan);
     setView("plan");
-    // Persiste no banco em background (apenas se autenticado)
-    syncProfile(p).catch(() => {});
-    syncPlan(newPlan).catch(() => {});
+    // saveProfile/savePlan já fazem sync em background
   };
 
   const handleEdit = () => {
@@ -60,6 +57,9 @@ const Index = () => {
       await Promise.allSettled([
         supabase.from("workout_plans").delete().eq("user_id", user.id),
         supabase.from("exercise_checks").delete().eq("user_id", user.id),
+        supabase.from("weight_logs").delete().eq("user_id", user.id),
+        supabase.from("workout_history").delete().eq("user_id", user.id),
+        supabase.from("body_compositions").delete().eq("user_id", user.id),
       ]);
     }
   };
@@ -73,7 +73,7 @@ const Index = () => {
         onClear={handleClear}
         onPlanUpdate={(updatedPlan) => {
           setPlan(updatedPlan);
-          syncPlan(updatedPlan).catch(() => {});
+          savePlan(updatedPlan);
         }}
       />
     );

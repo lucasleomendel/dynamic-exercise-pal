@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,13 +7,18 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "@/components/LoadingScreen";
 import Index from "./pages/Index";
-import Personal from "./pages/Personal";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import CREFValidation from "./pages/CREFValidation";
-import Progress from "./pages/Progress";
 import AdminRouteGuard from "./components/AdminRouteGuard";
 import CompleteProfileDialog from "./components/CompleteProfileDialog";
+
+// Lazy-loaded (rotas pesadas / admin) — reduzem o bundle inicial.
+const Personal = lazy(() => import("./pages/Personal"));
+const CREFValidation = lazy(() => import("./pages/CREFValidation"));
+const Progress = lazy(() => import("./pages/Progress"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Diagnostico = lazy(() => import("./pages/Diagnostico"));
+const ExerciseLibrary = lazy(() => import("./pages/ExerciseLibrary"));
 
 const queryClient = new QueryClient();
 
@@ -38,14 +44,19 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <CompleteProfileDialog />
-          <Routes>
-            <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-            <Route path="/cref-validation" element={<ProtectedRoute><CREFValidation /></ProtectedRoute>} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
-            <Route path="/personal" element={<ProtectedRoute><AdminRouteGuard><Personal /></AdminRouteGuard></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
+              <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/diagnostico" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
+              <Route path="/cref-validation" element={<ProtectedRoute><CREFValidation /></ProtectedRoute>} />
+              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
+              <Route path="/exercicios" element={<ProtectedRoute><ExerciseLibrary /></ProtectedRoute>} />
+              <Route path="/personal" element={<ProtectedRoute><AdminRouteGuard><Personal /></AdminRouteGuard></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

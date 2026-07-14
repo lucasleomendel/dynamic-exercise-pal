@@ -111,16 +111,23 @@ export type Database = {
           default_reps: string | null
           default_rest: string | null
           default_sets: number | null
+          description: string | null
           difficulty: string | null
           equipment: string | null
           id: string
+          image_attempts: number
+          image_last_error: string | null
+          image_last_try: string | null
+          image_url: string | null
           last_verified_at: string | null
           muscle_group: string
           name: string
           secondary_muscles: string[] | null
           source: string | null
+          steps: string[] | null
           technique_tip: string | null
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           active?: boolean | null
@@ -128,16 +135,23 @@ export type Database = {
           default_reps?: string | null
           default_rest?: string | null
           default_sets?: number | null
+          description?: string | null
           difficulty?: string | null
           equipment?: string | null
           id?: string
+          image_attempts?: number
+          image_last_error?: string | null
+          image_last_try?: string | null
+          image_url?: string | null
           last_verified_at?: string | null
           muscle_group: string
           name: string
           secondary_muscles?: string[] | null
           source?: string | null
+          steps?: string[] | null
           technique_tip?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           active?: boolean | null
@@ -145,16 +159,23 @@ export type Database = {
           default_reps?: string | null
           default_rest?: string | null
           default_sets?: number | null
+          description?: string | null
           difficulty?: string | null
           equipment?: string | null
           id?: string
+          image_attempts?: number
+          image_last_error?: string | null
+          image_last_try?: string | null
+          image_url?: string | null
           last_verified_at?: string | null
           muscle_group?: string
           name?: string
           secondary_muscles?: string[] | null
           source?: string | null
+          steps?: string[] | null
           technique_tip?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }
@@ -785,6 +806,7 @@ export type Database = {
         Returns: undefined
       }
       get_job_runner_secret: { Args: never; Returns: string }
+      is_master_admin: { Args: { uid: string }; Returns: boolean }
       is_personal_trainer: { Args: { uid: string }; Returns: boolean }
     }
     Enums: {

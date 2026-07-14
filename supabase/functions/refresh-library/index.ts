@@ -22,7 +22,12 @@ interface AIExercise {
   default_reps?: string;
   default_rest?: string;
   technique_tip?: string;
+  description?: string;
+  steps?: string[];
+  image_url?: string;
+  video_url?: string;
 }
+
 
 async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -31,8 +36,8 @@ async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "Você é um especialista em musculação. Retorne exercícios validados cientificamente para o grupo muscular pedido." },
-        { role: "user", content: `Liste 8-12 exercícios eficazes para ${muscle}, incluindo variações modernas e clássicas. Para cada um: nome em português, equipamento, dificuldade (iniciante/intermediario/avancado), séries, reps, descanso e dica técnica curta.` },
+        { role: "system", content: "Você é um especialista em musculação. Retorne exercícios validados cientificamente. Para video_url use APENAS URLs reais e verificadas do YouTube (canais reconhecidos como Jeff Nippard, ATHLEAN-X, Renaissance Periodization, Leandro Twin). Para image_url use URLs de Unsplash ou Wikimedia Commons — se não tiver certeza, omita o campo (é melhor omitir do que inventar)." },
+        { role: "user", content: `Liste 10-15 exercícios eficazes para ${muscle}, incluindo variações modernas e clássicas. Para cada um retorne: nome em português, músculos secundários, equipamento, dificuldade (iniciante/intermediario/avancado), séries, reps, descanso, dica técnica curta, descrição completa (2-3 frases), 6 passos de execução detalhados, e opcionalmente image_url e video_url reais.` },
       ],
       tools: [{
         type: "function",
@@ -55,8 +60,12 @@ async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
                     default_reps: { type: "string" },
                     default_rest: { type: "string" },
                     technique_tip: { type: "string" },
+                    description: { type: "string" },
+                    steps: { type: "array", items: { type: "string" }, minItems: 4, maxItems: 8 },
+                    image_url: { type: "string" },
+                    video_url: { type: "string" },
                   },
-                  required: ["name", "muscle_group"],
+                  required: ["name", "muscle_group", "description", "steps"],
                 },
               },
             },
@@ -67,6 +76,7 @@ async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
       tool_choice: { type: "function", function: { name: "list_exercises" } },
     }),
   });
+
 
   if (!res.ok) {
     console.error(`AI failed for ${muscle}: ${res.status}`);
@@ -83,10 +93,27 @@ async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
   }
 }
 
+async function getRunnerSecret(admin: ReturnType<typeof createClient>): Promise<string | null> {
+  try {
+    const { data } = await admin.rpc("get_job_runner_secret");
+    return data ? String(data) : null;
+  } catch { return null; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    // Somente service-role ou runner-secret podem invocar (função admin/cron).
+    const auth = req.headers.get("authorization")?.replace("Bearer ", "") ?? "";
+    const runnerSecret = await getRunnerSecret(supabase);
+    if (auth !== SERVICE_ROLE && (!runnerSecret || auth !== runnerSecret)) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let added = 0, updated = 0;
 
     for (const muscle of MUSCLES) {
@@ -102,10 +129,15 @@ Deno.serve(async (req) => {
           default_reps: ex.default_reps ?? "10-12",
           default_rest: ex.default_rest ?? "60s",
           technique_tip: ex.technique_tip ?? null,
+          description: ex.description ?? null,
+          steps: ex.steps && ex.steps.length > 0 ? ex.steps : null,
+          image_url: ex.image_url && /^https?:\/\//.test(ex.image_url) ? ex.image_url : null,
+          video_url: ex.video_url && /^https?:\/\//.test(ex.video_url) ? ex.video_url : null,
           source: "ai-refresh",
           last_verified_at: new Date().toISOString(),
           active: true,
         };
+
         const { data: existing } = await supabase
           .from("exercise_library")
           .select("id")
@@ -134,13 +166,13 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error(e);
+    console.error("refresh-library error:", e);
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     await supabase.from("library_updates").insert({
       status: "error",
-      notes: e instanceof Error ? e.message : "unknown",
+      notes: "internal error",
     });
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "err" }), {
+    return new Response(JSON.stringify({ error: "Erro interno do servidor" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

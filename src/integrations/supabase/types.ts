@@ -800,6 +800,7 @@ export type Database = {
       }
     }
     Functions: {
+      close_stale_job_runs: { Args: never; Returns: number }
       daily_health_check: { Args: never; Returns: Json }
       ensure_workout_history_partition: {
         Args: { p_year: number }

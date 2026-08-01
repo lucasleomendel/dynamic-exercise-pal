@@ -116,7 +116,29 @@ Deno.serve(async (req) => {
 
     let added = 0, updated = 0;
 
-    for (const muscle of MUSCLES) {
+    // Processa apenas um lote de grupos musculares por invocação para não estourar
+    // o limite de 150s da edge function. A rotação é baseada no dia do ano,
+    // então todos os grupos são cobertos ao longo dos ciclos do cron.
+    let batch = 3;
+    let selected: string[] | null = null;
+    if (req.method === "POST") {
+      try {
+        const body = await req.json();
+        if (Array.isArray(body?.muscles) && body.muscles.length > 0) {
+          selected = body.muscles.filter((m: unknown) => MUSCLES.includes(m as never));
+        }
+        if (body?.batch != null) batch = Math.min(Math.max(Number(body.batch) || 3, 1), MUSCLES.length);
+      } catch { /* sem corpo — usa padrão */ }
+    }
+
+    if (!selected || selected.length === 0) {
+      const dayOfYear = Math.floor((Date.now() - Date.UTC(new Date().getUTCFullYear(), 0, 0)) / 86_400_000);
+      const chunks = Math.ceil(MUSCLES.length / batch);
+      const start = (dayOfYear % chunks) * batch;
+      selected = MUSCLES.slice(start, start + batch);
+    }
+
+    for (const muscle of selected) {
       const exercises = await fetchExercisesForMuscle(muscle);
       for (const ex of exercises) {
         const payload = {

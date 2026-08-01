@@ -181,10 +181,10 @@ Deno.serve(async (req) => {
       exercises_added: added,
       exercises_updated: updated,
       status: "success",
-      notes: `Refreshed ${MUSCLES.length} muscle groups`,
+      notes: `Refreshed groups: ${selected.join(", ")}`,
     });
 
-    return new Response(JSON.stringify({ added, updated }), {
+    return new Response(JSON.stringify({ added, updated, groups: selected }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

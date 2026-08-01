@@ -74,9 +74,28 @@ interface Pending {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
+  // Auth obrigatória: JWT de usuário autenticado OU service-role (cron/job-runner).
+  // Sem isso o endpoint seria público e queimaria créditos de IA.
+  const auth = req.headers.get("authorization")?.replace("Bearer ", "") ?? "";
+  if (!auth) {
+    return new Response(JSON.stringify({ error: "unauthenticated" }), {
+      status: 401, headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+  if (auth !== SERVICE_ROLE) {
+    const authClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!);
+    const { data: u, error: authErr } = await authClient.auth.getUser(auth);
+    if (authErr || !u?.user) {
+      return new Response(JSON.stringify({ error: "invalid session" }), {
+        status: 401, headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+  }
+
   const url = new URL(req.url);
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? "3"), 1), MAX_PER_INVOCATION);
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
+
 
   // Seleciona a fila: sem imagem, ativos, ainda dentro do limite de tentativas
   // e fora do cooldown. Ordena por menos tentativas primeiro (fair queue).

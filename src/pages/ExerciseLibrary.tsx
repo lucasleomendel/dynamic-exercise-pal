@@ -92,14 +92,20 @@ const openVideoSearch = (name: string, provider: "auto" | "youtube" | "google" =
 const SUPABASE_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-exercise-images`;
 async function triggerBackgroundImageGen(limit = 3): Promise<{ processed: number; remaining: number } | null> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return null; // visitante: não dispara IA
     const res = await fetch(`${SUPABASE_FN_URL}?limit=${limit}`, {
       method: "POST",
-      headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string },
+      headers: {
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        Authorization: `Bearer ${session.access_token}`,
+      },
     });
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
 }
+
 
 export default function ExerciseLibrary() {
   const navigate = useNavigate();

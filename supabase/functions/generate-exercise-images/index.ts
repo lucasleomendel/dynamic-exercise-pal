@@ -92,8 +92,16 @@ Deno.serve(async (req) => {
     }
   }
 
+  // limit pode vir por query (frontend) ou pelo corpo JSON (job-runner/cron)
   const url = new URL(req.url);
-  const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? "3"), 1), MAX_PER_INVOCATION);
+  let rawLimit = url.searchParams.get("limit");
+  if (!rawLimit && req.method === "POST") {
+    try {
+      const body = await req.json();
+      if (body && body.limit != null) rawLimit = String(body.limit);
+    } catch { /* corpo vazio ou inválido — usa padrão */ }
+  }
+  const limit = Math.min(Math.max(Number(rawLimit ?? "3") || 3, 1), MAX_PER_INVOCATION);
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
 
 

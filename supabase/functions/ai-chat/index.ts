@@ -121,6 +121,55 @@ serve(async (req) => {
 ${tmb ? `- TMB: ${tmb} kcal | GET estimado: ${get} kcal` : ""}`;
     }
 
+    // Contexto real de treino do usuário (RLS aplicada via JWT) — permite gestão autônoma.
+    try {
+      const db = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: `Bearer ${jwt}` } } },
+      );
+      const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+      const [hist, loads, plan] = await Promise.all([
+        db.from("workout_history")
+          .select("workout_date,completed_exercises,total_exercises,day_focus")
+          .gte("workout_date", since).order("workout_date", { ascending: false }).limit(30),
+        db.from("weight_logs")
+          .select("exercise_name,weight,logged_at")
+          .gte("logged_at", since).order("logged_at", { ascending: false }).limit(40),
+        db.from("workout_plans")
+          .select("title,days_per_week,updated_at")
+          .eq("is_active", true).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+
+      const sessions = hist.data ?? [];
+      const adherence = sessions.length
+        ? Math.round(
+            (sessions.reduce((a: number, s: any) => a + (s.completed_exercises / Math.max(s.total_exercises, 1)), 0) /
+              sessions.length) * 100,
+          )
+        : null;
+
+      const byExercise = new Map<string, { first: number; last: number }>();
+      for (const l of (loads.data ?? []).slice().reverse() as any[]) {
+        const cur = byExercise.get(l.exercise_name);
+        if (!cur) byExercise.set(l.exercise_name, { first: Number(l.weight), last: Number(l.weight) });
+        else cur.last = Number(l.weight);
+      }
+      const trend = [...byExercise.entries()].slice(0, 8)
+        .map(([n, v]) => `${n}: ${v.first}→${v.last}kg`).join(" | ");
+
+      if (sessions.length || trend || plan.data) {
+        contextPrompt += `\n\n## CONTEXTO DE TREINO (últimos 30 dias — use para análise e decisões)
+- Plano ativo: ${plan.data?.title ?? "—"} (${plan.data?.days_per_week ?? "—"}x/sem, atualizado em ${plan.data?.updated_at?.slice(0, 10) ?? "—"})
+- Treinos concluídos: ${sessions.length} | Adesão média: ${adherence !== null ? adherence + "%" : "—"}
+- Método ativo: ${(profile as any)?.training_method ?? "padrão"} | Modo avançado: ${(profile as any)?.advanced_mode ? "ativo" : "inativo"}
+- Evolução de cargas: ${trend || "sem registros"}
+Se houver estagnação, baixa adesão ou queda de desempenho, aponte isso proativamente e proponha o ajuste concreto.`;
+      }
+    } catch (ctxErr) {
+      console.error("contexto de treino indisponível:", ctxErr);
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -128,7 +177,7 @@ ${tmb ? `- TMB: ${tmb} kcal | GET estimado: ${get} kcal` : ""}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3.6-flash",
         messages: [
           { role: "system", content: contextPrompt },
           ...sanitizedMessages,

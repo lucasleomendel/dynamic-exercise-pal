@@ -26,7 +26,8 @@ interface LibraryExercise {
 const MUSCLE_LABEL: Record<string, string> = {
   peito: "Peito", costas: "Costas", quadriceps: "Quadríceps", posterior: "Posterior",
   gluteos: "Glúteos", ombros: "Ombros", biceps: "Bíceps", triceps: "Tríceps",
-  abdomen: "Abdômen", panturrilha: "Panturrilha",
+  abdomen: "Abdômen", panturrilha: "Panturrilha", antebraco: "Antebraço",
+  trapezio: "Trapézio", lombar: "Lombar", mobilidade: "Mobilidade", cardio: "Cardio",
 };
 
 const MUSCLE_GRADIENT: Record<string, string> = {
@@ -40,6 +41,11 @@ const MUSCLE_GRADIENT: Record<string, string> = {
   triceps: "from-fuchsia-600 via-pink-500 to-rose-400",
   abdomen: "from-orange-600 via-red-500 to-pink-500",
   panturrilha: "from-sky-600 via-blue-500 to-indigo-400",
+  antebraco: "from-lime-600 via-emerald-500 to-teal-400",
+  trapezio: "from-indigo-600 via-blue-500 to-cyan-400",
+  lombar: "from-stone-600 via-amber-600 to-yellow-500",
+  mobilidade: "from-cyan-600 via-teal-500 to-emerald-400",
+  cardio: "from-rose-600 via-red-500 to-orange-500",
 };
 
 const DIFFICULTY_COLOR: Record<string, string> = {

@@ -143,7 +143,13 @@ Deno.serve(async (req) => {
     }
 
     for (const muscle of selected) {
-      const exercises = await fetchExercisesForMuscle(muscle);
+      const { data: current } = await supabase
+        .from("exercise_library")
+        .select("name")
+        .eq("muscle_group", muscle)
+        .eq("active", true);
+      const existingNames = (current ?? []).map((r: { name: string }) => r.name);
+      const exercises = await fetchExercisesForMuscle(muscle, existingNames);
       for (const ex of exercises) {
         const payload = {
           name: ex.name,

@@ -10,7 +10,10 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const MUSCLES = ["peito", "costas", "quadriceps", "posterior", "gluteos", "ombros", "biceps", "triceps", "abdomen", "panturrilha"];
+const MUSCLES = [
+  "peito", "costas", "quadriceps", "posterior", "gluteos", "ombros", "biceps", "triceps",
+  "abdomen", "panturrilha", "antebraco", "trapezio", "lombar", "mobilidade", "cardio",
+];
 
 interface AIExercise {
   name: string;
@@ -29,15 +32,16 @@ interface AIExercise {
 }
 
 
-async function fetchExercisesForMuscle(muscle: string): Promise<AIExercise[]> {
+async function fetchExercisesForMuscle(muscle: string, existingNames: string[] = []): Promise<AIExercise[]> {
+  const avoid = existingNames.slice(0, 250).join(", ");
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-3.6-flash",
       messages: [
-        { role: "system", content: "Você é um especialista em musculação. Retorne exercícios validados cientificamente. Para video_url use APENAS URLs reais e verificadas do YouTube (canais reconhecidos como Jeff Nippard, ATHLEAN-X, Renaissance Periodization, Leandro Twin). Para image_url use URLs de Unsplash ou Wikimedia Commons — se não tiver certeza, omita o campo (é melhor omitir do que inventar)." },
-        { role: "user", content: `Liste 10-15 exercícios eficazes para ${muscle}, incluindo variações modernas e clássicas. Para cada um retorne: nome em português, músculos secundários, equipamento, dificuldade (iniciante/intermediario/avancado), séries, reps, descanso, dica técnica curta, descrição completa (2-3 frases), 6 passos de execução detalhados, e opcionalmente image_url e video_url reais.` },
+        { role: "system", content: "Você é treinador de força e condicionamento (CSCS) e curador de biblioteca de exercícios. Retorne apenas exercícios reais e validados cientificamente, com nomenclatura em português do Brasil. Para video_url use APENAS URLs reais e verificadas do YouTube (canais reconhecidos como Jeff Nippard, ATHLEAN-X, Renaissance Periodization, Leandro Twin). Para image_url use URLs de Unsplash ou Wikimedia Commons — se não tiver certeza, omita o campo (é melhor omitir do que inventar)." },
+        { role: "user", content: `Liste 15-20 exercícios eficazes para ${muscle}, cobrindo barra, halteres, cabos, máquinas, peso corporal, kettlebell, elástico, unilaterais e isometrias.${avoid ? `\n\nNÃO repita nenhum destes já cadastrados: ${avoid}.` : ""}\n\nPara cada um retorne: nome em português, músculos secundários, equipamento, dificuldade (iniciante/intermediario/avancado), séries, reps, descanso, dica técnica curta, descrição completa (2-3 frases), 6 passos de execução detalhados, e opcionalmente image_url e video_url reais.` },
       ],
       tools: [{
         type: "function",
@@ -139,7 +143,13 @@ Deno.serve(async (req) => {
     }
 
     for (const muscle of selected) {
-      const exercises = await fetchExercisesForMuscle(muscle);
+      const { data: current } = await supabase
+        .from("exercise_library")
+        .select("name")
+        .eq("muscle_group", muscle)
+        .eq("active", true);
+      const existingNames = (current ?? []).map((r: { name: string }) => r.name);
+      const exercises = await fetchExercisesForMuscle(muscle, existingNames);
       for (const ex of exercises) {
         const payload = {
           name: ex.name,

@@ -28,7 +28,7 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
             <Lock className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             Área exclusiva
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -54,7 +54,7 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
           <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
             <Lock className="w-8 h-8 text-destructive" />
           </div>
-          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             Acesso Restrito
           </h1>
           <p className="text-sm text-muted-foreground">Faça login para acessar.</p>
@@ -105,7 +105,7 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
           <ShieldCheck className="w-8 h-8 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             Área do Personal Trainer
           </h1>
           <p className="text-sm text-muted-foreground mt-2">

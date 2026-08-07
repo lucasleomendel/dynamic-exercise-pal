@@ -1,6 +1,21 @@
 import { UserProfile } from "@/lib/workout-generator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { User, Edit3, Trash2, Target, Calendar, Clock, Activity, Ruler, Scale, UserCircle2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  User,
+  Edit3,
+  Trash2,
+  Target,
+  Calendar,
+  Clock,
+  Activity,
+  Scale,
+  Ruler,
+  Mail,
+  Flame,
+  Dumbbell,
+  TrendingUp,
+} from "lucide-react";
 
 interface Props {
   profile: UserProfile;
@@ -10,11 +25,11 @@ interface Props {
   onOpenChange?: (v: boolean) => void;
 }
 
-const goalLabels: Record<string, { label: string; emoji: string; color: string }> = {
-  hipertrofia: { label: "Hipertrofia", emoji: "💪", color: "from-orange-500/20 to-red-500/20" },
-  emagrecimento: { label: "Emagrecimento", emoji: "🔥", color: "from-yellow-500/20 to-orange-500/20" },
-  resistencia: { label: "Resistência", emoji: "🏃", color: "from-blue-500/20 to-cyan-500/20" },
-  forca: { label: "Força", emoji: "🏋️", color: "from-purple-500/20 to-pink-500/20" },
+const goalLabels: Record<string, { label: string; emoji: string }> = {
+  hipertrofia: { label: "Hipertrofia", emoji: "💪" },
+  emagrecimento: { label: "Emagrecimento", emoji: "🔥" },
+  resistencia: { label: "Resistência", emoji: "🏃" },
+  forca: { label: "Força", emoji: "🏋️" },
 };
 
 const levelLabels: Record<string, { label: string; emoji: string }> = {
@@ -30,7 +45,33 @@ const getBmiInfo = (bmi: number) => {
   return { label: "Obesidade", color: "text-red-400" };
 };
 
+const getHistoryStats = () => {
+  try {
+    const raw = localStorage.getItem("fitforge_history");
+    if (!raw) return { total: 0, last7: 0, streak: 0 };
+    const items: { date: string }[] = JSON.parse(raw);
+    const now = new Date();
+    const dates = new Set(items.map((i) => i.date.slice(0, 10)));
+    let streak = 0;
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      if (dates.has(key)) streak++;
+      else if (i > 0) break;
+    }
+    const last7 = items.filter((i) => {
+      const diff = (now.getTime() - new Date(i.date).getTime()) / 86400000;
+      return diff <= 7;
+    }).length;
+    return { total: items.length, last7, streak };
+  } catch {
+    return { total: 0, last7: 0, streak: 0 };
+  }
+};
+
 const ProfileSheet = ({ profile, onEdit, onClear, open, onOpenChange }: Props) => {
+  const { user } = useAuth();
   const bmiNum = profile.weight / ((profile.height / 100) ** 2);
   const bmi = bmiNum.toFixed(1);
   const bmiInfo = getBmiInfo(bmiNum);
@@ -38,6 +79,11 @@ const ProfileSheet = ({ profile, onEdit, onClear, open, onOpenChange }: Props) =
   const controlled = open !== undefined;
   const goal = goalLabels[profile.goal];
   const level = levelLabels[profile.level];
+  const stats = getHistoryStats();
+  const initials = (profile.name || "U").trim().split(/\s+/).slice(0, 2).map((n) => n[0]).join("").toUpperCase();
+  const memberSince = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
+    : "—";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -48,34 +94,45 @@ const ProfileSheet = ({ profile, onEdit, onClear, open, onOpenChange }: Props) =
           </button>
         </SheetTrigger>
       )}
-      <SheetContent side="right" className="bg-background border-border overflow-y-auto p-0 w-full sm:max-w-md">
-        {/* Hero Header */}
-        <div className={`relative bg-gradient-to-br ${goal?.color || "from-primary/20 to-primary/5"} px-6 pt-8 pb-6 border-b border-border`}>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-background/80 backdrop-blur flex items-center justify-center shadow-lg">
-              <UserCircle2 className="w-9 h-9 text-primary" />
+      <SheetContent
+        side="right"
+        className="bg-background border-l border-border overflow-y-auto p-0 w-full sm:max-w-md"
+      >
+        {/* HERO — Industrial compact */}
+        <div className="relative px-5 pt-7 pb-5 border-b-2 border-border bg-gradient-to-br from-primary/15 via-background to-background">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-xl bg-primary/15 border-2 border-primary/40 flex items-center justify-center text-primary font-display text-2xl tracking-wider shrink-0">
+              {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="font-bold text-lg text-foreground truncate" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Meu perfil
+              <div className="text-[10px] uppercase tracking-[0.2em] text-primary/80 font-semibold">Atleta</div>
+              <h2 className="font-display text-3xl leading-none tracking-wide text-foreground truncate mt-1">
+                {profile.name || "Sem nome"}
               </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {goal?.emoji} {goal?.label} · {level?.emoji} {level?.label}
-              </p>
+              {user?.email && (
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1.5 truncate">
+                  <Mail className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{user.email}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+                <Calendar className="w-3 h-3" />
+                Membro desde {memberSince}
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-5">
+          <div className="grid grid-cols-2 gap-2 mt-4">
             <button
               onClick={onEdit}
-              className="flex items-center justify-center gap-1.5 text-sm font-medium text-primary px-3 py-2.5 rounded-xl bg-background/70 hover:bg-background transition-colors backdrop-blur"
+              className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary px-3 py-2.5 rounded-md bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-colors"
             >
               <Edit3 className="w-3.5 h-3.5" />
               Editar
             </button>
             <button
               onClick={onClear}
-              className="flex items-center justify-center gap-1.5 text-sm font-medium text-destructive px-3 py-2.5 rounded-xl bg-background/70 hover:bg-background transition-colors backdrop-blur"
+              className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider text-destructive px-3 py-2.5 rounded-md bg-destructive/10 border border-destructive/30 hover:bg-destructive/20 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Limpar
@@ -83,84 +140,159 @@ const ProfileSheet = ({ profile, onEdit, onClear, open, onOpenChange }: Props) =
           </div>
         </div>
 
-        <div className="p-5 space-y-5">
-          {/* Vitals: highlight IMC */}
-          <div className="rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/20 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Métricas</span>
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${bmiInfo.color}`}>
-                {bmiInfo.label}
-              </span>
-            </div>
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <div className="text-4xl font-bold font-display text-foreground leading-none" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  {bmi}
+        <div className="p-4 space-y-3">
+          {/* BENTO: IMC (col-span-2) + 3 stats */}
+          <div className="grid grid-cols-4 gap-2">
+            {/* IMC card destaque */}
+            <div className="col-span-2 row-span-2 rounded-lg border border-border bg-card p-4 flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">IMC</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${bmiInfo.color}`}>
+                    {bmiInfo.label}
+                  </span>
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-1">IMC atual</div>
+                <div className="font-display text-5xl text-foreground leading-none tracking-wide">{bmi}</div>
+                <div className="text-[10px] text-muted-foreground mt-1">Índice atual</div>
               </div>
-              <div className="flex gap-2">
-                <div className="text-right">
-                  <div className="text-lg font-bold text-foreground">{profile.weight}<span className="text-xs text-muted-foreground ml-0.5">kg</span></div>
-                  <div className="text-[10px] text-muted-foreground">Peso</div>
+              <div className="relative flex gap-3 mt-3">
+                <div>
+                  <div className="font-display text-xl text-foreground leading-none">{profile.weight}<span className="text-[10px] text-muted-foreground ml-0.5 font-sans">kg</span></div>
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5">Peso</div>
                 </div>
                 <div className="w-px bg-border" />
-                <div className="text-right">
-                  <div className="text-lg font-bold text-foreground">{profile.height}<span className="text-xs text-muted-foreground ml-0.5">cm</span></div>
-                  <div className="text-[10px] text-muted-foreground">Altura</div>
+                <div>
+                  <div className="font-display text-xl text-foreground leading-none">{profile.height}<span className="text-[10px] text-muted-foreground ml-0.5 font-sans">cm</span></div>
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5">Altura</div>
                 </div>
               </div>
             </div>
+
+            {/* Streak */}
+            <StatCell
+              icon={<Flame className="w-3.5 h-3.5" />}
+              label="Streak"
+              value={String(stats.streak)}
+              suffix="dias"
+              accent
+            />
+            {/* Total treinos */}
+            <StatCell
+              icon={<Dumbbell className="w-3.5 h-3.5" />}
+              label="Total"
+              value={String(stats.total)}
+              suffix="treinos"
+            />
+            {/* Última semana */}
+            <StatCell
+              icon={<TrendingUp className="w-3.5 h-3.5" />}
+              label="7 dias"
+              value={String(stats.last7)}
+              suffix="sessões"
+            />
+            {/* Idade */}
+            <StatCell
+              icon={<User className="w-3.5 h-3.5" />}
+              label="Idade"
+              value={String(profile.age)}
+              suffix="anos"
+            />
           </div>
 
-          {/* Personal */}
-          <div>
-            <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Pessoal</h3>
-            <div className="grid grid-cols-3 gap-2">
-              <InfoChip icon={<User className="w-3.5 h-3.5" />} label="Idade" value={`${profile.age}`} suffix="anos" />
-              <InfoChip icon={<Scale className="w-3.5 h-3.5" />} label="Sexo" value={profile.sex === "masculino" ? "M" : "F"} />
-              <InfoChip icon={<Activity className="w-3.5 h-3.5" />} label="Nível" value={level?.emoji || "—"} />
-            </div>
+          {/* PESSOAL */}
+          <SectionHeader>Pessoal</SectionHeader>
+          <div className="grid grid-cols-2 gap-2">
+            <InfoRow icon={<Scale className="w-3.5 h-3.5" />} label="Sexo" value={profile.sex === "masculino" ? "Masculino" : "Feminino"} />
+            <InfoRow icon={<Activity className="w-3.5 h-3.5" />} label="Nível" value={`${level?.emoji} ${level?.label || "—"}`} />
           </div>
 
-          {/* Training */}
-          <div>
-            <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Treino</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <InfoChip icon={<Target className="w-3.5 h-3.5" />} label="Objetivo" value={`${goal?.emoji} ${goal?.label || "—"}`} compact />
-              <InfoChip icon={<Activity className="w-3.5 h-3.5" />} label="Nível" value={`${level?.emoji} ${level?.label || "—"}`} compact />
-              <InfoChip icon={<Calendar className="w-3.5 h-3.5" />} label="Frequência" value={`${profile.daysPerWeek}x`} suffix="por semana" />
-              <InfoChip icon={<Clock className="w-3.5 h-3.5" />} label="Sessão" value={timeLabel} suffix="por dia" />
-            </div>
+          {/* TREINO */}
+          <SectionHeader>Treino</SectionHeader>
+          <div className="grid grid-cols-2 gap-2">
+            <InfoRow icon={<Target className="w-3.5 h-3.5" />} label="Objetivo" value={`${goal?.emoji} ${goal?.label || "—"}`} />
+            <InfoRow icon={<Calendar className="w-3.5 h-3.5" />} label="Frequência" value={`${profile.daysPerWeek}x / semana`} />
+            <InfoRow icon={<Clock className="w-3.5 h-3.5" />} label="Sessão" value={`${timeLabel} / dia`} />
+            <InfoRow
+              icon={<Ruler className="w-3.5 h-3.5" />}
+              label="Volume sem."
+              value={`${(profile.daysPerWeek * profile.hoursPerSession).toFixed(1)}h`}
+            />
           </div>
+
+          {profile.selectedMuscles && profile.selectedMuscles.length > 0 && (
+            <>
+              <SectionHeader>Grupos ativos</SectionHeader>
+              <div className="flex flex-wrap gap-1.5">
+                {profile.selectedMuscles.map((m) => (
+                  <span
+                    key={m}
+                    className="px-2.5 py-1 rounded-md bg-secondary border border-border text-[10px] uppercase tracking-wider font-semibold text-foreground"
+                  >
+                    {m}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </SheetContent>
     </Sheet>
   );
 };
 
-const InfoChip = ({
+const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex items-center gap-2 pt-2">
+    <div className="h-px flex-1 bg-border" />
+    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">{children}</span>
+    <div className="h-px flex-1 bg-border" />
+  </div>
+);
+
+const StatCell = ({
   icon,
   label,
   value,
   suffix,
-  compact,
+  accent,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   suffix?: string;
-  compact?: boolean;
+  accent?: boolean;
 }) => (
-  <div className="rounded-xl bg-secondary/60 hover:bg-secondary transition-colors p-3 border border-transparent hover:border-border">
-    <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+  <div
+    className={`rounded-lg border p-2.5 flex flex-col justify-between min-h-[68px] ${
+      accent ? "border-primary/40 bg-primary/5" : "border-border bg-card"
+    }`}
+  >
+    <div className={`flex items-center gap-1 text-[9px] uppercase tracking-wider font-semibold ${accent ? "text-primary" : "text-muted-foreground"}`}>
       {icon}
-      <span className="text-[10px] uppercase tracking-wide">{label}</span>
+      <span>{label}</span>
     </div>
-    <div className={`font-semibold text-foreground leading-tight ${compact ? "text-sm" : "text-base"}`}>
-      {value}
+    <div>
+      <div className="font-display text-2xl text-foreground leading-none tracking-wide">{value}</div>
+      {suffix && <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5">{suffix}</div>}
     </div>
-    {suffix && <div className="text-[10px] text-muted-foreground mt-0.5">{suffix}</div>}
+  </div>
+);
+
+const InfoRow = ({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) => (
+  <div className="rounded-md border border-border bg-card px-3 py-2.5">
+    <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+      {icon}
+      <span className="text-[9px] uppercase tracking-wider font-semibold">{label}</span>
+    </div>
+    <div className="text-sm font-semibold text-foreground leading-tight">{value}</div>
   </div>
 );
 

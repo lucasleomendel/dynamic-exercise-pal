@@ -153,8 +153,8 @@ Use exercícios consagrados + variações modernas. Cada dia deve ter 5-8 exerc�
 
     return json({ ok: true, plan: planData, method: advanced ? methodSlug || null : null });
   } catch (e) {
-    console.error(e);
-    return json({ error: e instanceof Error ? e.message : "erro" }, 500);
+    console.error("apply-training-method error:", e);
+    return json({ error: "Erro interno do servidor" }, 500);
   }
 });
 

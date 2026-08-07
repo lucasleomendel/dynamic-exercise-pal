@@ -7,6 +7,7 @@ import { hasPersonalAccess } from "@/lib/admin";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { savePlan } from "@/lib/storage";
 import { toast } from "sonner";
 
 interface TrainingMethod { slug: string; name: string; short_description: string; }
@@ -65,8 +66,7 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
       // Atualiza cache local + notifica app
       if ((data as any)?.plan) {
         const plan = (data as any).plan;
-        localStorage.setItem("fitforge_plan", JSON.stringify(plan));
-        localStorage.setItem("fitforge_plan_ts", String(Date.now()));
+        savePlan(plan);
         window.dispatchEvent(new CustomEvent("fitforge:plan-updated", { detail: plan }));
       }
       toast.success("Treino atualizado!", { id: t });
@@ -98,13 +98,14 @@ const SettingsSheet = ({ open: openProp, onOpenChange }: Props = {}) => {
         </SheetTrigger>
       )}
       <SheetContent side="right" className="bg-background border-border overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Configurações
+        <SheetHeader className="border-b border-border pb-3">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">Sistema</span>
+          <SheetTitle className="text-foreground font-display text-2xl tracking-wide leading-none" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
+            CONFIGURAÇÕES
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-5 space-y-3">
           {/* Theme toggle */}
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

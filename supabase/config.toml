@@ -2,3 +2,6 @@ project_id = "lepswwvnbbyilijjldga"
 
 [functions.job-runner]
 verify_jwt = false
+
+[functions.generate-exercise-images]
+verify_jwt = false

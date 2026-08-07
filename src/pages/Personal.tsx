@@ -124,7 +124,7 @@ const Personal = () => {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <Dumbbell className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Personal</span>
+            <span className="font-bold text-lg" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>Personal</span>
           </div>
         </div>
         {/* Tab bar */}
@@ -260,7 +260,7 @@ const StudentManagement = ({ userId }: { userId?: string }) => {
       {/* Search */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <CardTitle className="text-base flex items-center gap-2" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             <Search className="w-4 h-4" /> Buscar Aluno
           </CardTitle>
         </CardHeader>
@@ -331,7 +331,7 @@ const StudentManagement = ({ userId }: { userId?: string }) => {
       {/* My Students */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <CardTitle className="text-base flex items-center gap-2" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             <Users className="w-4 h-4" /> Meus Alunos ({myStudents.length})
           </CardTitle>
         </CardHeader>
@@ -491,7 +491,7 @@ const StudentForm = ({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <CardTitle className="text-base" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             {student ? "Editar Aluno" : "Novo Aluno"}
           </CardTitle>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onCancel}>
@@ -651,7 +651,7 @@ const WorkoutBuilder = () => {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader><CardTitle className="text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Informações do Treino</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>Informações do Treino</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div><label className="text-sm font-medium text-foreground mb-1 block">Título</label><Input value={title} onChange={e => setTitle(e.target.value)} /></div>
           <div><label className="text-sm font-medium text-foreground mb-1 block">Descrição</label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} /></div>
@@ -665,7 +665,7 @@ const WorkoutBuilder = () => {
               <div className="flex items-center gap-3">
                 <GripVertical className="w-4 h-4 text-muted-foreground" />
                 <div className="text-left">
-                  <h3 className="font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{day.day} {day.focus && `- ${day.focus}`}</h3>
+                  <h3 className="font-bold" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>{day.day} {day.focus && `- ${day.focus}`}</h3>
                   <p className="text-sm text-muted-foreground">{day.exercises.length} exercício(s)</p>
                 </div>
               </div>

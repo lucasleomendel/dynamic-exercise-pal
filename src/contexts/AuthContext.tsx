@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { hydrateFromCloud, maybeDailySync } from "@/lib/cloud-sync";
@@ -34,6 +34,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try { return localStorage.getItem(GUEST_KEY) === "1"; } catch { return false; }
   });
 
+  const hydratedRef = useRef(false);
+
+  const runHydration = () => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+    hydrateFromCloud().catch(() => {});
+    maybeDailySync().catch(() => {});
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -44,10 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsGuest(false);
         }
         if (event === "SIGNED_IN" && session?.user) {
-          setTimeout(() => {
-            hydrateFromCloud().catch(() => {});
-            maybeDailySync().catch(() => {});
-          }, 0);
+          setTimeout(runHydration, 0);
         }
       }
     );
@@ -56,10 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setLoading(false);
       if (session?.user) {
-        setTimeout(() => {
-          hydrateFromCloud().catch(() => {});
-          maybeDailySync().catch(() => {});
-        }, 0);
+        setTimeout(runHydration, 0);
       }
     });
 
@@ -79,6 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = useCallback(async () => {
     try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
     setIsGuest(false);
+    hydratedRef.current = false;
     await supabase.auth.signOut();
   }, []);
 

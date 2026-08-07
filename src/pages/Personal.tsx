@@ -150,12 +150,24 @@ const Personal = () => {
             <Dumbbell className="w-4 h-4 inline mr-1.5" />
             Montar Treino
           </button>
+          <button
+            onClick={() => setTab("audit")}
+            className={`flex-1 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+              tab === "audit" ? "bg-primary/10 text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ScrollText className="w-4 h-4 inline mr-1.5" />
+            Auditoria
+          </button>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {tab === "students" ? <StudentManagement userId={user?.id} /> : <WorkoutBuilder />}
+        {tab === "students" && <StudentManagement userId={user?.id} />}
+        {tab === "workout" && <WorkoutBuilder />}
+        {tab === "audit" && <AuditLogPanel />}
       </div>
+
     </div>
   );
 };

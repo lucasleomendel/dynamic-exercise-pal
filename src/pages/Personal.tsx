@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dumbbell, Plus, Trash2, ChevronDown, ChevronUp, GripVertical, Save,
-  ArrowLeft, Copy, Search, UserPlus, Users, Loader2, X, User, Phone, Mail
+  ArrowLeft, Copy, Search, UserPlus, Users, Loader2, X, User, Phone, Mail, ScrollText
 } from "lucide-react";
 import { Exercise, WorkoutDay, WorkoutPlan } from "@/lib/workout-generator";
 import { savePlan, saveProfile, loadProfile, loadPlan } from "@/lib/storage";

@@ -31,19 +31,18 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
     }
     setServerRoleChecked(false);
     (async () => {
-      const { data } = await supabase.rpc("is_master_admin", { uid: user.id });
+      // getUser() busca os metadados atualizados no servidor, mesmo que o
+      // token em cache tenha sido emitido antes da concessão do papel.
+      const { data } = await supabase.auth.getUser();
       if (!active) return;
-      if (data === true) {
-        setServerAdmin(true);
-        // Sincroniza o token para que as políticas de acesso usem o papel atual.
-        await supabase.auth.refreshSession();
-      }
+      if (hasPersonalAccess(data?.user ?? null)) setServerAdmin(true);
       setServerRoleChecked(true);
     })();
     return () => {
       active = false;
     };
   }, [user]);
+
 
   if (loading) return null;
 

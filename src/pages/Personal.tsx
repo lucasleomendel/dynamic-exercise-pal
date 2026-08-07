@@ -10,11 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dumbbell, Plus, Trash2, ChevronDown, ChevronUp, GripVertical, Save,
-  ArrowLeft, Copy, Search, UserPlus, Users, Loader2, X, User, Phone, Mail
+  ArrowLeft, Copy, Search, UserPlus, Users, Loader2, X, User, Phone, Mail, ScrollText
 } from "lucide-react";
 import { Exercise, WorkoutDay, WorkoutPlan } from "@/lib/workout-generator";
 import { savePlan, saveProfile, loadProfile, loadPlan } from "@/lib/storage";
 import { motion, AnimatePresence } from "framer-motion";
+import { logAudit, diffFields } from "@/lib/audit";
+import AuditLogPanel from "@/components/AuditLogPanel";
+
 
 // ─── Types ────────────────────────────────────────
 interface Student {
@@ -104,7 +107,7 @@ const emptyExercise = (): ExerciseForm => ({ name: "", sets: 3, reps: "10-12", r
 const emptyDay = (index: number): DayForm => ({ day: DAY_NAMES[index] || `Dia ${index + 1}`, focus: "", exercises: [emptyExercise()] });
 
 // ─── Main Component ──────────────────────────────
-type Tab = "students" | "workout";
+type Tab = "students" | "workout" | "audit";
 
 const Personal = () => {
   const { toast } = useToast();
@@ -147,12 +150,24 @@ const Personal = () => {
             <Dumbbell className="w-4 h-4 inline mr-1.5" />
             Montar Treino
           </button>
+          <button
+            onClick={() => setTab("audit")}
+            className={`flex-1 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+              tab === "audit" ? "bg-primary/10 text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ScrollText className="w-4 h-4 inline mr-1.5" />
+            Auditoria
+          </button>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {tab === "students" ? <StudentManagement userId={user?.id} /> : <WorkoutBuilder />}
+        {tab === "students" && <StudentManagement userId={user?.id} />}
+        {tab === "workout" && <WorkoutBuilder />}
+        {tab === "audit" && <AuditLogPanel />}
       </div>
+
     </div>
   );
 };
@@ -226,6 +241,9 @@ const StudentManagement = ({ userId }: { userId?: string }) => {
     setStudents(data || []);
   };
 
+  const nameOf = (studentId: string) =>
+    [...students, ...myStudents].find(s => s.id === studentId)?.full_name ?? null;
+
   const linkStudent = async (studentId: string) => {
     if (!userId) return;
     const { error } = await supabase
@@ -240,19 +258,35 @@ const StudentManagement = ({ userId }: { userId?: string }) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
       return;
     }
+    await logAudit({
+      action: "vincular",
+      entity: "permissao",
+      entityId: studentId,
+      entityLabel: nameOf(studentId),
+      details: { personal_id: userId },
+    });
     toast({ title: "Aluno vinculado! ✅" });
     loadMyStudents();
   };
 
   const unlinkStudent = async (studentId: string) => {
     if (!userId) return;
+    const label = nameOf(studentId);
     await supabase
       .from("personal_student_links")
       .delete()
       .eq("personal_id", userId)
       .eq("student_id", studentId);
+    await logAudit({
+      action: "desvincular",
+      entity: "permissao",
+      entityId: studentId,
+      entityLabel: label,
+      details: { personal_id: userId },
+    });
     toast({ title: "Vínculo removido" });
     loadMyStudents();
+
   };
 
   return (
@@ -462,6 +496,13 @@ const StudentForm = ({
         toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
         setSaving(false); return;
       }
+      await logAudit({
+        action: "atualizar",
+        entity: "aluno",
+        entityId: student.id,
+        entityLabel: payload.full_name,
+        details: diffFields(student as unknown as Record<string, unknown>, payload),
+      });
       toast({ title: "Aluno atualizado! ✅" });
     } else {
       // Insert + link
@@ -481,8 +522,16 @@ const StudentForm = ({
           student_id: data.id,
         });
       }
+      await logAudit({
+        action: "criar",
+        entity: "aluno",
+        entityId: data?.id ?? null,
+        entityLabel: payload.full_name,
+        details: { cpf: payload.cpf, goal: payload.goal, level: payload.level, vinculado: !!personalId },
+      });
       toast({ title: "Aluno cadastrado e vinculado! ✅" });
     }
+
     setSaving(false);
     onSaved();
   };
@@ -636,7 +685,7 @@ const WorkoutBuilder = () => {
   const updateExercise = (di: number, ei: number, f: keyof ExerciseForm, v: string | number) => setDays(p => p.map((d, i) => i !== di ? d : { ...d, exercises: d.exercises.map((ex, j) => j === ei ? { ...ex, [f]: v } : ex) }));
   const selectSuggestion = (di: number, ei: number, name: string, muscle: string) => setDays(p => p.map((d, i) => i !== di ? d : { ...d, exercises: d.exercises.map((ex, j) => j === ei ? { ...ex, name, muscle } : ex) }));
 
-  const savePlanHandler = () => {
+  const savePlanHandler = async () => {
     const hasEmpty = days.some(d => !d.focus || d.exercises.some(e => !e.name));
     if (hasEmpty) { toast({ title: "Preencha todos os campos", variant: "destructive" }); return; }
     const plan: WorkoutPlan = { title, description, daysPerWeek: days.length, days: days.map(d => ({ day: d.day, focus: d.focus, exercises: d.exercises.map(e => ({ name: e.name, sets: e.sets, reps: e.reps, rest: e.rest, muscle: e.muscle })) })) };
@@ -644,9 +693,20 @@ const WorkoutBuilder = () => {
     if (!loadProfile()) {
       saveProfile({ name: "Aluno", age: 25, weight: 70, height: 170, sex: "masculino", goal: "hipertrofia", level: "intermediario", daysPerWeek: days.length, hoursPerSession: 1 });
     }
+    await logAudit({
+      action: existingPlan ? "atualizar" : "criar",
+      entity: "treino",
+      entityLabel: title,
+      details: {
+        dias: plan.daysPerWeek,
+        exercicios: plan.days.reduce((n, d) => n + d.exercises.length, 0),
+        focos: plan.days.map(d => `${d.day}: ${d.focus}`),
+      },
+    });
     toast({ title: "Treino salvo! ✅" });
     navigate("/");
   };
+
 
   return (
     <div className="space-y-6">

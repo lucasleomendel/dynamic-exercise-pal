@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isMasterAdmin, hasPersonalAccess } from "@/lib/admin";
@@ -18,8 +18,34 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
   const { toast } = useToast();
   const [cref, setCref] = useState("");
   const [validating, setValidating] = useState(false);
+  // O token JWT pode estar desatualizado (papel concedido após o último login).
+  // Confirmamos o papel direto no servidor antes de bloquear o acesso.
+  const [serverRoleChecked, setServerRoleChecked] = useState(false);
+  const [serverAdmin, setServerAdmin] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!user || hasPersonalAccess(user)) {
+      setServerRoleChecked(true);
+      return;
+    }
+    setServerRoleChecked(false);
+    (async () => {
+      // getUser() busca os metadados atualizados no servidor, mesmo que o
+      // token em cache tenha sido emitido antes da concessão do papel.
+      const { data } = await supabase.auth.getUser();
+      if (!active) return;
+      if (hasPersonalAccess(data?.user ?? null)) setServerAdmin(true);
+      setServerRoleChecked(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
 
   if (loading) return null;
+
 
   if (isGuest) {
     return (
@@ -66,10 +92,20 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
     );
   }
 
-  // Master admin or already validated personal
-  if (hasPersonalAccess(user)) {
+  // Master admin (token ou servidor) ou personal já validado
+  if (hasPersonalAccess(user) || serverAdmin) {
     return <>{children}</>;
   }
+
+  // Aguardando confirmação do papel no servidor
+  if (!serverRoleChecked) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
 
   // CREF validation form
   const handleValidateCref = async () => {

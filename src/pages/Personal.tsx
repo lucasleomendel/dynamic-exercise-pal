@@ -107,7 +107,7 @@ const emptyExercise = (): ExerciseForm => ({ name: "", sets: 3, reps: "10-12", r
 const emptyDay = (index: number): DayForm => ({ day: DAY_NAMES[index] || `Dia ${index + 1}`, focus: "", exercises: [emptyExercise()] });
 
 // ─── Main Component ──────────────────────────────
-type Tab = "students" | "workout";
+type Tab = "students" | "workout" | "audit";
 
 const Personal = () => {
   const { toast } = useToast();

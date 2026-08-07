@@ -15,6 +15,9 @@ import {
 import { Exercise, WorkoutDay, WorkoutPlan } from "@/lib/workout-generator";
 import { savePlan, saveProfile, loadProfile, loadPlan } from "@/lib/storage";
 import { motion, AnimatePresence } from "framer-motion";
+import { logAudit, diffFields } from "@/lib/audit";
+import AuditLogPanel from "@/components/AuditLogPanel";
+
 
 // ─── Types ────────────────────────────────────────
 interface Student {

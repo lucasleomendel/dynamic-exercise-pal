@@ -685,7 +685,7 @@ const WorkoutBuilder = () => {
   const updateExercise = (di: number, ei: number, f: keyof ExerciseForm, v: string | number) => setDays(p => p.map((d, i) => i !== di ? d : { ...d, exercises: d.exercises.map((ex, j) => j === ei ? { ...ex, [f]: v } : ex) }));
   const selectSuggestion = (di: number, ei: number, name: string, muscle: string) => setDays(p => p.map((d, i) => i !== di ? d : { ...d, exercises: d.exercises.map((ex, j) => j === ei ? { ...ex, name, muscle } : ex) }));
 
-  const savePlanHandler = () => {
+  const savePlanHandler = async () => {
     const hasEmpty = days.some(d => !d.focus || d.exercises.some(e => !e.name));
     if (hasEmpty) { toast({ title: "Preencha todos os campos", variant: "destructive" }); return; }
     const plan: WorkoutPlan = { title, description, daysPerWeek: days.length, days: days.map(d => ({ day: d.day, focus: d.focus, exercises: d.exercises.map(e => ({ name: e.name, sets: e.sets, reps: e.reps, rest: e.rest, muscle: e.muscle })) })) };
@@ -693,9 +693,20 @@ const WorkoutBuilder = () => {
     if (!loadProfile()) {
       saveProfile({ name: "Aluno", age: 25, weight: 70, height: 170, sex: "masculino", goal: "hipertrofia", level: "intermediario", daysPerWeek: days.length, hoursPerSession: 1 });
     }
+    await logAudit({
+      action: existingPlan ? "atualizar" : "criar",
+      entity: "treino",
+      entityLabel: title,
+      details: {
+        dias: plan.daysPerWeek,
+        exercicios: plan.days.reduce((n, d) => n + d.exercises.length, 0),
+        focos: plan.days.map(d => `${d.day}: ${d.focus}`),
+      },
+    });
     toast({ title: "Treino salvo! ✅" });
     navigate("/");
   };
+
 
   return (
     <div className="space-y-6">

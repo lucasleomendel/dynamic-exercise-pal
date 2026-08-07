@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isMasterAdmin, hasPersonalAccess } from "@/lib/admin";
@@ -18,8 +18,35 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
   const { toast } = useToast();
   const [cref, setCref] = useState("");
   const [validating, setValidating] = useState(false);
+  // O token JWT pode estar desatualizado (papel concedido após o último login).
+  // Confirmamos o papel direto no servidor antes de bloquear o acesso.
+  const [serverRoleChecked, setServerRoleChecked] = useState(false);
+  const [serverAdmin, setServerAdmin] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!user || hasPersonalAccess(user)) {
+      setServerRoleChecked(true);
+      return;
+    }
+    setServerRoleChecked(false);
+    (async () => {
+      const { data } = await supabase.rpc("is_master_admin", { uid: user.id });
+      if (!active) return;
+      if (data === true) {
+        setServerAdmin(true);
+        // Sincroniza o token para que as políticas de acesso usem o papel atual.
+        await supabase.auth.refreshSession();
+      }
+      setServerRoleChecked(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   if (loading) return null;
+
 
   if (isGuest) {
     return (

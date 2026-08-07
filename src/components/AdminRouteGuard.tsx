@@ -93,10 +93,20 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
     );
   }
 
-  // Master admin or already validated personal
-  if (hasPersonalAccess(user)) {
+  // Master admin (token ou servidor) ou personal já validado
+  if (hasPersonalAccess(user) || serverAdmin) {
     return <>{children}</>;
   }
+
+  // Aguardando confirmação do papel no servidor
+  if (!serverRoleChecked) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
 
   // CREF validation form
   const handleValidateCref = async () => {

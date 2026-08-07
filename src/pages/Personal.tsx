@@ -241,6 +241,9 @@ const StudentManagement = ({ userId }: { userId?: string }) => {
     setStudents(data || []);
   };
 
+  const nameOf = (studentId: string) =>
+    [...students, ...myStudents].find(s => s.id === studentId)?.full_name ?? null;
+
   const linkStudent = async (studentId: string) => {
     if (!userId) return;
     const { error } = await supabase
@@ -255,19 +258,35 @@ const StudentManagement = ({ userId }: { userId?: string }) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
       return;
     }
+    await logAudit({
+      action: "vincular",
+      entity: "permissao",
+      entityId: studentId,
+      entityLabel: nameOf(studentId),
+      details: { personal_id: userId },
+    });
     toast({ title: "Aluno vinculado! ✅" });
     loadMyStudents();
   };
 
   const unlinkStudent = async (studentId: string) => {
     if (!userId) return;
+    const label = nameOf(studentId);
     await supabase
       .from("personal_student_links")
       .delete()
       .eq("personal_id", userId)
       .eq("student_id", studentId);
+    await logAudit({
+      action: "desvincular",
+      entity: "permissao",
+      entityId: studentId,
+      entityLabel: label,
+      details: { personal_id: userId },
+    });
     toast({ title: "Vínculo removido" });
     loadMyStudents();
+
   };
 
   return (

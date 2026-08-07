@@ -496,6 +496,13 @@ const StudentForm = ({
         toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
         setSaving(false); return;
       }
+      await logAudit({
+        action: "atualizar",
+        entity: "aluno",
+        entityId: student.id,
+        entityLabel: payload.full_name,
+        details: diffFields(student as unknown as Record<string, unknown>, payload),
+      });
       toast({ title: "Aluno atualizado! ✅" });
     } else {
       // Insert + link
@@ -515,8 +522,16 @@ const StudentForm = ({
           student_id: data.id,
         });
       }
+      await logAudit({
+        action: "criar",
+        entity: "aluno",
+        entityId: data?.id ?? null,
+        entityLabel: payload.full_name,
+        details: { cpf: payload.cpf, goal: payload.goal, level: payload.level, vinculado: !!personalId },
+      });
       toast({ title: "Aluno cadastrado e vinculado! ✅" });
     }
+
     setSaving(false);
     onSaved();
   };

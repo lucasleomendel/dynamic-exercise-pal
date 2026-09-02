@@ -1,9 +1,7 @@
-# OBSOLETO — guia de sincronização com Lovable
+# OBSOLETO — movido para archive/LOVABLE_SYNC_SETUP.md
 
-Este arquivo foi marcado como obsoleto e substituído pela implementação atual de sincronização.
+Este guia foi arquivado porque a sincronização agora é feita por src/lib/cloud-sync.ts.
 
-Motivo: o repositório não usa mais o padrão descrito neste guia (hook useLovableSync, serviço lovableSyncService.ts, workflow de Actions). A sincronização atual é feita por: `src/lib/cloud-sync.ts`.
-
-Se for necessário manter instruções de configuração, favor atualizar `README.md` ou criar documentação atualizada apontando para `src/lib/cloud-sync.ts`.
+Se precisar da versão original, consulte archive/LOVABLE_SYNC_SETUP.md neste PR.
 
 Última atualização automática: 2026-09-02

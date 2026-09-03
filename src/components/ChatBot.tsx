@@ -105,7 +105,11 @@ async function streamChat({
   }
 }
 
+// Frases que disparam a geração automática do plano de treino (ação, não conversa).
+const PLAN_INTENT = /\b(gerar?|monta[r]?|criar?|refaz(er)?|atualiza[r]?|novo)\b[^.?!]{0,40}\b(plano|treino|ficha|programa)\b/i;
+
 const QUICK_SUGGESTIONS = [
+  { icon: "🧠", text: "Gerar meu plano de treino automático" },
   { icon: "💪", text: "Como ganhar massa muscular?" },
   { icon: "🥗", text: "Monte uma dieta de cutting" },
   { icon: "🏋️", text: "Melhores exercícios para peito" },

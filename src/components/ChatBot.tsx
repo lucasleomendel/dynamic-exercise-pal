@@ -145,6 +145,48 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
   // NOTE: do NOT abort on unmount when streaming — keep AI running in background.
   // The component lives at app root; aborting only happens via Stop / Clear.
 
+  // Gera (ou atualiza) o plano de treino automático a partir do histórico do aluno.
+  const generatePlan = useCallback(async (request: string) => {
+    setIsStreaming(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("smart-plan", {
+        body: { focus: request },
+      });
+      const errMsg = (data as any)?.error;
+      if (error || errMsg) throw new Error(errMsg || error?.message || "Falha ao gerar o treino");
+
+      const plan = (data as any).plan;
+      const analysis = (data as any).analysis ?? {};
+      savePlan(plan);
+      window.dispatchEvent(new CustomEvent("fitforge:plan-updated", { detail: plan }));
+
+      const resumo = (plan.days ?? [])
+        .map((d: any) => `- **${d.day} · ${d.focus}** — ${d.exercises.length} exercícios`)
+        .join("\n");
+
+      const content = `✅ **${plan.title}** criado e já ativo no seu app.
+
+${plan.description}
+
+${resumo}
+
+${plan.progressionNotes ? `**Progressão (4 semanas):** ${plan.progressionNotes}\n\n` : ""}Base da análise: ${analysis.sessions ?? 0} sessões nos últimos 60 dias${analysis.adherence != null ? `, adesão ${analysis.adherence}%` : ""}${analysis.stagnant?.length ? `, estímulo trocado em ${analysis.stagnant.join(", ")}` : ""}.
+
+Veja tudo em **Meus treinos**.`;
+
+      setMessages(prev => [...prev, { role: "assistant", content, timestamp: Date.now() }]);
+    } catch (e) {
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: `⚠️ ${e instanceof Error ? e.message : "Erro ao gerar o treino"}`,
+        timestamp: Date.now(),
+      }]);
+    } finally {
+      setIsStreaming(false);
+      if (!openRef.current) setUnread(u => u + 1);
+    }
+  }, []);
+
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
     setInput("");
@@ -152,7 +194,14 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
     const userMsg: Message = { role: "user", content: text.trim(), timestamp: Date.now() };
     const currentMessages = [...messagesRef.current, userMsg];
     setMessages(currentMessages);
+
+    if (PLAN_INTENT.test(text)) {
+      await generatePlan(text.trim());
+      return;
+    }
+
     setIsStreaming(true);
+
 
     const controller = new AbortController();
     abortRef.current = controller;

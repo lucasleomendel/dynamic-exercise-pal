@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import type { UserProfile } from "@/lib/workout-generator";
+import { savePlan } from "@/lib/storage";
 
 interface Message {
   role: "user" | "assistant";
@@ -240,7 +241,7 @@ Veja tudo em **Meus treinos**.`;
       },
       signal: controller.signal,
     });
-  }, [isStreaming, profile]);
+  }, [isStreaming, profile, generatePlan]);
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();

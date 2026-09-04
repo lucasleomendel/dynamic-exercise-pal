@@ -19,6 +19,7 @@ const Progress = lazy(() => import("./pages/Progress"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Diagnostico = lazy(() => import("./pages/Diagnostico"));
 const ExerciseLibrary = lazy(() => import("./pages/ExerciseLibrary"));
+const Admin = lazy(() => import("./pages/Admin"));
 const Treinos = lazy(() => import("./pages/Treinos"));
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
               <Route path="/exercicios" element={<ProtectedRoute><ExerciseLibrary /></ProtectedRoute>} />
               <Route path="/treinos" element={<ProtectedRoute><Treinos /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="/personal" element={<ProtectedRoute><AdminRouteGuard><Personal /></AdminRouteGuard></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

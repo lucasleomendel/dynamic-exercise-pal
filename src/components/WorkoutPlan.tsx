@@ -9,8 +9,9 @@ import WaterTracker from "./WaterTracker";
 import ChatBot from "./ChatBot";
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
-import { Calendar, ChevronDown, LogOut, BarChart3, MoreVertical, Download, UtensilsCrossed, Ruler, Settings, User, Loader2, Library, Dumbbell } from "lucide-react";
+import { Calendar, ChevronDown, LogOut, BarChart3, MoreVertical, Download, UtensilsCrossed, Ruler, Settings, User, Loader2, Library, Dumbbell, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { isMasterAdmin } from "@/lib/admin";
 import { useNavigate } from "react-router-dom";
 import logoImg from "@/assets/logo-fitforge.png";
 import { generateWorkoutPDF } from "@/lib/pdf-generator";
@@ -47,7 +48,7 @@ interface Props {
 }
 
 const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) => {
-  const { signOut, isGuest, exitGuestMode } = useAuth();
+  const { signOut, isGuest, exitGuestMode, user } = useAuth();
   const navigate = useNavigate();
   const goToAuth = useCallback(() => {
     exitGuestMode();
@@ -188,6 +189,11 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
                   Baixar PDF do treino
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {isMasterAdmin(user) && (
+                  <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    <ShieldCheck className="w-4 h-4 mr-2" /> Painel admin
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => setOpenSheet("settings")}>
                   <Settings className="w-4 h-4 mr-2" /> Configurações
                 </DropdownMenuItem>

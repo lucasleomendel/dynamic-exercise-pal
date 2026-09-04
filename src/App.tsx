@@ -19,6 +19,7 @@ const Progress = lazy(() => import("./pages/Progress"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Diagnostico = lazy(() => import("./pages/Diagnostico"));
 const ExerciseLibrary = lazy(() => import("./pages/ExerciseLibrary"));
+const Admin = lazy(() => import("./pages/Admin"));
 const Treinos = lazy(() => import("./pages/Treinos"));
 
 const queryClient = new QueryClient();

@@ -188,6 +188,11 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
                   Baixar PDF do treino
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {isMasterAdmin(user) && (
+                  <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    <ShieldCheck className="w-4 h-4 mr-2" /> Painel admin
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => setOpenSheet("settings")}>
                   <Settings className="w-4 h-4 mr-2" /> Configurações
                 </DropdownMenuItem>

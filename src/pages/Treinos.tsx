@@ -28,17 +28,38 @@ const Treinos = () => {
   const [activeDay, setActiveDay] = useState(0);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
+  const [history, setHistory] = useState<
+    { id: string; title: string; created_at: string; days_per_week: number | null; is_active: boolean }[]
+  >([]);
+  const [progress, setProgress] = useState<
+    { id: string; analyzed_at: string; workouts_completed: number | null; avg_completion_rate: number | null; recommendation: string | null }[]
+  >([]);
+
   const fetchRemotePlan = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
-      .from("workout_plans")
-      .select("plan_data,updated_at")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [{ data }, { data: plans }, { data: logs }] = await Promise.all([
+      supabase
+        .from("workout_plans")
+        .select("plan_data,updated_at")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("workout_plans")
+        .select("id,title,created_at,days_per_week,is_active")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("progression_log")
+        .select("id,analyzed_at,workouts_completed,avg_completion_rate,recommendation")
+        .eq("user_id", user.id)
+        .order("analyzed_at", { ascending: false })
+        .limit(5),
+    ]);
     if (data?.plan_data) {
       const remote = data.plan_data as unknown as PlanWithNotes;
       setPlan(remote);
@@ -46,9 +67,12 @@ const Treinos = () => {
       setUpdatedAt(data.updated_at);
       setActiveDay(0);
     }
+    setHistory(plans ?? []);
+    setProgress(logs ?? []);
   }, []);
 
   useEffect(() => { fetchRemotePlan(); }, [fetchRemotePlan]);
+
 
   // Atualiza automaticamente quando o chat (ou o modo avançado) regenera o plano.
   useEffect(() => {

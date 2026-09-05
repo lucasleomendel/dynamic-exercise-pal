@@ -1,6 +1,7 @@
 import { UserProfile } from "@/lib/workout-generator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
+import PersonalDataCard from "@/components/PersonalDataCard";
 import {
   User,
   Edit3,
@@ -206,6 +207,8 @@ const ProfileSheet = ({ profile, onEdit, onClear, open, onOpenChange }: Props) =
             <InfoRow icon={<Scale className="w-3.5 h-3.5" />} label="Sexo" value={profile.sex === "masculino" ? "Masculino" : "Feminino"} />
             <InfoRow icon={<Activity className="w-3.5 h-3.5" />} label="Nível" value={`${level?.emoji} ${level?.label || "—"}`} />
           </div>
+
+          <PersonalDataCard />
 
           {/* TREINO */}
           <SectionHeader>Treino</SectionHeader>

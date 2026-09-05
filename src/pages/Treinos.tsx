@@ -28,17 +28,38 @@ const Treinos = () => {
   const [activeDay, setActiveDay] = useState(0);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
+  const [history, setHistory] = useState<
+    { id: string; title: string; created_at: string; days_per_week: number | null; is_active: boolean }[]
+  >([]);
+  const [progress, setProgress] = useState<
+    { id: string; analyzed_at: string; workouts_completed: number | null; avg_completion_rate: number | null; recommendation: string | null }[]
+  >([]);
+
   const fetchRemotePlan = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
-      .from("workout_plans")
-      .select("plan_data,updated_at")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [{ data }, { data: plans }, { data: logs }] = await Promise.all([
+      supabase
+        .from("workout_plans")
+        .select("plan_data,updated_at")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("workout_plans")
+        .select("id,title,created_at,days_per_week,is_active")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("progression_log")
+        .select("id,analyzed_at,workouts_completed,avg_completion_rate,recommendation")
+        .eq("user_id", user.id)
+        .order("analyzed_at", { ascending: false })
+        .limit(5),
+    ]);
     if (data?.plan_data) {
       const remote = data.plan_data as unknown as PlanWithNotes;
       setPlan(remote);
@@ -46,9 +67,12 @@ const Treinos = () => {
       setUpdatedAt(data.updated_at);
       setActiveDay(0);
     }
+    setHistory(plans ?? []);
+    setProgress(logs ?? []);
   }, []);
 
   useEffect(() => { fetchRemotePlan(); }, [fetchRemotePlan]);
+
 
   // Atualiza automaticamente quando o chat (ou o modo avançado) regenera o plano.
   useEffect(() => {
@@ -59,7 +83,10 @@ const Treinos = () => {
         setActiveDay(0);
         setUpdatedAt(new Date().toISOString());
       }
+      // Puxa também o histórico/progressão recém-gravados no banco.
+      fetchRemotePlan();
     };
+
     window.addEventListener("fitforge:plan-updated", onPlanUpdated);
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -235,6 +262,51 @@ const Treinos = () => {
             )}
           </>
         )}
+
+        {progress.length > 0 && (
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <p className="text-[10px] font-display tracking-[0.25em] text-primary uppercase flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5" /> Histórico de progressão
+            </p>
+            <div className="mt-3 space-y-3">
+              {progress.map((p) => (
+                <div key={p.id} className="border-l-2 border-primary/30 pl-3">
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(p.analyzed_at).toLocaleDateString("pt-BR")} ·{" "}
+                    {p.workouts_completed ?? 0} sessões
+                    {p.avg_completion_rate != null ? ` · adesão ${Math.round(Number(p.avg_completion_rate))}%` : ""}
+                  </p>
+                  {p.recommendation && <p className="text-sm mt-1 leading-relaxed">{p.recommendation}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {history.length > 0 && (
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <p className="text-[10px] font-display tracking-[0.25em] text-primary uppercase flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" /> Planos salvos
+            </p>
+            <ul className="mt-3 space-y-2">
+              {history.map((h) => (
+                <li key={h.id} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate">
+                    {h.title}
+                    {h.is_active && (
+                      <span className="ml-2 text-[10px] uppercase tracking-wide text-primary">ativo</span>
+                    )}
+                  </span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {new Date(h.created_at).toLocaleDateString("pt-BR")}
+                    {h.days_per_week ? ` · ${h.days_per_week}x` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
       </main>
     </div>
   );

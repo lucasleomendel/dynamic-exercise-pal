@@ -193,22 +193,49 @@ ${librarySummary.slice(0, 4000)}`;
       return json({ error: "A IA não retornou dias de treino." }, 502);
     }
 
+    // Mantém o histórico: planos anteriores ficam arquivados (is_active = false).
     await sb.from("workout_plans").update({ is_active: false }).eq("user_id", userId).eq("is_active", true);
-    const { error: insErr } = await sb.from("workout_plans").insert({
+    const { data: inserted, error: insErr } = await sb.from("workout_plans").insert({
       user_id: userId,
       title: planData.title,
       description: planData.description,
       days_per_week: planData.daysPerWeek ?? planData.days.length,
       plan_data: planData,
       is_active: true,
-    });
-    if (insErr) {
+    }).select("id,created_at").single();
+    if (insErr || !inserted) {
       console.error(insErr);
       return json({ error: "Falha ao salvar o plano." }, 500);
     }
 
+    // Registra a progressão que originou este plano (histórico do aluno).
+    const periodEnd = new Date();
+    const periodStart = new Date(Date.now() - 60 * 86400000);
+    const { error: progErr } = await sb.from("progression_log").insert({
+      user_id: userId,
+      analyzed_at: periodEnd.toISOString(),
+      period_start: periodStart.toISOString().slice(0, 10),
+      period_end: periodEnd.toISOString().slice(0, 10),
+      workouts_completed: sessions.length,
+      avg_completion_rate: adherence,
+      weight_progression: loadTrend.slice(0, 40),
+      recommendation: planData.progressionNotes ?? planData.description ?? null,
+      applied: true,
+      plan_changes: {
+        plan_id: inserted.id,
+        title: planData.title,
+        days_per_week: planData.daysPerWeek ?? planData.days.length,
+        exercises: planData.days.reduce((a: number, d: any) => a + (d.exercises?.length ?? 0), 0),
+        stagnant: stagnant.slice(0, 12),
+        method: advanced ? (activeMethod?.name ?? null) : null,
+        source: "smart-plan",
+      },
+    });
+    if (progErr) console.error("progression_log insert failed", progErr);
+
     return json({
       ok: true,
+      planId: inserted.id,
       plan: planData,
       analysis: {
         sessions: sessions.length,
@@ -217,6 +244,7 @@ ${librarySummary.slice(0, 4000)}`;
         method: advanced ? (activeMethod?.name ?? null) : null,
       },
     });
+
   } catch (e) {
     console.error("smart-plan error:", e);
     return json({ error: "Erro interno do servidor" }, 500);

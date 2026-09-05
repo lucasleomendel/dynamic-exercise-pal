@@ -83,7 +83,10 @@ const Treinos = () => {
         setActiveDay(0);
         setUpdatedAt(new Date().toISOString());
       }
+      // Puxa também o histórico/progressão recém-gravados no banco.
+      fetchRemotePlan();
     };
+
     window.addEventListener("fitforge:plan-updated", onPlanUpdated);
 
     let channel: ReturnType<typeof supabase.channel> | null = null;

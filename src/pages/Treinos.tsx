@@ -262,6 +262,51 @@ const Treinos = () => {
             )}
           </>
         )}
+
+        {progress.length > 0 && (
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <p className="text-[10px] font-display tracking-[0.25em] text-primary uppercase flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5" /> Histórico de progressão
+            </p>
+            <div className="mt-3 space-y-3">
+              {progress.map((p) => (
+                <div key={p.id} className="border-l-2 border-primary/30 pl-3">
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(p.analyzed_at).toLocaleDateString("pt-BR")} ·{" "}
+                    {p.workouts_completed ?? 0} sessões
+                    {p.avg_completion_rate != null ? ` · adesão ${Math.round(Number(p.avg_completion_rate))}%` : ""}
+                  </p>
+                  {p.recommendation && <p className="text-sm mt-1 leading-relaxed">{p.recommendation}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {history.length > 0 && (
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <p className="text-[10px] font-display tracking-[0.25em] text-primary uppercase flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" /> Planos salvos
+            </p>
+            <ul className="mt-3 space-y-2">
+              {history.map((h) => (
+                <li key={h.id} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate">
+                    {h.title}
+                    {h.is_active && (
+                      <span className="ml-2 text-[10px] uppercase tracking-wide text-primary">ativo</span>
+                    )}
+                  </span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {new Date(h.created_at).toLocaleDateString("pt-BR")}
+                    {h.days_per_week ? ` · ${h.days_per_week}x` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
       </main>
     </div>
   );

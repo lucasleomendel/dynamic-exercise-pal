@@ -66,14 +66,20 @@ Deno.serve(async (req) => {
 
     const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: u } = await authClient.auth.getUser(jwt);
-    const userId = u?.user?.id;
-    if (!userId) return json({ error: "invalid session" }, 401);
+    const callerId = u?.user?.id;
+    if (!callerId) return json({ error: "invalid session" }, 401);
 
     const body = await req.json().catch(() => ({}));
     const focusRequest = typeof body?.focus === "string" ? body.focus.slice(0, 400) : "";
 
+    // O administrador geral pode gerar o treino em nome de um aluno.
+    const callerRole = (u?.user?.app_metadata as Record<string, unknown> | undefined)?.role;
+    const target = typeof body?.targetUserId === "string" ? body.targetUserId : "";
+    const userId = target && callerRole === "master_admin" ? target : callerId;
+
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
     const since = new Date(Date.now() - 60 * 86400000).toISOString();
+
 
     const [{ data: profile }, { data: history }, { data: weights }, { data: method }, { data: library }] =
       await Promise.all([

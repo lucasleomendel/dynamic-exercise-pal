@@ -32,6 +32,8 @@ interface AIExercise {
 }
 
 
+let lastAIError: string | null = null;
+
 async function fetchExercisesForMuscle(muscle: string, existingNames: string[] = []): Promise<AIExercise[]> {
   const avoid = existingNames.slice(0, 250).join(", ");
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

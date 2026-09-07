@@ -85,7 +85,11 @@ async function fetchExercisesForMuscle(muscle: string, existingNames: string[] =
 
 
   if (!res.ok) {
-    console.error(`AI failed for ${muscle}: ${res.status}`);
+    const body = await res.text().catch(() => "");
+    lastAIError = res.status === 402
+      ? "sem_creditos_ia (402)"
+      : `ia_${res.status}: ${body.slice(0, 160)}`;
+    console.error(`AI failed for ${muscle}: ${res.status} ${body.slice(0, 200)}`);
     return [];
   }
   const data = await res.json();

@@ -848,6 +848,14 @@ export type Database = {
       get_job_runner_secret: { Args: never; Returns: string }
       is_master_admin: { Args: { uid: string }; Returns: boolean }
       is_personal_trainer: { Args: { uid: string }; Returns: boolean }
+      list_personals: {
+        Args: never
+        Returns: {
+          email: string
+          id: string
+          role: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

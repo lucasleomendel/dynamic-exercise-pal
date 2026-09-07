@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { isMasterAdmin } from "@/lib/admin";
+import AdminCadastro from "@/components/AdminCadastro";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -300,12 +301,18 @@ const AdminPanel = () => {
           <StatCard icon={<Dumbbell className="w-4 h-4" />} label="Exercícios" value={exercises.length} />
         </div>
 
-        <Tabs defaultValue="alunos">
-          <TabsList className="w-full grid grid-cols-3">
+        <Tabs defaultValue="cadastro">
+          <TabsList className="w-full grid grid-cols-4">
+            <TabsTrigger value="cadastro">Cadastro</TabsTrigger>
             <TabsTrigger value="alunos">Alunos</TabsTrigger>
             <TabsTrigger value="treinos">Treinos</TabsTrigger>
             <TabsTrigger value="exercicios">Exercícios</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="cadastro">
+            <AdminCadastro />
+          </TabsContent>
+
 
           {/* ------------------------------ alunos ------------------------------ */}
           <TabsContent value="alunos" className="space-y-3">

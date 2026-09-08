@@ -267,6 +267,19 @@ const Treinos = () => {
                 {day.exercises.map((ex, i) => (
                   <article key={`${ex.name}-${i}`} className="rounded-xl border border-border bg-card p-4">
                     <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        {images[normalizeName(ex.name)] ? (
+                          <img
+                            src={images[normalizeName(ex.name)]}
+                            alt={`Demonstração do exercício ${ex.name}`}
+                            loading="lazy"
+                            className="w-14 h-14 rounded-lg object-cover border border-border shrink-0"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-lg bg-secondary/60 border border-border/50 flex items-center justify-center shrink-0">
+                            <Dumbbell className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
                       <div className="min-w-0">
                         <h4 className="font-semibold text-sm">{ex.name}</h4>
                         <p className="text-[11px] text-muted-foreground uppercase tracking-wide mt-0.5">{ex.muscle}</p>

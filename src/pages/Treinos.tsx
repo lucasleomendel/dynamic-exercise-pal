@@ -20,6 +20,9 @@ interface Analysis {
   method: string | null;
 }
 
+const normalizeName = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
 const Treinos = () => {
   const navigate = useNavigate();
   const [plan, setPlan] = useState<PlanWithNotes | null>(() => loadPlan() as PlanWithNotes | null);
@@ -129,6 +132,26 @@ const Treinos = () => {
       setGenerating(false);
     }
   };
+
+  // Imagens da biblioteca de exercícios (associadas pelo nome normalizado).
+  const [images, setImages] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("exercise_library")
+        .select("name,image_url")
+        .not("image_url", "is", null)
+        .limit(1000);
+      if (cancelled || !data) return;
+      const map: Record<string, string> = {};
+      for (const row of data) {
+        if (row.image_url) map[normalizeName(row.name)] = row.image_url;
+      }
+      setImages(map);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const totalExercises = useMemo(
     () => plan?.days?.reduce((s, d) => s + d.exercises.length, 0) ?? 0,
@@ -244,9 +267,23 @@ const Treinos = () => {
                 {day.exercises.map((ex, i) => (
                   <article key={`${ex.name}-${i}`} className="rounded-xl border border-border bg-card p-4">
                     <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        {images[normalizeName(ex.name)] ? (
+                          <img
+                            src={images[normalizeName(ex.name)]}
+                            alt={`Demonstração do exercício ${ex.name}`}
+                            loading="lazy"
+                            className="w-14 h-14 rounded-lg object-cover border border-border shrink-0"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-lg bg-secondary/60 border border-border/50 flex items-center justify-center shrink-0">
+                            <Dumbbell className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
                       <div className="min-w-0">
                         <h4 className="font-semibold text-sm">{ex.name}</h4>
                         <p className="text-[11px] text-muted-foreground uppercase tracking-wide mt-0.5">{ex.muscle}</p>
+                      </div>
                       </div>
                       <div className="text-right shrink-0">
                         <p className="font-display text-lg leading-none text-primary">{ex.sets}×{ex.reps}</p>

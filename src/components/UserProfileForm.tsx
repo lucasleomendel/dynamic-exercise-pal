@@ -197,34 +197,59 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
   const current = steps[step];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-lg">
-        {/* Progress */}
-        <div className="flex gap-2 mb-8">
+    <div className="min-h-screen bg-background">
+      <div className="w-full max-w-lg mx-auto px-4 pt-6 pb-10">
+        {/* Header band (Industrial Compact) */}
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <img src={logoImg} alt="FitForge" className="w-9 h-9 rounded-lg object-contain" />
+            <div className="leading-tight">
+              <span className="font-display text-lg tracking-wider text-foreground block">FITFORGE</span>
+              <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Setup · Passo {step + 1}/{steps.length}</span>
+            </div>
+          </div>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-primary font-semibold">
+            {Math.round(((step + 1) / steps.length) * 100)}%
+          </span>
+        </div>
+
+        {/* Progress segments */}
+        <div className="flex gap-1.5 mt-3">
           {steps.map((_, i) => (
-            <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= step ? "bg-primary" : "bg-secondary"}`} />
+            <div key={i} className={`h-[3px] flex-1 rounded-sm transition-all duration-500 ${i <= step ? "bg-primary" : "bg-secondary"}`} />
           ))}
         </div>
 
-        {/* Logo */}
-        <div className="flex items-center gap-3 mb-8">
-          <img src={logoImg} alt="FitForge Logo" className="w-12 h-12 rounded-xl object-contain" />
-          <span className="font-display text-xl font-bold">FitForge</span>
+        {/* Eyebrow + title */}
+        <div className="mt-6">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">
+            {step === 0 ? "Identificação" : step === 1 ? "Perfil físico" : step === 2 ? "Objetivo" : step === 3 ? "Experiência" : step === 4 ? "Rotina" : "Foco muscular"}
+          </span>
+          <h2 className="font-display text-3xl tracking-wide mt-1 text-foreground leading-none">{current.title}</h2>
         </div>
 
-        {/* Step */}
-        <h2 className="font-display text-2xl font-bold mb-6">{current.title}</h2>
-        <div className="mb-8">{current.content}</div>
+        {/* Content */}
+        <div className="mt-6">{current.content}</div>
 
-        {/* Next */}
-        <button
-          onClick={nextStep}
-          disabled={!current.valid}
-          className="w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]"
-        >
-          {step < steps.length - 1 ? "Continuar" : "Gerar Meu Treino"}
-          <ChevronRight className="w-5 h-5" />
-        </button>
+        {/* Divider + CTA */}
+        <div className="mt-8 pt-4 border-t border-border">
+          <button
+            onClick={nextStep}
+            disabled={!current.valid}
+            className="w-full py-3.5 rounded-lg font-display text-lg tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]"
+          >
+            {step < steps.length - 1 ? "CONTINUAR" : "GERAR MEU TREINO"}
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {step > 0 && (
+            <button
+              onClick={() => setStep(step - 1)}
+              className="w-full mt-2 py-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Voltar
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

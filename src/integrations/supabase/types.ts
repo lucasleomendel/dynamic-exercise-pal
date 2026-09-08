@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string
+          actor_role: string | null
+          created_at: string
+          details: Json
+          entity: string
+          entity_id: string | null
+          entity_label: string | null
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id: string
+          actor_role?: string | null
+          created_at?: string
+          details?: Json
+          entity: string
+          entity_id?: string | null
+          entity_label?: string | null
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string
+          actor_role?: string | null
+          created_at?: string
+          details?: Json
+          entity?: string
+          entity_id?: string | null
+          entity_label?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       body_compositions: {
         Row: {
           body_fat: number | null
@@ -111,16 +150,23 @@ export type Database = {
           default_reps: string | null
           default_rest: string | null
           default_sets: number | null
+          description: string | null
           difficulty: string | null
           equipment: string | null
           id: string
+          image_attempts: number
+          image_last_error: string | null
+          image_last_try: string | null
+          image_url: string | null
           last_verified_at: string | null
           muscle_group: string
           name: string
           secondary_muscles: string[] | null
           source: string | null
+          steps: string[] | null
           technique_tip: string | null
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           active?: boolean | null
@@ -128,16 +174,23 @@ export type Database = {
           default_reps?: string | null
           default_rest?: string | null
           default_sets?: number | null
+          description?: string | null
           difficulty?: string | null
           equipment?: string | null
           id?: string
+          image_attempts?: number
+          image_last_error?: string | null
+          image_last_try?: string | null
+          image_url?: string | null
           last_verified_at?: string | null
           muscle_group: string
           name: string
           secondary_muscles?: string[] | null
           source?: string | null
+          steps?: string[] | null
           technique_tip?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           active?: boolean | null
@@ -145,16 +198,23 @@ export type Database = {
           default_reps?: string | null
           default_rest?: string | null
           default_sets?: number | null
+          description?: string | null
           difficulty?: string | null
           equipment?: string | null
           id?: string
+          image_attempts?: number
+          image_last_error?: string | null
+          image_last_try?: string | null
+          image_url?: string | null
           last_verified_at?: string | null
           muscle_group?: string
           name?: string
           secondary_muscles?: string[] | null
           source?: string | null
+          steps?: string[] | null
           technique_tip?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }
@@ -779,13 +839,23 @@ export type Database = {
       }
     }
     Functions: {
+      close_stale_job_runs: { Args: never; Returns: number }
       daily_health_check: { Args: never; Returns: Json }
       ensure_workout_history_partition: {
         Args: { p_year: number }
         Returns: undefined
       }
       get_job_runner_secret: { Args: never; Returns: string }
+      is_master_admin: { Args: { uid: string }; Returns: boolean }
       is_personal_trainer: { Args: { uid: string }; Returns: boolean }
+      list_personals: {
+        Args: never
+        Returns: {
+          email: string
+          id: string
+          role: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -804,12 +874,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -833,11 +903,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -858,11 +928,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -883,11 +953,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -900,11 +970,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

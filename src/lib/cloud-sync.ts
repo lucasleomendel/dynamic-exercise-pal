@@ -21,14 +21,18 @@ async function getUserId(): Promise<string | null> {
   return data.user?.id ?? null;
 }
 
+async function resolveUserId(userId?: string | null): Promise<string | null> {
+  return userId ?? (await getUserId());
+}
+
 /* ============ PROFILE ============ */
-export async function syncProfile(profile?: UserProfile | null) {
-  const userId = await getUserId();
-  if (!userId) return;
+export async function syncProfile(profile?: UserProfile | null, userId?: string | null) {
+  const uid = await resolveUserId(userId);
+  if (!uid) return;
   const p = profile ?? loadProfile();
   if (!p) return;
   await supabase.from("profiles").upsert({
-    user_id: userId,
+    user_id: uid,
     name: p.name,
     age: p.age,
     weight: p.weight,
@@ -71,21 +75,29 @@ export async function pullProfile(): Promise<UserProfile | null> {
 }
 
 /* ============ PLAN ============ */
-export async function syncPlan(plan?: WorkoutPlan | null) {
-  const userId = await getUserId();
-  if (!userId) return;
+export async function syncPlan(plan?: WorkoutPlan | null, userId?: string | null) {
+  const uid = await resolveUserId(userId);
+  if (!uid) return;
   const p = plan ?? loadPlan();
   if (!p) return;
   // desativa planos anteriores e insere novo ativo
-  await supabase.from("workout_plans").update({ is_active: false }).eq("user_id", userId).eq("is_active", true);
+  await supabase.from("workout_plans").update({ is_active: false }).eq("user_id", uid).eq("is_active", true);
   await supabase.from("workout_plans").insert({
-    user_id: userId,
+    user_id: uid,
     title: p.title,
     description: p.description,
     days_per_week: p.daysPerWeek,
     plan_data: p as any,
     is_active: true,
   });
+  // Limpa planos inativos antigos (> 30 dias) para evitar acúmulo
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  await supabase
+    .from("workout_plans")
+    .delete()
+    .eq("user_id", uid)
+    .eq("is_active", false)
+    .lt("updated_at", cutoff);
 }
 
 export async function pullPlan(): Promise<WorkoutPlan | null> {
@@ -106,69 +118,52 @@ export async function pullPlan(): Promise<WorkoutPlan | null> {
 }
 
 /* ============ WEIGHTS ============ */
-export async function syncWeights(weights?: WeightEntry[]) {
-  const userId = await getUserId();
-  if (!userId) return;
+export async function syncWeights(weights?: WeightEntry[], userId?: string | null) {
+  const uid = await resolveUserId(userId);
+  if (!uid) return;
   const list = weights ?? loadWeights();
   if (!list.length) return;
 
-  // Dedupe: busca timestamps já existentes para evitar duplicar em re-syncs
-  const dates = list.map(w => w.date);
-  const { data: existing } = await supabase
+  const rows = list.map(w => ({
+    user_id: uid,
+    exercise_key: w.exerciseKey,
+    exercise_name: w.exerciseName,
+    muscle: w.muscle,
+    weight: w.weight,
+    logged_at: w.date,
+  }));
+  await supabase
     .from("weight_logs")
-    .select("logged_at,exercise_key")
-    .eq("user_id", userId)
-    .in("logged_at", dates);
-  const existingSet = new Set((existing ?? []).map(e => `${e.exercise_key}|${e.logged_at}`));
-
-  const rows = list
-    .filter(w => !existingSet.has(`${w.exerciseKey}|${w.date}`))
-    .map(w => ({
-      user_id: userId,
-      exercise_key: w.exerciseKey,
-      exercise_name: w.exerciseName,
-      muscle: w.muscle,
-      weight: w.weight,
-      logged_at: w.date,
-    }));
-  if (rows.length) await supabase.from("weight_logs").insert(rows);
+    .upsert(rows, { onConflict: "user_id,exercise_key,logged_at", ignoreDuplicates: true });
 }
 
 /* ============ HISTORY ============ */
-export async function syncHistory(history?: WorkoutHistoryEntry[]) {
-  const userId = await getUserId();
-  if (!userId) return;
+export async function syncHistory(history?: WorkoutHistoryEntry[], userId?: string | null) {
+  const uid = await resolveUserId(userId);
+  if (!uid) return;
   const list = history ?? loadWorkoutHistory();
   if (!list.length) return;
 
-  const dates = list.map(h => h.date);
-  const { data: existing } = await supabase
+  const rows = list.map(h => ({
+    user_id: uid,
+    workout_date: h.date,
+    completed_exercises: h.completedExercises,
+    total_exercises: h.totalExercises,
+    day_focus: h.dayFocus,
+  }));
+  await supabase
     .from("workout_history")
-    .select("workout_date")
-    .eq("user_id", userId)
-    .in("workout_date", dates);
-  const existingSet = new Set((existing ?? []).map(e => e.workout_date));
-
-  const rows = list
-    .filter(h => !existingSet.has(h.date))
-    .map(h => ({
-      user_id: userId,
-      workout_date: h.date,
-      completed_exercises: h.completedExercises,
-      total_exercises: h.totalExercises,
-      day_focus: h.dayFocus,
-    }));
-  if (rows.length) await supabase.from("workout_history").insert(rows);
+    .upsert(rows, { onConflict: "user_id,workout_date", ignoreDuplicates: true });
 }
 
 /* ============ BODY COMP ============ */
-export async function syncBodyComp(data?: BodyCompData | null) {
-  const userId = await getUserId();
-  if (!userId) return;
+export async function syncBodyComp(data?: BodyCompData | null, userId?: string | null) {
+  const uid = await resolveUserId(userId);
+  if (!uid) return;
   const bc = data ?? loadBodyComp();
   if (!bc?.result) return;
   await supabase.from("body_compositions").insert({
-    user_id: userId,
+    user_id: uid,
     measured_at: bc.date,
     skinfolds: bc.skinfolds as any,
     measurements: bc.measurements as any,
@@ -181,12 +176,12 @@ export async function syncBodyComp(data?: BodyCompData | null) {
 }
 
 /* ============ EXERCISE CHECKS ============ */
-export async function syncChecks() {
-  const userId = await getUserId();
-  if (!userId) return;
+export async function syncChecks(userId?: string | null) {
+  const uid = await resolveUserId(userId);
+  if (!uid) return;
   const checks = loadChecked();
   await supabase.from("exercise_checks").upsert({
-    user_id: userId,
+    user_id: uid,
     checks_data: checks as any,
   }, { onConflict: "user_id" });
 }
@@ -210,8 +205,12 @@ export async function fullSync(opts?: { silent?: boolean }) {
   if (!userId) return { ok: false, reason: "not_authenticated" };
   try {
     await Promise.allSettled([
-      syncProfile(), syncPlan(), syncWeights(), syncHistory(),
-      syncBodyComp(), syncChecks(),
+      syncProfile(undefined, userId),
+      syncPlan(undefined, userId),
+      syncWeights(undefined, userId),
+      syncHistory(undefined, userId),
+      syncBodyComp(undefined, userId),
+      syncChecks(userId),
     ]);
     await supabase.from("sync_log").insert({
       user_id: userId,
@@ -345,4 +344,3 @@ export async function maybeDailySync() {
     await fullSync({ silent: true });
   }
 }
-

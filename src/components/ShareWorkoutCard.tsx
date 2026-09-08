@@ -16,7 +16,7 @@ const ShareWorkoutCard = forwardRef<HTMLDivElement, Props>(({ plan, profile }, r
       className="w-[400px] p-6 rounded-2xl text-white"
       style={{
         background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Bebas Neue', 'Barlow', sans-serif",
       }}
     >
       {/* Header */}

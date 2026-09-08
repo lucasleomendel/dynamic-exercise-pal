@@ -1,4 +1,5 @@
 // Auto-progression: analisa o progresso mensal de cada usuário e ajusta o plano de treino via IA.
+// Autenticação obrigatória: (a) service-role/runner-secret para cron/batch; (b) JWT de usuário para self-only.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -8,6 +9,7 @@ const corsHeaders = {
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 interface PlanChange {
@@ -38,7 +40,6 @@ async function analyzeUser(supabase: ReturnType<typeof createClient>, userId: st
       ? history!.reduce((s, h) => s + (h.completed_exercises / Math.max(1, h.total_exercises)), 0) / workoutsCompleted
       : 0;
 
-  // Weight progression per exercise
   const byExercise: Record<string, number[]> = {};
   weights?.forEach((w) => {
     byExercise[w.exercise_name] ??= [];
@@ -97,7 +98,6 @@ Decida: aumentar carga/volume, manter, ou deload. Retorne JSON via tool.`;
     recommendation: "Manter", intensity_delta: "maintain", volume_delta: "maintain", notes: "Sem dados suficientes",
   };
 
-  // Apply: bump sets/reps in plan_data
   const planData = plan.plan_data as { days?: Array<{ exercises: Array<{ sets: number; reps: string }> }> };
   if (planData?.days && (decision.intensity_delta === "increase" || decision.volume_delta === "increase")) {
     planData.days.forEach((d) => d.exercises.forEach((ex) => {
@@ -126,24 +126,58 @@ Decida: aumentar carga/volume, manter, ou deload. Retorne JSON via tool.`;
   return { decision, workoutsCompleted };
 }
 
+async function getRunnerSecret(admin: ReturnType<typeof createClient>): Promise<string | null> {
+  try {
+    const { data } = await admin.rpc("get_job_runner_secret");
+    return data ? String(data) : null;
+  } catch { return null; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const body = await req.json().catch(() => ({}));
-    let userIds: string[] = body.userId ? [body.userId] : [];
-    if (!userIds.length) {
-      const { data } = await supabase.from("workout_plans").select("user_id").eq("is_active", true);
-      userIds = [...new Set((data ?? []).map((r) => r.user_id))];
+    const auth = req.headers.get("authorization")?.replace("Bearer ", "") ?? "";
+    if (!auth) {
+      return new Response(JSON.stringify({ error: "unauthenticated" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
+    const body = await req.json().catch(() => ({}));
+
+    // Trilha 1: caller privilegiado (service-role ou runner-secret) → pode processar todos ou userId específico
+    const runnerSecret = await getRunnerSecret(supabase);
+    const isPrivileged = auth === SERVICE_ROLE || (runnerSecret && auth === runnerSecret);
+
+    let userIds: string[] = [];
+    if (isPrivileged) {
+      if (body.userId && typeof body.userId === "string") {
+        userIds = [body.userId];
+      } else {
+        const { data } = await supabase.from("workout_plans").select("user_id").eq("is_active", true);
+        userIds = [...new Set((data ?? []).map((r) => r.user_id))];
+      }
+    } else {
+      // Trilha 2: JWT de usuário → só pode processar a si mesmo, userId derivado do token
+      const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data: u, error } = await authClient.auth.getUser(auth);
+      if (error || !u?.user) {
+        return new Response(JSON.stringify({ error: "invalid session" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userIds = [u.user.id];
+    }
+
     const results = await Promise.allSettled(userIds.map((id) => analyzeUser(supabase, id)));
     const ok = results.filter((r) => r.status === "fulfilled").length;
     return new Response(JSON.stringify({ processed: userIds.length, ok }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error(e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "err" }), {
+    console.error("auto-progression error:", e);
+    return new Response(JSON.stringify({ error: "Erro interno do servidor" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

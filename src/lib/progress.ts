@@ -259,7 +259,12 @@ export function generateProgressReport(): ProgressReport | null {
   };
 }
 
-// Always regenerate for real-time updates
-export function shouldRegenerateReport(_lastReport: ProgressReport | null): boolean {
-  return true;
+const REPORT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+/** True se o relatório não existe ou tem mais de 5 minutos */
+export function shouldRegenerateReport(lastReport: ProgressReport | null): boolean {
+  if (!lastReport?.generatedAt) return true;
+  const generated = new Date(lastReport.generatedAt).getTime();
+  if (!Number.isFinite(generated)) return true;
+  return Date.now() - generated > REPORT_CACHE_TTL_MS;
 }

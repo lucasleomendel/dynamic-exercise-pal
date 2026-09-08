@@ -130,6 +130,26 @@ const Treinos = () => {
     }
   };
 
+  // Imagens da biblioteca de exercícios (associadas pelo nome normalizado).
+  const [images, setImages] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("exercise_library")
+        .select("name,image_url")
+        .not("image_url", "is", null)
+        .limit(1000);
+      if (cancelled || !data) return;
+      const map: Record<string, string> = {};
+      for (const row of data) {
+        if (row.image_url) map[normalizeName(row.name)] = row.image_url;
+      }
+      setImages(map);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const totalExercises = useMemo(
     () => plan?.days?.reduce((s, d) => s + d.exercises.length, 0) ?? 0,
     [plan],

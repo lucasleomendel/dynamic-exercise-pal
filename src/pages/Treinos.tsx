@@ -284,6 +284,7 @@ const Treinos = () => {
                         <h4 className="font-semibold text-sm">{ex.name}</h4>
                         <p className="text-[11px] text-muted-foreground uppercase tracking-wide mt-0.5">{ex.muscle}</p>
                       </div>
+                      </div>
                       <div className="text-right shrink-0">
                         <p className="font-display text-lg leading-none text-primary">{ex.sets}×{ex.reps}</p>
                         <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1 justify-end">

@@ -20,6 +20,9 @@ interface Analysis {
   method: string | null;
 }
 
+const normalizeName = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
 const Treinos = () => {
   const navigate = useNavigate();
   const [plan, setPlan] = useState<PlanWithNotes | null>(() => loadPlan() as PlanWithNotes | null);

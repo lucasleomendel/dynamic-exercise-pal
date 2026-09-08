@@ -196,8 +196,8 @@ Deno.serve(async (req) => {
     await supabase.from("library_updates").insert({
       exercises_added: added,
       exercises_updated: updated,
-      status: "success",
-      notes: `Refreshed groups: ${selected.join(", ")}`,
+      status: lastAIError ? "error" : "success",
+      notes: `Grupos: ${selected.join(", ")}${lastAIError ? ` | falha IA: ${lastAIError}` : ""}`,
     });
 
     return new Response(JSON.stringify({ added, updated, groups: selected }), {

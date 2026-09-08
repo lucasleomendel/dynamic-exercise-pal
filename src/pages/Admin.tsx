@@ -135,6 +135,7 @@ const AdminPanel = () => {
   const [qUser, setQUser] = useState("");
   const [qPlan, setQPlan] = useState("");
   const [qEx, setQEx] = useState("");
+  const [exGroup, setExGroup] = useState<string>("todos");
 
   const [editProfile, setEditProfile] = useState<ProfileRow | null>(null);
   const [editExercise, setEditExercise] = useState<Partial<ExerciseRow> | null>(null);
@@ -184,12 +185,20 @@ const AdminPanel = () => {
       (nameByUser.get(p.user_id) ?? "").toLowerCase().includes(q));
   }, [plans, qPlan, nameByUser]);
 
+  const exerciseGroups = useMemo(() => {
+    const set = new Set<string>();
+    exercises.forEach(e => e.muscle_group && set.add(e.muscle_group));
+    return Array.from(set).sort();
+  }, [exercises]);
+
   const filteredExercises = useMemo(() => {
     const q = qEx.trim().toLowerCase();
-    if (!q) return exercises.slice(0, 200);
-    return exercises.filter(e =>
-      e.name.toLowerCase().includes(q) || e.muscle_group.toLowerCase().includes(q)).slice(0, 200);
-  }, [exercises, qEx]);
+    return exercises.filter(e => {
+      if (exGroup !== "todos" && e.muscle_group !== exGroup) return false;
+      if (!q) return true;
+      return e.name.toLowerCase().includes(q) || e.muscle_group.toLowerCase().includes(q);
+    }).slice(0, 300);
+  }, [exercises, qEx, exGroup]);
 
   /* ------------------------------- ações ------------------------------- */
 
@@ -376,31 +385,73 @@ const AdminPanel = () => {
                 <Plus className="w-4 h-4" /> Novo
               </Button>
             </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+              <Badge
+                variant={exGroup === "todos" ? "default" : "outline"}
+                className="cursor-pointer shrink-0"
+                onClick={() => setExGroup("todos")}
+              >
+                Todos ({exercises.length})
+              </Badge>
+              {exerciseGroups.map(g => (
+                <Badge
+                  key={g}
+                  variant={exGroup === g ? "default" : "outline"}
+                  className="cursor-pointer capitalize shrink-0"
+                  onClick={() => setExGroup(g)}
+                >
+                  {g} ({exercises.filter(e => e.muscle_group === g).length})
+                </Badge>
+              ))}
+            </div>
             {filteredExercises.length === 0 && !busy && <Empty text="Nenhum exercício encontrado." />}
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {filteredExercises.map(e => (
                 <div key={e.id} className="rounded-xl border border-border bg-card p-3 flex items-center gap-3">
                   {e.image_url
-                    ? <img src={e.image_url} alt={e.name} loading="lazy" className="w-12 h-12 rounded-lg object-cover" />
-                    : <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                    ? <img src={e.image_url} alt={e.name} loading="lazy" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                    : <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
                         <Dumbbell className="w-5 h-5 text-muted-foreground" />
                       </div>}
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold truncate">{e.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {e.muscle_group}{e.equipment ? ` · ${e.equipment}` : ""}{e.difficulty ? ` · ${e.difficulty}` : ""}
-                    </p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      <Badge variant="secondary" className="text-[10px] capitalize">{e.muscle_group}</Badge>
+                      {e.difficulty && (
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${
+                            e.difficulty === "avancado" || e.difficulty === "avançado"
+                              ? "border-destructive text-destructive"
+                              : e.difficulty === "intermediario" || e.difficulty === "intermediário"
+                                ? "border-primary text-primary"
+                                : ""
+                          }`}
+                        >
+                          {e.difficulty}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <Switch checked={!!e.active} onCheckedChange={v => toggleExerciseActive(e, v)} />
-                  <Button size="icon" variant="ghost" onClick={() => setEditExercise(e)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => deleteExercise(e)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <Switch checked={!!e.active} onCheckedChange={v => toggleExerciseActive(e, v)} />
+                    <div className="flex">
+                      <Button size="icon" variant="ghost" onClick={() => setEditExercise(e)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => deleteExercise(e)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
+            {!busy && filteredExercises.length >= 300 && (
+              <p className="text-xs text-center text-muted-foreground">
+                Mostrando 300 primeiros — refine a busca ou filtre por grupo.
+              </p>
+            )}
           </TabsContent>
         </Tabs>
       </main>

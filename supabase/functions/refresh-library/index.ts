@@ -124,6 +124,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    lastAIError = null;
     let added = 0, updated = 0;
 
     // Processa apenas um lote de grupos musculares por invocação para não estourar
@@ -196,8 +197,8 @@ Deno.serve(async (req) => {
     await supabase.from("library_updates").insert({
       exercises_added: added,
       exercises_updated: updated,
-      status: "success",
-      notes: `Refreshed groups: ${selected.join(", ")}`,
+      status: lastAIError ? "error" : "success",
+      notes: `Grupos: ${selected.join(", ")}${lastAIError ? ` | falha IA: ${lastAIError}` : ""}`,
     });
 
     return new Response(JSON.stringify({ added, updated, groups: selected }), {

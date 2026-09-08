@@ -124,6 +124,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    lastAIError = null;
     let added = 0, updated = 0;
 
     // Processa apenas um lote de grupos musculares por invocação para não estourar

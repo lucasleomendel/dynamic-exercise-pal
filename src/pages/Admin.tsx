@@ -135,6 +135,7 @@ const AdminPanel = () => {
   const [qUser, setQUser] = useState("");
   const [qPlan, setQPlan] = useState("");
   const [qEx, setQEx] = useState("");
+  const [exGroup, setExGroup] = useState<string>("todos");
 
   const [editProfile, setEditProfile] = useState<ProfileRow | null>(null);
   const [editExercise, setEditExercise] = useState<Partial<ExerciseRow> | null>(null);
@@ -184,12 +185,20 @@ const AdminPanel = () => {
       (nameByUser.get(p.user_id) ?? "").toLowerCase().includes(q));
   }, [plans, qPlan, nameByUser]);
 
+  const exerciseGroups = useMemo(() => {
+    const set = new Set<string>();
+    exercises.forEach(e => e.muscle_group && set.add(e.muscle_group));
+    return Array.from(set).sort();
+  }, [exercises]);
+
   const filteredExercises = useMemo(() => {
     const q = qEx.trim().toLowerCase();
-    if (!q) return exercises.slice(0, 200);
-    return exercises.filter(e =>
-      e.name.toLowerCase().includes(q) || e.muscle_group.toLowerCase().includes(q)).slice(0, 200);
-  }, [exercises, qEx]);
+    return exercises.filter(e => {
+      if (exGroup !== "todos" && e.muscle_group !== exGroup) return false;
+      if (!q) return true;
+      return e.name.toLowerCase().includes(q) || e.muscle_group.toLowerCase().includes(q);
+    }).slice(0, 300);
+  }, [exercises, qEx, exGroup]);
 
   /* ------------------------------- ações ------------------------------- */
 

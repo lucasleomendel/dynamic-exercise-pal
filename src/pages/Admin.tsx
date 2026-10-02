@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { isMasterAdmin } from "@/lib/admin";
 import AdminCadastro from "@/components/AdminCadastro";
+import LibraryScanStats from "@/components/LibraryScanStats";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -311,15 +312,20 @@ const AdminPanel = () => {
         </div>
 
         <Tabs defaultValue="cadastro">
-          <TabsList className="w-full grid grid-cols-4">
+          <TabsList className="w-full grid grid-cols-5">
             <TabsTrigger value="cadastro">Cadastro</TabsTrigger>
             <TabsTrigger value="alunos">Alunos</TabsTrigger>
             <TabsTrigger value="treinos">Treinos</TabsTrigger>
             <TabsTrigger value="exercicios">Exercícios</TabsTrigger>
+            <TabsTrigger value="varredura">Varredura</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cadastro">
             <AdminCadastro />
+          </TabsContent>
+
+          <TabsContent value="varredura">
+            <LibraryScanStats />
           </TabsContent>
 
 

@@ -185,11 +185,18 @@ Veja tudo em **Meus treinos**.`;
 
       setMessages(prev => [...prev, { role: "assistant", content, timestamp: Date.now() }]);
     } catch (e) {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: `⚠️ ${e instanceof Error ? e.message : "Erro ao gerar o treino"}`,
-        timestamp: Date.now(),
-      }]);
+      // Sem IA: gera o treino com o gerador local, a partir do perfil.
+      let content = `⚠️ ${e instanceof Error ? e.message : "Erro ao gerar o treino"}`;
+      if (profile) {
+        try {
+          const plan = generateWorkout(profile);
+          savePlan(plan);
+          window.dispatchEvent(new CustomEvent("fitforge:plan-updated", { detail: plan }));
+          const resumo = (plan.days ?? []).map((d: any) => `- **${d.day} · ${d.focus}** — ${d.exercises.length} exercícios`).join("\n");
+          content = `✅ Treino criado a partir do seu perfil e já ativo.\n\n${resumo}\n\nVeja tudo em **Meus treinos**.\n\n_Modo bot: a análise com IA volta quando os créditos forem recarregados._`;
+        } catch { /* mantém a mensagem de erro */ }
+      }
+      setMessages(prev => [...prev, { role: "assistant", content, timestamp: Date.now() }]);
     } finally {
       setIsStreaming(false);
       if (!openRef.current) setUnread(u => u + 1);
@@ -211,6 +218,15 @@ Veja tudo em **Meus treinos**.`;
 
     setIsStreaming(true);
 
+    const botAnswer = async () => {
+      const reply = await offlineReply(text, profile).catch(() => "⚠️ Não consegui responder agora.");
+      setMessages(prev => [...prev.filter(m => m.timestamp !== 0), { role: "assistant", content: reply, timestamp: Date.now() }]);
+      setIsStreaming(false);
+      abortRef.current = null;
+      if (!openRef.current) setUnread(u => u + 1);
+    };
+
+    if (isOffline()) { await botAnswer(); return; }
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -242,6 +258,7 @@ Veja tudo em **Meus treinos**.`;
         if (!openRef.current) setUnread(u => u + 1);
       },
       onError: (err) => {
+        if (err === OFFLINE_SIGNAL) { markOffline(); void botAnswer(); return; }
         setMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${err}`, timestamp: Date.now() }]);
         setIsStreaming(false);
         abortRef.current = null;

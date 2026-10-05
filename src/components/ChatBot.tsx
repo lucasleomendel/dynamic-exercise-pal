@@ -201,7 +201,7 @@ Veja tudo em **Meus treinos**.`;
       setIsStreaming(false);
       if (!openRef.current) setUnread(u => u + 1);
     }
-  }, []);
+  }, [profile]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;

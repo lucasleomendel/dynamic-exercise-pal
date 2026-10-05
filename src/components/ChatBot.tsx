@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import type { UserProfile } from "@/lib/workout-generator";
+import { generateWorkout } from "@/lib/workout-generator";
 import { savePlan } from "@/lib/storage";
+import { offlineReply } from "@/lib/offline-bot";
 
 interface Message {
   role: "user" | "assistant";
@@ -14,6 +16,12 @@ interface Message {
 
 const CHAT_HISTORY_KEY = "fitforge_chat_history_v2";
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+const OFFLINE_SIGNAL = "__ai_offline__";
+const OFFLINE_KEY = "fitforge_ai_offline_until";
+const OFFLINE_MS = 30 * 60_000; // 30 min sem tentar a IA após falta de créditos
+
+const isOffline = () => Number(localStorage.getItem(OFFLINE_KEY) || 0) > Date.now();
+const markOffline = () => localStorage.setItem(OFFLINE_KEY, String(Date.now() + OFFLINE_MS));
 
 function loadChatHistory(): Message[] {
   try {
@@ -66,8 +74,8 @@ async function streamChat({
 
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ error: "Erro de conexão" }));
+      if (resp.status === 402 || resp.status === 403 || resp.status >= 500) return onError(OFFLINE_SIGNAL);
       if (resp.status === 429) return onError("Muitas requisições. Aguarde alguns segundos.");
-      if (resp.status === 402) return onError("Créditos de IA esgotados. Contate o administrador.");
       return onError(err.error || `Erro ${resp.status}`);
     }
 

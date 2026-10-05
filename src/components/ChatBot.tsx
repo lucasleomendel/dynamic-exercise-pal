@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import type { UserProfile } from "@/lib/workout-generator";
+import { generateWorkout } from "@/lib/workout-generator";
 import { savePlan } from "@/lib/storage";
+import { offlineReply } from "@/lib/offline-bot";
 
 interface Message {
   role: "user" | "assistant";
@@ -14,6 +16,12 @@ interface Message {
 
 const CHAT_HISTORY_KEY = "fitforge_chat_history_v2";
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+const OFFLINE_SIGNAL = "__ai_offline__";
+const OFFLINE_KEY = "fitforge_ai_offline_until";
+const OFFLINE_MS = 30 * 60_000; // 30 min sem tentar a IA após falta de créditos
+
+const isOffline = () => Number(localStorage.getItem(OFFLINE_KEY) || 0) > Date.now();
+const markOffline = () => localStorage.setItem(OFFLINE_KEY, String(Date.now() + OFFLINE_MS));
 
 function loadChatHistory(): Message[] {
   try {
@@ -66,8 +74,8 @@ async function streamChat({
 
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ error: "Erro de conexão" }));
+      if (resp.status === 402 || resp.status === 403 || resp.status >= 500) return onError(OFFLINE_SIGNAL);
       if (resp.status === 429) return onError("Muitas requisições. Aguarde alguns segundos.");
-      if (resp.status === 402) return onError("Créditos de IA esgotados. Contate o administrador.");
       return onError(err.error || `Erro ${resp.status}`);
     }
 
@@ -177,16 +185,23 @@ Veja tudo em **Meus treinos**.`;
 
       setMessages(prev => [...prev, { role: "assistant", content, timestamp: Date.now() }]);
     } catch (e) {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: `⚠️ ${e instanceof Error ? e.message : "Erro ao gerar o treino"}`,
-        timestamp: Date.now(),
-      }]);
+      // Sem IA: gera o treino com o gerador local, a partir do perfil.
+      let content = `⚠️ ${e instanceof Error ? e.message : "Erro ao gerar o treino"}`;
+      if (profile) {
+        try {
+          const plan = generateWorkout(profile);
+          savePlan(plan);
+          window.dispatchEvent(new CustomEvent("fitforge:plan-updated", { detail: plan }));
+          const resumo = (plan.days ?? []).map((d: any) => `- **${d.day} · ${d.focus}** — ${d.exercises.length} exercícios`).join("\n");
+          content = `✅ Treino criado a partir do seu perfil e já ativo.\n\n${resumo}\n\nVeja tudo em **Meus treinos**.\n\n_Modo bot: a análise com IA volta quando os créditos forem recarregados._`;
+        } catch { /* mantém a mensagem de erro */ }
+      }
+      setMessages(prev => [...prev, { role: "assistant", content, timestamp: Date.now() }]);
     } finally {
       setIsStreaming(false);
       if (!openRef.current) setUnread(u => u + 1);
     }
-  }, []);
+  }, [profile]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
@@ -203,6 +218,15 @@ Veja tudo em **Meus treinos**.`;
 
     setIsStreaming(true);
 
+    const botAnswer = async () => {
+      const reply = await offlineReply(text, profile).catch(() => "⚠️ Não consegui responder agora.");
+      setMessages(prev => [...prev.filter(m => m.timestamp !== 0), { role: "assistant", content: reply, timestamp: Date.now() }]);
+      setIsStreaming(false);
+      abortRef.current = null;
+      if (!openRef.current) setUnread(u => u + 1);
+    };
+
+    if (isOffline()) { await botAnswer(); return; }
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -234,6 +258,7 @@ Veja tudo em **Meus treinos**.`;
         if (!openRef.current) setUnread(u => u + 1);
       },
       onError: (err) => {
+        if (err === OFFLINE_SIGNAL) { markOffline(); void botAnswer(); return; }
         setMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${err}`, timestamp: Date.now() }]);
         setIsStreaming(false);
         abortRef.current = null;

@@ -101,8 +101,17 @@ Deno.serve(async (req) => {
       if (body && body.limit != null) rawLimit = String(body.limit);
     } catch { /* corpo vazio ou inválido — usa padrão */ }
   }
-  const limit = Math.min(Math.max(Number(rawLimit ?? "3") || 3, 1), MAX_PER_INVOCATION);
+  let limit = Math.min(Math.max(Number(rawLimit ?? "3") || 3, 1), MAX_PER_INVOCATION);
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+  // Circuit breaker: se houve falta de créditos (402/403) na última hora,
+  // processa só 1 item de teste (probe) em vez do lote inteiro.
+  const pauseSince = new Date(Date.now() - 60 * 60_000).toISOString();
+  const { count: recentNoCredit } = await sb.from("exercise_library")
+    .select("id", { count: "exact", head: true })
+    .gte("image_last_try", pauseSince)
+    .or("image_last_error.like.provider_402%,image_last_error.like.provider_403%");
+  if ((recentNoCredit ?? 0) > 0) limit = 1;
 
 
   // Seleciona a fila: sem imagem, ativos, ainda dentro do limite de tentativas
@@ -153,7 +162,17 @@ Deno.serve(async (req) => {
     }
 
     if (!gen.bytes) {
-      const attempts = attemptsBefore + 1;
+      const noCredit = /^provider_40[23]/.test(gen.error ?? "");
+      // Falta de créditos não é culpa do exercício: não gasta tentativa e para o lote.
+      const attempts = noCredit ? attemptsBefore : attemptsBefore + 1;
+      if (noCredit) {
+        await sb.from("exercise_library").update({
+          image_last_error: (gen.error ?? "").slice(0, 240),
+          image_last_try: new Date().toISOString(),
+        }).eq("id", ex.id);
+        results.push({ id: ex.id, ok: false, error: gen.error, attempts });
+        break;
+      }
       await sb.from("exercise_library").update({
         image_attempts: attempts,
         image_last_error: (gen.error ?? "unknown").slice(0, 240),

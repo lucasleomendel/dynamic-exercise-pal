@@ -398,12 +398,12 @@ async function resolveChecksConflict() {
     .maybeSingle();
   const local = loadChecked();
   const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
-  // Merge: união (true tem prioridade); se cloud > local em timestamp, prefere cloud
+  // Se há um registro cloud com timestamp, ele é a fonte mais recente.
+  // Sem timestamp cloud, preservamos o cache local e acrescentamos o que existir.
   const cloud = (data?.checks_data ?? {}) as Record<string, boolean>;
-  const merged: Record<string, boolean> = { ...local };
-  Object.keys(cloud).forEach(k => {
-    if (cloudTs > 0 || cloud[k]) merged[k] = cloud[k] || merged[k] || false;
-  });
+  const merged: Record<string, boolean> = cloudTs > 0
+    ? { ...cloud }
+    : { ...local, ...cloud };
   saveChecked(merged);
 }
 

@@ -58,6 +58,19 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
   const { user } = useAuth();
   const [water, setWater] = useState<WaterState>(loadWater);
   const hydratedRef = useRef(!user);
+  const userId = user?.id;
+  const dailyTarget = useMemo(() => calculateDailyWater(weight, hoursPerSession, daysPerWeek), [weight, hoursPerSession, daysPerWeek]);
+  const waterRef = useRef(water);
+  const targetRef = useRef(dailyTarget);
+
+  useEffect(() => {
+    waterRef.current = water;
+  }, [water]);
+
+  useEffect(() => {
+    targetRef.current = dailyTarget;
+  }, [dailyTarget]);
+
   useEffect(() => {
     const refreshDate = () => {
       const today = getLocalDateKey();
@@ -77,13 +90,13 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
     let active = true;
     const date = water.date;
 
-    if (!user) {
+    if (!userId) {
       hydratedRef.current = true;
       return () => { active = false; };
     }
 
     hydratedRef.current = false;
-    pullWater(date, user.id)
+    pullWater(date, userId)
       .then((remote) => {
         if (!active) return;
         if (remote) {
@@ -92,7 +105,7 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
           saveWater(next);
         } else {
           hydratedRef.current = true;
-          void syncWater({ date, glasses: water.glasses, goalMl: Math.round(dailyTarget * 1000) }, user.id)
+          void syncWater({ date, glasses: waterRef.current.glasses, goalMl: Math.round(targetRef.current * 1000) }, userId)
             .catch((error) => console.warn("[FitForge] Falha ao sincronizar hidratação.", error));
         }
         hydratedRef.current = true;
@@ -104,19 +117,19 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
       });
 
     return () => { active = false; };
-  }, [user?.id, water.date]);
+  }, [userId, water.date]);
 
   useEffect(() => {
     saveWater(water);
-    if (!user || !hydratedRef.current) return;
+    if (!userId || !hydratedRef.current) return;
     void syncWater({
       date: water.date,
       glasses: water.glasses,
       goalMl: Math.round(dailyTarget * 1000),
-    }, user.id).catch((error) => {
+    }, userId).catch((error) => {
       console.warn("[FitForge] Falha ao sincronizar hidratação.", error);
     });
-  }, [water, user?.id, dailyTarget]);
+  }, [water, userId, dailyTarget]);
 
   const addGlass = useCallback(() => {
     setWater(prev => ({ ...prev, glasses: prev.glasses + 1 }));

@@ -370,7 +370,16 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     return result;
   }
 
-  const days = buildSplit().filter(d => d.exercises.length > 0);
+  const days = buildSplit()
+    .filter(d => d.exercises.length > 0)
+    .map(d => {
+      const muscles = [...new Set(d.exercises.map(ex => ex.muscle).filter(Boolean))];
+      return {
+        ...d,
+        // Keep the displayed focus truthful when the user excluded a default muscle group.
+        focus: muscles.length > 0 ? muscles.slice(0, 4).join(" + ") : d.focus,
+      };
+    });
 
   const timeLabel = hoursPerSession < 1 ? `${Math.round(hoursPerSession * 60)}min` : `${hoursPerSession}h`;
 

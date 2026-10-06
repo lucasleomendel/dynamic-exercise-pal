@@ -212,7 +212,7 @@ export async function fullSync(opts?: { silent?: boolean }) {
   const userId = await getUserId();
   if (!userId) return { ok: false, reason: "not_authenticated" };
   try {
-    await Promise.allSettled([
+    const results = await Promise.allSettled([
       syncProfile(undefined, userId),
       syncPlan(undefined, userId),
       syncWeights(undefined, userId),
@@ -220,6 +220,20 @@ export async function fullSync(opts?: { silent?: boolean }) {
       syncBodyComp(undefined, userId),
       syncChecks(userId),
     ]);
+    const failures = results
+      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map(result => result.reason instanceof Error ? result.reason.message : String(result.reason));
+
+    if (failures.length > 0) {
+      await supabase.from("sync_log").insert({
+        user_id: userId,
+        sync_type: "full",
+        status: "error",
+        details: { ts: Date.now(), errors: failures, silent: opts?.silent ?? false },
+      });
+      return { ok: false, reason: failures.join("; ") };
+    }
+
     await supabase.from("sync_log").insert({
       user_id: userId,
       sync_type: "full",

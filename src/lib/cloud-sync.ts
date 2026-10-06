@@ -220,6 +220,47 @@ export async function pullChecks() {
   }
 }
 
+/* ============ WATER ============ */
+export interface CloudWaterState {
+  date: string;
+  glasses: number;
+  goalMl: number | null;
+}
+
+export async function syncWater(
+  state: { date: string; glasses: number; goalMl?: number | null },
+  userId?: string | null,
+) {
+  const uid = await resolveUserId(userId);
+  if (!uid) return;
+  const amountMl = Math.max(0, Math.round(state.glasses * 250));
+  const { error } = await supabase.from("water_logs").upsert({
+    user_id: uid,
+    log_date: state.date,
+    amount_ml: amountMl,
+    goal_ml: state.goalMl ?? null,
+  }, { onConflict: "user_id,log_date" });
+  if (error) throw error;
+}
+
+export async function pullWater(date: string, userId?: string | null): Promise<CloudWaterState | null> {
+  const uid = await resolveUserId(userId);
+  if (!uid) return null;
+  const { data, error } = await supabase
+    .from("water_logs")
+    .select("log_date,amount_ml,goal_ml")
+    .eq("user_id", uid)
+    .eq("log_date", date)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    date: data.log_date,
+    glasses: Math.max(0, Math.floor(Number(data.amount_ml ?? 0) / 250)),
+    goalMl: data.goal_ml == null ? null : Number(data.goal_ml),
+  };
+}
+
 /* ============ FULL SYNC ============ */
 export async function fullSync(opts?: { silent?: boolean }) {
   const userId = await getUserId();

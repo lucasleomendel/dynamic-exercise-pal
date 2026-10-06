@@ -8,13 +8,21 @@ interface Props {
 }
 
 function calculateDailyWater(weight: number, hoursPerSession: number, daysPerWeek: number): number {
-  // Base: 35ml per kg of body weight
-  let base = weight * 35;
-  // Add for exercise: ~500ml per hour of training, spread across week
-  const weeklyExtraML = hoursPerSession * 500 * daysPerWeek;
-  base += weeklyExtraML / 7;
-  // Round to nearest 100ml, convert to liters
-  return Math.round(base / 100) * 100 / 1000;
+  const safeWeight = Number.isFinite(weight) && weight > 0 ? Math.min(weight, 350) : 70;
+  const safeHours = Number.isFinite(hoursPerSession) && hoursPerSession > 0 ? Math.min(hoursPerSession, 4) : 1;
+  const safeDays = Number.isFinite(daysPerWeek) && daysPerWeek > 0 ? Math.min(daysPerWeek, 7) : 3;
+  const base = safeWeight * 35;
+  const weeklyExtraML = safeHours * 500 * safeDays;
+  const dailyML = base + weeklyExtraML / 7;
+  return Math.max(1.5, Math.round(dailyML / 100) * 100 / 1000);
+}
+
+function getLocalDateKey(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 const WATER_KEY = "fitforge_water";
@@ -25,13 +33,19 @@ interface WaterState {
 }
 
 function loadWater(): WaterState {
+  const today = getLocalDateKey();
   const raw = localStorage.getItem(WATER_KEY);
   if (raw) {
-    const parsed = JSON.parse(raw) as WaterState;
-    const today = new Date().toISOString().split("T")[0];
-    if (parsed.date === today) return parsed;
+    try {
+      const parsed = JSON.parse(raw) as Partial<WaterState>;
+      if (parsed.date === today && Number.isInteger(parsed.glasses) && (parsed.glasses ?? 0) >= 0) {
+        return { date: today, glasses: parsed.glasses as number };
+      }
+    } catch (error) {
+      console.warn("[FitForge] Registro de hidratação local inválido.", error);
+    }
   }
-  return { date: new Date().toISOString().split("T")[0], glasses: 0 };
+  return { date: today, glasses: 0 };
 }
 
 function saveWater(state: WaterState) {
@@ -42,7 +56,7 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
   const [water, setWater] = useState<WaterState>(loadWater);
   const dailyTarget = useMemo(() => calculateDailyWater(weight, hoursPerSession, daysPerWeek), [weight, hoursPerSession, daysPerWeek]);
   const glassSize = 0.25; // 250ml per glass
-  const targetGlasses = Math.ceil(dailyTarget / glassSize);
+  const targetGlasses = Math.max(1, Math.ceil(dailyTarget / glassSize));
   const currentLiters = (water.glasses * glassSize).toFixed(2);
   const progress = Math.min((water.glasses / targetGlasses) * 100, 100);
 
@@ -93,12 +107,15 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
         <div className="flex items-center gap-2">
           <button
             onClick={removeGlass}
+            disabled={water.glasses === 0}
+            aria-label="Remover um copo de água"
             className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
           >
             <Minus className="w-4 h-4" />
           </button>
           <button
             onClick={addGlass}
+            aria-label="Adicionar um copo de água"
             className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary hover:bg-primary/30 transition-colors"
           >
             <Plus className="w-4 h-4" />

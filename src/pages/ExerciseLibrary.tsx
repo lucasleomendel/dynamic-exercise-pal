@@ -100,6 +100,7 @@ async function triggerBackgroundImageGen(limit = 3): Promise<{ processed: number
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return null; // visitante: não dispara IA
+    if (session.user.app_metadata?.role !== "master_admin") return null;
     const res = await fetch(`${SUPABASE_FN_URL}?limit=${limit}`, {
       method: "POST",
       headers: {

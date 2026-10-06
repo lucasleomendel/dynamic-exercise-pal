@@ -31,7 +31,7 @@ export async function syncProfile(profile?: UserProfile | null, userId?: string 
   if (!uid) return;
   const p = profile ?? loadProfile();
   if (!p) return;
-  await supabase.from("profiles").upsert({
+  const { error } = await supabase.from("profiles").upsert({
     user_id: uid,
     name: p.name,
     age: p.age,
@@ -46,6 +46,7 @@ export async function syncProfile(profile?: UserProfile | null, userId?: string 
     split_legs: p.splitLegs ?? false,
     last_synced_at: new Date().toISOString(),
   }, { onConflict: "user_id" });
+  if (error) throw error;
 }
 
 export async function pullProfile(): Promise<UserProfile | null> {
@@ -81,8 +82,9 @@ export async function syncPlan(plan?: WorkoutPlan | null, userId?: string | null
   const p = plan ?? loadPlan();
   if (!p) return;
   // desativa planos anteriores e insere novo ativo
-  await supabase.from("workout_plans").update({ is_active: false }).eq("user_id", uid).eq("is_active", true);
-  await supabase.from("workout_plans").insert({
+  const { error: deactivateError } = await supabase.from("workout_plans").update({ is_active: false }).eq("user_id", uid).eq("is_active", true);
+  if (deactivateError) throw deactivateError;
+  const { error: insertError } = await supabase.from("workout_plans").insert({
     user_id: uid,
     title: p.title,
     description: p.description,
@@ -90,14 +92,16 @@ export async function syncPlan(plan?: WorkoutPlan | null, userId?: string | null
     plan_data: p as any,
     is_active: true,
   });
+  if (insertError) throw insertError;
   // Limpa planos inativos antigos (> 30 dias) para evitar acúmulo
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  await supabase
+  const { error: cleanupError } = await supabase
     .from("workout_plans")
     .delete()
     .eq("user_id", uid)
     .eq("is_active", false)
     .lt("updated_at", cutoff);
+  if (cleanupError) throw cleanupError;
 }
 
 export async function pullPlan(): Promise<WorkoutPlan | null> {
@@ -132,9 +136,10 @@ export async function syncWeights(weights?: WeightEntry[], userId?: string | nul
     weight: w.weight,
     logged_at: w.date,
   }));
-  await supabase
+  const { error } = await supabase
     .from("weight_logs")
     .upsert(rows, { onConflict: "user_id,exercise_key,logged_at", ignoreDuplicates: true });
+  if (error) throw error;
 }
 
 /* ============ HISTORY ============ */
@@ -151,9 +156,10 @@ export async function syncHistory(history?: WorkoutHistoryEntry[], userId?: stri
     total_exercises: h.totalExercises,
     day_focus: h.dayFocus,
   }));
-  await supabase
+  const { error } = await supabase
     .from("workout_history")
     .upsert(rows, { onConflict: "user_id,workout_date", ignoreDuplicates: true });
+  if (error) throw error;
 }
 
 /* ============ BODY COMP ============ */
@@ -162,7 +168,7 @@ export async function syncBodyComp(data?: BodyCompData | null, userId?: string |
   if (!uid) return;
   const bc = data ?? loadBodyComp();
   if (!bc?.result) return;
-  await supabase.from("body_compositions").insert({
+  const { error } = await supabase.from("body_compositions").insert({
     user_id: uid,
     measured_at: bc.date,
     skinfolds: bc.skinfolds as any,
@@ -173,6 +179,7 @@ export async function syncBodyComp(data?: BodyCompData | null, userId?: string |
     classification: bc.result.classification,
     method: bc.result.method,
   });
+  if (error) throw error;
 }
 
 /* ============ EXERCISE CHECKS ============ */
@@ -180,10 +187,11 @@ export async function syncChecks(userId?: string | null) {
   const uid = await resolveUserId(userId);
   if (!uid) return;
   const checks = loadChecked();
-  await supabase.from("exercise_checks").upsert({
+  const { error } = await supabase.from("exercise_checks").upsert({
     user_id: uid,
     checks_data: checks as any,
   }, { onConflict: "user_id" });
+  if (error) throw error;
 }
 
 export async function pullChecks() {

@@ -496,12 +496,17 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
   // templates padrão poderiam deixar dias sem exercícios.
   const represented = new Set<string>();
   result.forEach(day => day.exercises.forEach(exercise => {
-    const group = ALL_MUSCLE_GROUPS.find(candidate =>
-      exerciseDatabase[candidate]?.some(item => item.name === exercise.name) ||
-      (candidate === 'pernas' && ['pernas_anterior', 'pernas_posterior'].some(part =>
-        exerciseDatabase[part]?.some(item => item.name === exercise.name)
-      ))
-    );
+    const group = ALL_MUSCLE_GROUPS.find(candidate => {
+      if (exerciseDatabase[candidate]?.some(item => item.name === exercise.name)) {
+        return true;
+      }
+      if (candidate === 'pernas') {
+        return ['pernas_anterior', 'pernas_posterior'].some(part =>
+          exerciseDatabase[part]?.some(item => item.name === exercise.name)
+        );
+      }
+      return false;
+    });
     if (group) represented.add(group);
   });
 

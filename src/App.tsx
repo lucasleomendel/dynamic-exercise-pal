@@ -22,7 +22,10 @@ const ExerciseLibrary = lazy(() => import("./pages/ExerciseLibrary"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Treinos = lazy(() => import("./pages/Treinos"));
 
-const queryClient = new QueryClient();
+// Cache de 5 min e sem refetch ao trocar de aba: evita requisições repetidas.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 5 * 60_000, refetchOnWindowFocus: false, retry: 1 } },
+});
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, isGuest } = useAuth();

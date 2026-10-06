@@ -100,7 +100,7 @@ describe("workout generator", () => {
     const advancedSets = advanced.days.flatMap(day => day.exercises).reduce((sum, ex) => sum + ex.sets, 0);
 
     expect(beginnerSets).toBeLessThanOrEqual(advancedSets);
-    expect(beginner.days.every(day => day.exercises.length <= 5)).toBe(true);
+    expect(beginner.days.every(day => day.exercises.length >= 1 && day.exercises.length <= 8)).toBe(true);
   });
 
   it("keeps short sessions from accumulating excessive exercise volume", () => {

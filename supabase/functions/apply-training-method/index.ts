@@ -29,12 +29,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
   try {
     const jwt = req.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!jwt) return json({ error: "unauthenticated" }, 401, req, 200, req);
+    if (!jwt) return json({ error: "unauthenticated" }, 401, req);
 
     const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: u } = await authClient.auth.getUser(jwt);
     const userId = u?.user?.id;
-    if (!userId) return json({ error: "invalid session" }, 401, req, 200, req);
+    if (!userId) return json({ error: "invalid session" }, 401, req);
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       supabase.from("weight_logs").select("exercise_name,weight,logged_at").eq("user_id", userId).gte("logged_at", since).order("logged_at"),
     ]);
 
-    if (!profile) return json({ error: "missing profile" }, 400, req, 200, req);
+    if (!profile) return json({ error: "missing profile" }, 400, req);
 
     const advanced = !!profile.advanced_mode;
     const methodSlug = profile.training_method || "";
@@ -139,14 +139,14 @@ Use exercícios consagrados + variações modernas. Cada dia deve ter 5-8 exerc�
     if (!aiRes.ok) {
       const t = await aiRes.text();
       console.error("AI error", aiRes.status, t);
-      if (aiRes.status === 429) return json({ error: "Limite de requisições. Tente em instantes." }, 429, req, 200, req);
-      if (aiRes.status === 402) return json({ error: "Créditos de IA esgotados." }, 402, req, 200, req);
-      return json({ error: "Falha ao gerar plano" }, 502, req, 200, req);
+      if (aiRes.status === 429) return json({ error: "Limite de requisições. Tente em instantes." }, 429, req);
+      if (aiRes.status === 402) return json({ error: "Créditos de IA esgotados." }, 402, req);
+      return json({ error: "Falha ao gerar plano" }, 502, req);
     }
 
     const aiData = await aiRes.json();
     const args = aiData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-    if (!args) return json({ error: "Resposta inválida da IA" }, 502, req, 200, req);
+    if (!args) return json({ error: "Resposta inválida da IA" }, 502, req);
     const planData = JSON.parse(args);
 
     // Desativa antigos e insere novo
@@ -161,13 +161,13 @@ Use exercícios consagrados + variações modernas. Cada dia deve ter 5-8 exerc�
     }).select().maybeSingle();
     if (insErr) {
       console.error(insErr);
-      return json({ error: "Falha ao salvar plano" }, 500, req, 200, req);
+      return json({ error: "Falha ao salvar plano" }, 500, req);
     }
 
     return json({ ok: true, plan: planData, method: advanced ? methodSlug || null : null }, 200, req);
   } catch (e) {
     console.error("apply-training-method error:", e);
-    return json({ error: "Erro interno do servidor" }, 500, req, 200, req);
+    return json({ error: "Erro interno do servidor" }, 500, req);
   }
 });
 

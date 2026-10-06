@@ -1,12 +1,9 @@
-import { Loader2 } from "lucide-react";
-
-// Tela de carregamento leve (sem biblioteca de animação, entra no pacote inicial).
+// Mesmo visual da tela de abertura do index.html, para a transição não "piscar".
 const LoadingScreen = () => (
-  <div className="flex items-center justify-center h-screen w-screen bg-background animate-in fade-in duration-300">
-    <div className="flex flex-col items-center">
-      <Loader2 className="h-12 w-12 text-primary animate-spin" />
-      <h1 className="mt-4 text-3xl font-bold text-primary tracking-wide">FitForge</h1>
-    </div>
+  <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-background">
+    <img src="/logo-splash.png" alt="FitForge" className="h-32 w-32 rounded-[28px] shadow-lg animate-pulse" />
+    <h1 className="text-4xl font-extrabold tracking-[0.3em] text-primary">FITFORGE</h1>
+    <p className="text-xs uppercase tracking-widest text-muted-foreground">Treino personalizado</p>
   </div>
 );
 

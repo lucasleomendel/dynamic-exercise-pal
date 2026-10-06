@@ -308,7 +308,6 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
 
   const fitToSession = (exercises: Exercise[]): Exercise[] => {
     const budget = hoursPerSession * 60;
-    const minimum = hoursPerSession <= 0.5 ? 2 : 3;
     const result: Exercise[] = [];
     let minutes = 0;
 
@@ -316,14 +315,16 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
       if (result.length >= 8) break;
       const cost = estimateExerciseMinutes(exercise);
 
-      if (result.length < minimum || minutes + cost <= budget) {
+      // Prioriza o limite de tempo informado pelo usuário. Um único
+      // exercício pode ultrapassar o orçamento se, sozinho, já exigir mais
+      // tempo do que a sessão, mas não adicionamos um segundo exercício
+      // quando ele faria a sessão ultrapassar o limite.
+      if (result.length === 0 || minutes + cost <= budget) {
         result.push(exercise);
         minutes += cost;
       }
     }
 
-    // Nunca retorna exercícios duplicados e não inventa exercícios de grupos
-    // que o usuário excluiu.
     return result.filter((exercise, index, list) =>
       list.findIndex(item => item.name === exercise.name) === index
     );
@@ -354,11 +355,10 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     const padded = fillFromAllowed(unique, fallbackGroups);
     const fitted = fitToSession(padded);
 
-    // Para sessões muito curtas, a seleção acima pode ficar abaixo do mínimo
-    // por causa dos descansos. Nesse caso mantemos ao menos 2 exercícios,
-    // respeitando o limite de duração sempre que possível.
-    if (fitted.length >= (hoursPerSession <= 0.5 ? 2 : 3)) return fitted;
-    return padded.slice(0, hoursPerSession <= 0.5 ? 2 : 3);
+    // Não força um número mínimo artificial de exercícios: respeitar o
+    // tempo escolhido é mais importante do que preencher a sessão com volume
+    // que não cabe nela.
+    return fitted.length > 0 ? fitted : padded.slice(0, 1);
   };
 
   const groupsForGeneralDays = [...allowed];

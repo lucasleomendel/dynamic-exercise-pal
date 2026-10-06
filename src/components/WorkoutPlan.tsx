@@ -6,7 +6,8 @@ import ProgressSheet from "./ProgressSheet";
 import BodyCompositionSheet from "./BodyCompositionSheet";
 import DietSheet from "./DietSheet";
 import WaterTracker from "./WaterTracker";
-import ChatBot from "./ChatBot";
+import { lazy, Suspense } from "react";
+const ChatBot = lazy(() => import("./ChatBot"));
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
 import { Calendar, ChevronDown, LogOut, BarChart3, MoreVertical, Download, UtensilsCrossed, Ruler, Settings, User, Loader2, Library, Dumbbell, ShieldCheck } from "lucide-react";
@@ -529,7 +530,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
         <ProgressSheet />
       </div>
 
-      <ChatBot profile={profile} />
+      <Suspense fallback={null}><ChatBot profile={profile} /></Suspense>
 
       {/* Rest Timer */}
       {activeTimer && (

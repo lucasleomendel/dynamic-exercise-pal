@@ -1,5 +1,6 @@
 import { UserProfile, WorkoutPlan } from "./workout-generator";
 import { ProgressReport } from "./progress";
+import { supabase } from "@/integrations/supabase/client";
 
 /** Executa sincronizações em background sem bloquear a UI, mas não silencia falhas. */
 const bg = (operation: string, fn: () => Promise<unknown>) => {
@@ -24,6 +25,17 @@ function safeParse<T>(raw: string | null, fallback: T): T {
 }
 const cloud = () => import("./cloud-sync");
 
+const bgAuthenticated = (operation: string, fn: (userId: string) => Promise<unknown>) => {
+  bg(operation, async () => {
+    // Capture the authenticated identity at the moment the local write occurs.
+    // This prevents a guest save that is still queued in the background from
+    // being attributed to a different account after a subsequent login.
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user?.id) return;
+    await fn(data.user.id);
+  });
+};
+
 const PROFILE_KEY = "fitforge_profile";
 const PLAN_KEY = "fitforge_plan";
 const CHECKED_KEY = "fitforge_checked";
@@ -41,7 +53,7 @@ export interface WeightEntry {
 export function saveProfile(profile: UserProfile) {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
   localStorage.setItem("fitforge_profile_ts", String(Date.now()));
-  bg("auto-sync", async () => (await cloud()).syncProfile(profile));
+  bgAuthenticated("auto-sync", async (userId) => (await cloud()).syncProfile(profile, userId));
 }
 
 export function loadProfile(): UserProfile | null {
@@ -51,7 +63,7 @@ export function loadProfile(): UserProfile | null {
 export function savePlan(plan: WorkoutPlan) {
   localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
   localStorage.setItem("fitforge_plan_ts", String(Date.now()));
-  bg("auto-sync", async () => (await cloud()).syncPlan(plan));
+  bgAuthenticated("auto-sync", async (userId) => (await cloud()).syncPlan(plan, userId));
 }
 
 export function loadPlan(): WorkoutPlan | null {
@@ -71,7 +83,7 @@ export function saveWeight(entry: WeightEntry) {
   const weights = loadWeights();
   weights.push(entry);
   localStorage.setItem(WEIGHTS_KEY, JSON.stringify(weights));
-  bg("auto-sync", async () => (await cloud()).syncWeights([entry]));
+  bgAuthenticated("auto-sync", async (userId) => (await cloud()).syncWeights([entry], userId));
 }
 
 export function loadWeights(): WeightEntry[] {
@@ -103,7 +115,7 @@ export interface BodyCompData {
 
 export function saveBodyComp(data: BodyCompData) {
   localStorage.setItem(BODY_COMP_KEY, JSON.stringify(data));
-  bg("auto-sync", async () => (await cloud()).syncBodyComp(data));
+  bgAuthenticated("auto-sync", async (userId) => (await cloud()).syncBodyComp(data, userId));
 }
 
 export function loadBodyComp(): BodyCompData | null {
@@ -128,7 +140,7 @@ export function saveWorkoutHistory(entry: WorkoutHistoryEntry) {
   cutoff.setDate(cutoff.getDate() - 90);
   const filtered = history.filter(h => new Date(h.date) > cutoff);
   localStorage.setItem(WORKOUT_HISTORY_KEY, JSON.stringify(filtered));
-  bg("auto-sync", async () => (await cloud()).syncHistory([entry]));
+  bgAuthenticated("auto-sync", async (userId) => (await cloud()).syncHistory([entry], userId));
 }
 
 export function loadWorkoutHistory(): WorkoutHistoryEntry[] {

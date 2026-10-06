@@ -58,6 +58,15 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
   const { user } = useAuth();
   const [water, setWater] = useState<WaterState>(loadWater);
   const hydratedRef = useRef(!user);
+  useEffect(() => {
+    const refreshDate = () => {
+      const today = getLocalDateKey();
+      setWater((prev) => prev.date === today ? prev : { date: today, glasses: 0 });
+    };
+    document.addEventListener("visibilitychange", refreshDate);
+    return () => document.removeEventListener("visibilitychange", refreshDate);
+  }, []);
+
   const dailyTarget = useMemo(() => calculateDailyWater(weight, hoursPerSession, daysPerWeek), [weight, hoursPerSession, daysPerWeek]);
   const glassSize = 0.25; // 250ml per glass
   const targetGlasses = Math.max(1, Math.ceil(dailyTarget / glassSize));

@@ -100,11 +100,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const enterGuestMode = useCallback(() => {
+    // Guest mode must start from a clean app cache so no previous account data
+    // can be displayed or later queued for synchronization.
+    clearAll();
     try { localStorage.setItem(GUEST_KEY, "1"); } catch { /* ignore */ }
     setIsGuest(true);
   }, []);
 
   const exitGuestMode = useCallback(() => {
+    // Leaving guest mode discards guest-only data instead of carrying it into
+    // the next authenticated account.
+    clearAll();
     try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
     setIsGuest(false);
   }, []);

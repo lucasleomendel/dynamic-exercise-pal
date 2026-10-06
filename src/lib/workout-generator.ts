@@ -199,27 +199,42 @@ const exerciseDatabase: Record<string, Exercise[]> = {
   ],
 };
 
+const COMPOUND_EXERCISE_HINTS = [
+  'Supino', 'Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Stiff', 'Levantamento Terra',
+  'Remada', 'Puxada', 'Barra Fixa', 'Desenvolvimento', 'Mergulho em Paralelas', 'Supino Fechado',
+  'Elevação Pélvica', 'Hip Thrust', 'Good Morning', 'Nordic Curl', 'Agachamento Hack',
+  'Agachamento Búlgaro', 'Agachamento Sumô'
+];
+
+function isCompoundExercise(exercise: Exercise): boolean {
+  return COMPOUND_EXERCISE_HINTS.some(hint => exercise.name.includes(hint));
+}
+
 function adjustForGoal(exercises: Exercise[], goal: string): Exercise[] {
   return exercises.map(ex => {
     const e = { ...ex };
+    const compound = isCompoundExercise(e);
+
     switch (goal) {
       case 'hipertrofia':
-        e.sets = Math.min(e.sets + 1, 5);
-        e.reps = '8-12';
-        e.rest = '90s';
+        e.sets = compound ? Math.min(Math.max(e.sets, 3), 4) : Math.min(Math.max(e.sets, 2), 3);
+        e.reps = compound ? '6-10' : '10-15';
+        e.rest = compound ? '120s' : '60s';
         break;
       case 'emagrecimento':
-        e.reps = '15-20';
-        e.rest = '30s';
+        e.sets = Math.min(Math.max(e.sets - 1, 2), 3);
+        e.reps = compound ? '8-12' : '10-15';
+        e.rest = compound ? '90s' : '45s';
         break;
       case 'resistencia':
-        e.reps = '15-25';
-        e.rest = '30s';
+        e.sets = Math.min(Math.max(e.sets - 1, 2), 3);
+        e.reps = compound ? '12-20' : '15-25';
+        e.rest = compound ? '60s' : '30s';
         break;
       case 'forca':
-        e.sets = 5;
-        e.reps = '3-6';
-        e.rest = '180s';
+        e.sets = compound ? Math.min(Math.max(e.sets, 3), 5) : Math.min(Math.max(e.sets, 2), 3);
+        e.reps = compound ? '3-6' : '6-10';
+        e.rest = compound ? '180s' : '90s';
         break;
     }
     return e;
@@ -229,37 +244,23 @@ function adjustForGoal(exercises: Exercise[], goal: string): Exercise[] {
 function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
   switch (level) {
     case 'iniciante':
-      return exercises.slice(0, 5).map(e => ({ ...e, sets: Math.max(e.sets - 1, 2) }));
+      return exercises.slice(0, 5).map(e => ({
+        ...e,
+        sets: Math.max(Math.min(e.sets - 1, 3), 2),
+        rest: isCompoundExercise(e)
+          ? (e.rest === '30s' || e.rest === '45s' ? '60s' : e.rest)
+          : e.rest,
+      }));
     case 'intermediario':
-      return exercises.slice(0, 7);
+      return exercises.slice(0, 7).map(e => ({ ...e }));
     case 'avancado':
-      return exercises.map(e => ({ ...e, sets: Math.min(e.sets + 1, 6) }));
+      return exercises.slice(0, 8).map(e => ({
+        ...e,
+        sets: Math.min(e.sets + (isCompoundExercise(e) ? 1 : 0), 5),
+      }));
     default:
       return exercises;
   }
-}
-
-const MIN_EXERCISES_PER_DAY = 4;
-
-function padDay(exercises: Exercise[], allowed: MuscleGroup[], goal: string, level: string): Exercise[] {
-  if (exercises.length >= MIN_EXERCISES_PER_DAY) return exercises;
-
-  const existing = new Set(exercises.map(e => e.name));
-  const fillGroups: string[] = ['abdomen', 'ombros', 'biceps', 'triceps', 'costas', 'peito'];
-
-  for (const group of fillGroups) {
-    if (exercises.length >= MIN_EXERCISES_PER_DAY) break;
-    if (!allowed.includes(group as MuscleGroup)) continue;
-    const pool = adjustForLevel(adjustForGoal(exerciseDatabase[group] || [], goal), level);
-    for (const ex of pool) {
-      if (exercises.length >= MIN_EXERCISES_PER_DAY) break;
-      if (!existing.has(ex.name)) {
-        exercises.push(ex);
-        existing.add(ex.name);
-      }
-    }
-  }
-  return exercises;
 }
 
 export function generateWorkout(profile: UserProfile): WorkoutPlan {
@@ -302,8 +303,10 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
   // razoavelmente na duração escolhida pelo usuário.
   const estimateExerciseMinutes = (exercise: Exercise): number => {
     const restMinutes = (parseSeconds(exercise.rest) * Math.max(exercise.sets - 1, 0)) / 60;
-    const setMinutes = exercise.sets * 0.75;
-    return setMinutes + restMinutes + 0.75; // troca/ajuste do equipamento
+    const executionMinutesPerSet = isCompoundExercise(exercise) ? 0.85 : 0.65;
+    const setMinutes = exercise.sets * executionMinutesPerSet;
+    const setupMinutes = isCompoundExercise(exercise) ? 1 : 0.75;
+    return setMinutes + restMinutes + setupMinutes;
   };
 
   const fitToSession = (exercises: Exercise[]): Exercise[] => {

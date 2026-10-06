@@ -1,6 +1,9 @@
 export const ALL_MUSCLE_GROUPS = ['peito', 'costas', 'pernas', 'ombros', 'biceps', 'triceps', 'abdomen'] as const;
 export type MuscleGroup = typeof ALL_MUSCLE_GROUPS[number];
 
+export const INJURY_AREAS = ['ombro', 'joelho', 'lombar', 'punho', 'cotovelo', 'quadril', 'tornozelo'] as const;
+export type InjuryArea = typeof INJURY_AREAS[number];
+
 export interface UserProfile {
   name: string;
   age: number;
@@ -13,6 +16,7 @@ export interface UserProfile {
   hoursPerSession: number;
   selectedMuscles?: MuscleGroup[];
   splitLegs?: boolean;
+  injuries?: InjuryArea[];
 }
 
 export interface Exercise {
@@ -50,6 +54,7 @@ export function validateUserProfile(profile: Partial<UserProfile>): string[] {
   if (!Number.isInteger(profile.daysPerWeek) || (profile.daysPerWeek as number) < 2 || (profile.daysPerWeek as number) > 6) errors.push("Frequência deve estar entre 2 e 6 dias por semana.");
   if (![0.5, 0.75, 1, 1.5].includes(profile.hoursPerSession as number)) errors.push("Duração de sessão inválida.");
   if (profile.selectedMuscles && (profile.selectedMuscles.length < 2 || profile.selectedMuscles.some(m => !ALL_MUSCLE_GROUPS.includes(m)))) errors.push("Seleção muscular inválida.");
+  if (profile.injuries && profile.injuries.some(injury => !INJURY_AREAS.includes(injury))) errors.push("Restrição física inválida.");
   return errors;
 }
 
@@ -64,6 +69,7 @@ export function normalizeUserProfile(profile: UserProfile): UserProfile {
     hoursPerSession: Number(profile.hoursPerSession),
     selectedMuscles: profile.selectedMuscles?.filter(m => ALL_MUSCLE_GROUPS.includes(m)) ?? [...ALL_MUSCLE_GROUPS],
     splitLegs: Boolean(profile.splitLegs),
+    injuries: profile.injuries?.filter(injury => INJURY_AREAS.includes(injury)) ?? [],
   };
   const errors = validateUserProfile(normalized);
   if (errors.length) throw new Error(errors.join(" "));
@@ -263,9 +269,25 @@ function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
   }
 }
 
+const INJURY_EXCLUSION_RULES: Record<InjuryArea, string[]> = {
+  ombro: ['Desenvolvimento', 'Arnold', 'Militar', 'Elevação Frontal', 'Elevação Lateral', 'Remada Alta', 'Mergulho', 'Flexão Diamante', 'Face Pull', 'Y-Raise', 'Crucifixo Inverso'],
+  joelho: ['Agachamento', 'Leg Press', 'Extensora', 'Hack', 'Avanço', 'Passada', 'Búlgaro', 'Sissy', 'Panturrilha no Leg Press'],
+  lombar: ['Levantamento Terra', 'Remada Curvada', 'Stiff', 'Good Morning', 'Agachamento Livre', 'Agachamento Frontal', 'Agachamento Sumô', 'Avanço', 'Passada', 'Agachamento Búlgaro'],
+  punho: ['Supino Reto com Barra', 'Supino Declinado', 'Supino Inclinado com Halteres', 'Supino Reto com Halteres', 'Flexão de Braço', 'Flexão Diamante', 'Rosca Direta com Barra', 'Rosca Inversa', 'Tríceps Testa', 'Mergulho'],
+  cotovelo: ['Rosca Direta', 'Rosca Alternada', 'Rosca Martelo', 'Rosca Scott', 'Rosca Concentrada', 'Rosca no Cabo', 'Rosca Inversa', 'Rosca 21', 'Rosca Spider', 'Rosca Inclinada', 'Tríceps Pulley', 'Tríceps Testa', 'Tríceps Francês', 'Tríceps Corda', 'Tríceps Coice', 'Mergulho', 'Supino Fechado', 'JM Press'],
+  quadril: ['Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Búlgaro', 'Stiff', 'Good Morning', 'Elevação Pélvica', 'Abdução de Quadril', 'Glúteo no Cabo', 'Extensão de Quadril', 'Nordic Curl'],
+  tornozelo: ['Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Búlgaro', 'Sissy', 'Panturrilha', 'Mountain Climber'],
+};
+
+function isExerciseRestricted(exercise: Exercise, injuries: InjuryArea[]): boolean {
+  return injuries.some(injury =>
+    INJURY_EXCLUSION_RULES[injury].some(keyword => exercise.name.includes(keyword))
+  );
+}
+
 export function generateWorkout(profile: UserProfile): WorkoutPlan {
   const safeProfile = normalizeUserProfile(profile);
-  const { goal, level, daysPerWeek, hoursPerSession, selectedMuscles, splitLegs } = safeProfile;
+  const { goal, level, daysPerWeek, hoursPerSession, selectedMuscles, splitLegs, injuries = [] } = safeProfile;
   const allowed = selectedMuscles && selectedMuscles.length >= 2
     ? [...selectedMuscles]
     : [...ALL_MUSCLE_GROUPS];
@@ -284,7 +306,8 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
   };
 
   const adjusted = (group: string): Exercise[] =>
-    adjustForLevel(adjustForGoal(exerciseDatabase[group] || [], goal), level);
+    adjustForLevel(adjustForGoal(exerciseDatabase[group] || [], goal), level)
+      .filter(exercise => !isExerciseRestricted(exercise, injuries));
 
   const pick = (group: string): Exercise[] => {
     if (group === 'pernas_anterior' || group === 'pernas_posterior') {
@@ -503,9 +526,13 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     ? `${Math.round(hoursPerSession * 60)}min`
     : `${hoursPerSession}h`;
 
+  const injuryNote = injuries.length > 0
+    ? ' Exercícios incompatíveis com as restrições informadas foram excluídos automaticamente; em caso de dor ou condição clínica, confirme a seleção com um profissional de saúde ou educação física.'
+    : '';
+
   return {
     title: `Treino ${goalLabels[goal]} - ${levelLabels[level]}`,
-    description: `Plano personalizado para ${safeProfile.name}. ${days.length}x por semana, sessões de ~${timeLabel}.`,
+    description: `Plano personalizado para ${safeProfile.name}. ${days.length}x por semana, sessões de ~${timeLabel}.${injuryNote}`,
     daysPerWeek: days.length,
     days,
   };

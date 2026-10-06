@@ -2,10 +2,23 @@
 // (ou voltando ao padrão quando desativado), usando IA + perfil + progresso recente.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://dynamic-exercise-pal.lovable.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://dynamic-exercise-pal.lovable.app";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -13,15 +26,15 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
   try {
     const jwt = req.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!jwt) return json({ error: "unauthenticated" }, 401);
+    if (!jwt) return json({ error: "unauthenticated" }, 401, req, 200, req);
 
     const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: u } = await authClient.auth.getUser(jwt);
     const userId = u?.user?.id;
-    if (!userId) return json({ error: "invalid session" }, 401);
+    if (!userId) return json({ error: "invalid session" }, 401, req, 200, req);
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
@@ -35,7 +48,7 @@ Deno.serve(async (req) => {
       supabase.from("weight_logs").select("exercise_name,weight,logged_at").eq("user_id", userId).gte("logged_at", since).order("logged_at"),
     ]);
 
-    if (!profile) return json({ error: "missing profile" }, 400);
+    if (!profile) return json({ error: "missing profile" }, 400, req, 200, req);
 
     const advanced = !!profile.advanced_mode;
     const methodSlug = profile.training_method || "";
@@ -126,14 +139,14 @@ Use exercícios consagrados + variações modernas. Cada dia deve ter 5-8 exerc�
     if (!aiRes.ok) {
       const t = await aiRes.text();
       console.error("AI error", aiRes.status, t);
-      if (aiRes.status === 429) return json({ error: "Limite de requisições. Tente em instantes." }, 429);
-      if (aiRes.status === 402) return json({ error: "Créditos de IA esgotados." }, 402);
-      return json({ error: "Falha ao gerar plano" }, 502);
+      if (aiRes.status === 429) return json({ error: "Limite de requisições. Tente em instantes." }, 429, req, 200, req);
+      if (aiRes.status === 402) return json({ error: "Créditos de IA esgotados." }, 402, req, 200, req);
+      return json({ error: "Falha ao gerar plano" }, 502, req, 200, req);
     }
 
     const aiData = await aiRes.json();
     const args = aiData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-    if (!args) return json({ error: "Resposta inválida da IA" }, 502);
+    if (!args) return json({ error: "Resposta inválida da IA" }, 502, req, 200, req);
     const planData = JSON.parse(args);
 
     // Desativa antigos e insere novo
@@ -148,19 +161,19 @@ Use exercícios consagrados + variações modernas. Cada dia deve ter 5-8 exerc�
     }).select().maybeSingle();
     if (insErr) {
       console.error(insErr);
-      return json({ error: "Falha ao salvar plano" }, 500);
+      return json({ error: "Falha ao salvar plano" }, 500, req, 200, req);
     }
 
-    return json({ ok: true, plan: planData, method: advanced ? methodSlug || null : null });
+    return json({ ok: true, plan: planData, method: advanced ? methodSlug || null : null }, 200, req);
   } catch (e) {
     console.error("apply-training-method error:", e);
-    return json({ error: "Erro interno do servidor" }, 500);
+    return json({ error: "Erro interno do servidor" }, 500, req, 200, req);
   }
 });
 
 async function safeJson(req: Request) {
   try { return await req.clone().json(); } catch { return {}; }
 }
-function json(b: unknown, status = 200) {
-  return new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+function json(b: unknown, status = 200, req?: Request) {
+  return new Response(JSON.stringify(b), { status, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
 }

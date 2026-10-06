@@ -1,12 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, lazy, Suspense } from "react";
 import { WorkoutPlan as WorkoutPlanType, UserProfile } from "@/lib/workout-generator";
 import ExerciseCard from "./ExerciseCard";
 import ProfileSheet from "./ProfileSheet";
-import ProgressSheet from "./ProgressSheet";
+const ProgressSheet = lazy(() => import("./ProgressSheet"));
 import BodyCompositionSheet from "./BodyCompositionSheet";
 import DietSheet from "./DietSheet";
 import WaterTracker from "./WaterTracker";
-import { lazy, Suspense } from "react";
 const ChatBot = lazy(() => import("./ChatBot"));
 import SettingsSheet from "./SettingsSheet";
 import RestTimer from "./RestTimer";
@@ -15,7 +14,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { isMasterAdmin } from "@/lib/admin";
 import { useNavigate } from "react-router-dom";
 import logoImg from "@/assets/logo-fitforge.png";
-import { generateWorkoutPDF } from "@/lib/pdf-generator";
 import { toast } from "sonner";
 import { loadChecked, saveChecked, saveWeight, loadWeights, saveWorkoutHistory, savePlan } from "@/lib/storage";
 
@@ -72,6 +70,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
+      const { generateWorkoutPDF } = await import("@/lib/pdf-generator");
       await generateWorkoutPDF(plan, profile);
       toast.success("PDF do treino baixado! 📥");
     } catch {
@@ -527,7 +526,7 @@ const WorkoutPlan = ({ plan, profile, onEdit, onClear, onPlanUpdate }: Props) =>
         </div>
 
         {/* Progress button */}
-        <ProgressSheet />
+        <Suspense fallback={null}><ProgressSheet /></Suspense>
       </div>
 
       <Suspense fallback={null}><ChatBot profile={profile} /></Suspense>

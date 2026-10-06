@@ -40,8 +40,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const runHydration = () => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
-    hydrateFromCloud().catch(() => {});
-    maybeDailySync().catch(() => {});
+    Promise.all([hydrateFromCloud(), maybeDailySync()]).catch((error) => {
+      // Allow a later visibility/auth event to retry after a transient outage.
+      hydratedRef.current = false;
+      console.warn("[FitForge] Falha ao hidratar dados da conta.", error);
+    });
   };
 
   useEffect(() => {

@@ -1,10 +1,27 @@
 import { UserProfile, WorkoutPlan } from "./workout-generator";
 import { ProgressReport } from "./progress";
 
-/** Dispara fn em background sem bloquear nem propagar erros (auto-sync cloud). */
-const bg = (fn: () => Promise<unknown>) => {
-  Promise.resolve().then(() => fn().catch(() => {}));
+/** Executa sincronizações em background sem bloquear a UI, mas não silencia falhas. */
+const bg = (operation: string, fn: () => Promise<unknown>) => {
+  Promise.resolve()
+    .then(fn)
+    .catch((error) => {
+      console.warn(`[FitForge] Falha na sincronização: ${operation}`, error);
+      window.dispatchEvent(new CustomEvent("fitforge:sync-error", {
+        detail: { operation, error },
+      }));
+    });
 };
+
+function safeParse<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    console.warn("[FitForge] Dados locais corrompidos; usando fallback.", error);
+    return fallback;
+  }
+}
 const cloud = () => import("./cloud-sync");
 
 const PROFILE_KEY = "fitforge_profile";
@@ -24,45 +41,41 @@ export interface WeightEntry {
 export function saveProfile(profile: UserProfile) {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
   localStorage.setItem("fitforge_profile_ts", String(Date.now()));
-  bg(async () => (await cloud()).syncProfile(profile));
+  bg("auto-sync", async () => (await cloud()).syncProfile(profile));
 }
 
 export function loadProfile(): UserProfile | null {
-  const raw = localStorage.getItem(PROFILE_KEY);
-  return raw ? JSON.parse(raw) : null;
+  return safeParse<UserProfile | null>(localStorage.getItem(PROFILE_KEY), null);
 }
 
 export function savePlan(plan: WorkoutPlan) {
   localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
   localStorage.setItem("fitforge_plan_ts", String(Date.now()));
-  bg(async () => (await cloud()).syncPlan(plan));
+  bg("auto-sync", async () => (await cloud()).syncPlan(plan));
 }
 
 export function loadPlan(): WorkoutPlan | null {
-  const raw = localStorage.getItem(PLAN_KEY);
-  return raw ? JSON.parse(raw) : null;
+  return safeParse<WorkoutPlan | null>(localStorage.getItem(PLAN_KEY), null);
 }
 
 export function saveChecked(checked: Record<string, boolean>) {
   localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
-  bg(async () => (await cloud()).syncChecks());
+  bg("auto-sync", async () => (await cloud()).syncChecks());
 }
 
 export function loadChecked(): Record<string, boolean> {
-  const raw = localStorage.getItem(CHECKED_KEY);
-  return raw ? JSON.parse(raw) : {};
+  return safeParse<Record<string, boolean>>(localStorage.getItem(CHECKED_KEY), {});
 }
 
 export function saveWeight(entry: WeightEntry) {
   const weights = loadWeights();
   weights.push(entry);
   localStorage.setItem(WEIGHTS_KEY, JSON.stringify(weights));
-  bg(async () => (await cloud()).syncWeights([entry]));
+  bg("auto-sync", async () => (await cloud()).syncWeights([entry]));
 }
 
 export function loadWeights(): WeightEntry[] {
-  const raw = localStorage.getItem(WEIGHTS_KEY);
-  return raw ? JSON.parse(raw) : [];
+  return safeParse<WeightEntry[]>(localStorage.getItem(WEIGHTS_KEY), []);
 }
 
 export function saveReport(report: ProgressReport) {
@@ -70,8 +83,7 @@ export function saveReport(report: ProgressReport) {
 }
 
 export function loadReport(): ProgressReport | null {
-  const raw = localStorage.getItem(REPORT_KEY);
-  return raw ? JSON.parse(raw) : null;
+  return safeParse<ProgressReport | null>(localStorage.getItem(REPORT_KEY), null);
 }
 
 const BODY_COMP_KEY = "fitforge_bodycomp";
@@ -91,12 +103,11 @@ export interface BodyCompData {
 
 export function saveBodyComp(data: BodyCompData) {
   localStorage.setItem(BODY_COMP_KEY, JSON.stringify(data));
-  bg(async () => (await cloud()).syncBodyComp(data));
+  bg("auto-sync", async () => (await cloud()).syncBodyComp(data));
 }
 
 export function loadBodyComp(): BodyCompData | null {
-  const raw = localStorage.getItem(BODY_COMP_KEY);
-  return raw ? JSON.parse(raw) : null;
+  return safeParse<BodyCompData | null>(localStorage.getItem(BODY_COMP_KEY), null);
 }
 
 const WORKOUT_HISTORY_KEY = "fitforge_history";
@@ -117,12 +128,11 @@ export function saveWorkoutHistory(entry: WorkoutHistoryEntry) {
   cutoff.setDate(cutoff.getDate() - 90);
   const filtered = history.filter(h => new Date(h.date) > cutoff);
   localStorage.setItem(WORKOUT_HISTORY_KEY, JSON.stringify(filtered));
-  bg(async () => (await cloud()).syncHistory([entry]));
+  bg("auto-sync", async () => (await cloud()).syncHistory([entry]));
 }
 
 export function loadWorkoutHistory(): WorkoutHistoryEntry[] {
-  const raw = localStorage.getItem(WORKOUT_HISTORY_KEY);
-  return raw ? JSON.parse(raw) : [];
+  return safeParse<WorkoutHistoryEntry[]>(localStorage.getItem(WORKOUT_HISTORY_KEY), []);
 }
 
 export function clearAll() {

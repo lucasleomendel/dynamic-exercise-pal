@@ -3,20 +3,33 @@
 // Salva como plano ativo em workout_plans e devolve o JSON para o app.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://dynamic-exercise-pal.lovable.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://dynamic-exercise-pal.lovable.app";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function json(b: unknown, status = 200) {
+function json(b: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(b), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -58,16 +71,16 @@ const PLAN_SCHEMA = {
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const jwt = req.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!jwt) return json({ error: "unauthenticated" }, 401);
+    if (!jwt) return json({ error: "unauthenticated" }, 401, req, 200, req);
 
     const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: u } = await authClient.auth.getUser(jwt);
     const callerId = u?.user?.id;
-    if (!callerId) return json({ error: "invalid session" }, 401);
+    if (!callerId) return json({ error: "invalid session" }, 401, req, 200, req);
 
     const body = await req.json().catch(() => ({}));
     const focusRequest = typeof body?.focus === "string" ? body.focus.slice(0, 400) : "";
@@ -96,7 +109,7 @@ Deno.serve(async (req) => {
           .eq("active", true).limit(600),
       ]);
 
-    if (!profile) return json({ error: "Complete seu perfil antes de gerar o treino." }, 400);
+    if (!profile) return json({ error: "Complete seu perfil antes de gerar o treino." }, 400, req, 200, req);
 
     const sessions = history ?? [];
     const adherence = sessions.length
@@ -183,20 +196,20 @@ ${librarySummary.slice(0, 4000)}`;
     if (!aiRes.ok) {
       const t = await aiRes.text().catch(() => "");
       console.error("AI error", aiRes.status, t);
-      if (aiRes.status === 429) return json({ error: "Muitas requisições à IA. Tente em alguns segundos." }, 429);
-      if (aiRes.status === 402) return json({ error: "Créditos de IA esgotados." }, 402);
-      if (aiRes.status === 403) return json({ error: "IA indisponível para esta conta." }, 403);
-      return json({ error: "Falha ao gerar o plano." }, 502);
+      if (aiRes.status === 429) return json({ error: "Muitas requisições à IA. Tente em alguns segundos." }, 429, req, 200, req);
+      if (aiRes.status === 402) return json({ error: "Créditos de IA esgotados." }, 402, req, 200, req);
+      if (aiRes.status === 403) return json({ error: "IA indisponível para esta conta." }, 403, req, 200, req);
+      return json({ error: "Falha ao gerar o plano." }, 502, req, 200, req);
     }
 
     const aiData = await aiRes.json();
     const args = aiData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-    if (!args) return json({ error: "Resposta inválida da IA." }, 502);
+    if (!args) return json({ error: "Resposta inválida da IA." }, 502, req, 200, req);
 
     let planData: any;
-    try { planData = JSON.parse(args); } catch { return json({ error: "Resposta inválida da IA." }, 502); }
+    try { planData = JSON.parse(args); } catch { return json({ error: "Resposta inválida da IA." }, 502, req, 200, req); }
     if (!Array.isArray(planData?.days) || planData.days.length === 0) {
-      return json({ error: "A IA não retornou dias de treino." }, 502);
+      return json({ error: "A IA não retornou dias de treino." }, 502, req, 200, req);
     }
 
     // Mantém o histórico: planos anteriores ficam arquivados (is_active = false).
@@ -211,7 +224,7 @@ ${librarySummary.slice(0, 4000)}`;
     }).select("id,created_at").single();
     if (insErr || !inserted) {
       console.error(insErr);
-      return json({ error: "Falha ao salvar o plano." }, 500);
+      return json({ error: "Falha ao salvar o plano." }, 500, req, 200, req);
     }
 
     // Registra a progressão que originou este plano (histórico do aluno).
@@ -249,10 +262,10 @@ ${librarySummary.slice(0, 4000)}`;
         stagnant: stagnant.slice(0, 10),
         method: advanced ? (activeMethod?.name ?? null) : null,
       },
-    });
+    }, 200, req);
 
   } catch (e) {
     console.error("smart-plan error:", e);
-    return json({ error: "Erro interno do servidor" }, 500);
+    return json({ error: "Erro interno do servidor" }, 500, req, 200, req);
   }
 });

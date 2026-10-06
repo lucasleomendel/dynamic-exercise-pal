@@ -4,7 +4,7 @@
  * Roda automaticamente: ao carregar, ao salvar, e uma vez por dia em background.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { UserProfile, WorkoutPlan } from "./workout-generator";
+import { UserProfile, WorkoutPlan, normalizeUserProfile } from "./workout-generator";
 import {
   loadProfile, saveProfile,
   loadPlan, savePlan,
@@ -31,19 +31,20 @@ export async function syncProfile(profile?: UserProfile | null, userId?: string 
   if (!uid) return;
   const p = profile ?? loadProfile();
   if (!p) return;
+  const safeProfile = normalizeUserProfile(p);
   const { error } = await supabase.from("profiles").upsert({
     user_id: uid,
-    name: p.name,
-    age: p.age,
-    weight: p.weight,
-    height: p.height,
-    sex: p.sex,
-    goal: p.goal,
-    level: p.level,
-    days_per_week: p.daysPerWeek,
-    hours_per_session: p.hoursPerSession,
-    selected_muscles: p.selectedMuscles ?? null,
-    split_legs: p.splitLegs ?? false,
+    name: safeProfile.name,
+    age: safeProfile.age,
+    weight: safeProfile.weight,
+    height: safeProfile.height,
+    sex: safeProfile.sex,
+    goal: safeProfile.goal,
+    level: safeProfile.level,
+    days_per_week: safeProfile.daysPerWeek,
+    hours_per_session: safeProfile.hoursPerSession,
+    selected_muscles: safeProfile.selectedMuscles ?? null,
+    split_legs: safeProfile.splitLegs ?? false,
     last_synced_at: new Date().toISOString(),
   }, { onConflict: "user_id" });
   if (error) throw error;
@@ -58,7 +59,7 @@ export async function pullProfile(): Promise<UserProfile | null> {
     .eq("user_id", userId)
     .maybeSingle();
   if (!data || !data.name) return null;
-  const profile: UserProfile = {
+  const candidate: UserProfile = {
     name: data.name,
     age: data.age ?? 0,
     weight: Number(data.weight ?? 0),
@@ -71,8 +72,14 @@ export async function pullProfile(): Promise<UserProfile | null> {
     selectedMuscles: (data.selected_muscles as UserProfile["selectedMuscles"]) ?? undefined,
     splitLegs: data.split_legs ?? false,
   };
-  saveProfile(profile);
-  return profile;
+  try {
+    const profile = normalizeUserProfile(candidate);
+    saveProfile(profile);
+    return profile;
+  } catch {
+    console.warn("[FitForge] Ignoring invalid profile received from cloud.");
+    return null;
+  }
 }
 
 /* ============ PLAN ============ */
@@ -282,8 +289,9 @@ async function resolveProfileConflict() {
 
   if (!data?.name && !localProfile) return;
   if (cloudTs > localTs && data?.name) {
-    // cloud mais novo → hidrata local
-    const profile: UserProfile = {
+    // cloud mais novo → hidrata local somente se o registro passar pela mesma
+    // validação usada na geração do treino.
+    const candidate: UserProfile = {
       name: data.name,
       age: data.age ?? 0,
       weight: Number(data.weight ?? 0),
@@ -296,8 +304,13 @@ async function resolveProfileConflict() {
       selectedMuscles: (data.selected_muscles as UserProfile["selectedMuscles"]) ?? undefined,
       splitLegs: data.split_legs ?? false,
     };
-    saveProfile(profile);
-    localStorage.setItem(PROFILE_TS_KEY, String(cloudTs));
+    try {
+      const profile = normalizeUserProfile(candidate);
+      saveProfile(profile);
+      localStorage.setItem(PROFILE_TS_KEY, String(cloudTs));
+    } catch {
+      console.warn("[FitForge] Ignoring invalid cloud profile during conflict resolution.");
+    }
   } else if (localTs > cloudTs && localProfile) {
     await syncProfile(localProfile);
   }

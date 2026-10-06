@@ -375,6 +375,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          injuries: string[]
+
           advanced_mode: boolean | null
           age: number | null
           avatar_url: string | null
@@ -407,6 +409,8 @@ export type Database = {
           weight: number | null
         }
         Insert: {
+          injuries?: string[]
+
           advanced_mode?: boolean | null
           age?: number | null
           avatar_url?: string | null
@@ -439,6 +443,8 @@ export type Database = {
           weight?: number | null
         }
         Update: {
+          injuries?: string[]
+
           advanced_mode?: boolean | null
           age?: number | null
           avatar_url?: string | null

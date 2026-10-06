@@ -26,6 +26,79 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const INJURY_KEYWORDS: Record<string, string[]> = {
+  ombro: ["Desenvolvimento", "Arnold", "Militar", "Elevação Frontal", "Elevação Lateral", "Remada Alta", "Mergulho", "Flexão Diamante", "Face Pull", "Y-Raise", "Crucifixo Inverso"],
+  joelho: ["Agachamento", "Leg Press", "Extensora", "Hack", "Avanço", "Passada", "Búlgaro", "Sissy", "Panturrilha no Leg Press"],
+  lombar: ["Levantamento Terra", "Remada Curvada", "Stiff", "Good Morning", "Agachamento Livre", "Agachamento Frontal", "Agachamento Sumô", "Avanço", "Passada", "Agachamento Búlgaro"],
+  punho: ["Supino Reto com Barra", "Supino Declinado", "Supino Inclinado com Halteres", "Supino Reto com Halteres", "Flexão de Braço", "Flexão Diamante", "Rosca Direta com Barra", "Rosca Inversa", "Tríceps Testa", "Mergulho"],
+  cotovelo: ["Rosca Direta", "Rosca Alternada", "Rosca Martelo", "Rosca Scott", "Rosca Concentrada", "Rosca no Cabo", "Rosca Inversa", "Rosca 21", "Rosca Spider", "Rosca Inclinada", "Tríceps Pulley", "Tríceps Testa", "Tríceps Francês", "Tríceps Corda", "Tríceps Coice", "Mergulho", "Supino Fechado", "JM Press"],
+  quadril: ["Agachamento", "Leg Press", "Avanço", "Passada", "Búlgaro", "Stiff", "Good Morning", "Elevação Pélvica", "Abdução de Quadril", "Glúteo no Cabo", "Extensão de Quadril", "Nordic Curl"],
+  tornozelo: ["Agachamento", "Leg Press", "Avanço", "Passada", "Búlgaro", "Sissy", "Panturrilha", "Mountain Climber"],
+};
+
+function exerciseBlocked(name: string, injuries: unknown[]): boolean {
+  return injuries.some((injury) =>
+    typeof injury === "string" && (INJURY_KEYWORDS[injury] ?? []).some((keyword) => name.includes(keyword))
+  );
+}
+
+function estimateMinutes(exercise: any): number {
+  const rest = Number(String(exercise.rest ?? "").match(/(\d+)/)?.[1] ?? 60);
+  const sets = Math.min(Math.max(Number(exercise.sets) || 1, 1), 6);
+  const compound = ["Supino", "Agachamento", "Leg Press", "Remada", "Puxada", "Barra Fixa", "Desenvolvimento", "Terra", "Stiff", "Hip Thrust", "Elevação Pélvica"].some((k) => String(exercise.name).includes(k));
+  return sets * (compound ? 0.85 : 0.65) + Math.max(sets - 1, 0) * rest / 60 + (compound ? 1 : 0.75);
+}
+
+function sanitizePlan(planData: any, profile: any) {
+  const targetDays = Number(profile.days_per_week) || 1;
+  const budget = (Number(profile.hours_per_session) || 1) * 60;
+  const injuries = Array.isArray(profile.injuries) ? profile.injuries : [];
+  const days = Array.isArray(planData?.days) ? planData.days.slice(0, targetDays) : [];
+  if (days.length !== targetDays) throw new Error("A IA retornou uma quantidade de dias diferente do perfil.");
+
+  const sanitizedDays = days.map((day: any) => {
+    const source = Array.isArray(day?.exercises) ? day.exercises : [];
+    const unique = new Set<string>();
+    const exercises = source
+      .filter((ex: any) => typeof ex?.name === "string" && ex.name.trim())
+      .filter((ex: any) => !exerciseBlocked(ex.name, injuries))
+      .map((ex: any) => ({
+        name: String(ex.name).trim().slice(0, 120),
+        sets: Math.min(Math.max(Math.round(Number(ex.sets) || 1), 1), 6),
+        reps: String(ex.reps ?? "8-12").slice(0, 30),
+        rest: String(ex.rest ?? "60s").slice(0, 20),
+        muscle: String(ex.muscle ?? "Geral").slice(0, 60),
+        ...(ex.tip ? { tip: String(ex.tip).slice(0, 240) } : {}),
+      }))
+      .filter((ex: any) => {
+        if (unique.has(ex.name)) return false;
+        unique.add(ex.name);
+        return true;
+      })
+      .slice(0, 8);
+
+    const fitted: any[] = [];
+    let minutes = 0;
+    for (const ex of exercises) {
+      const cost = estimateMinutes(ex);
+      if (fitted.length === 0 || minutes + cost <= budget) {
+        fitted.push(ex);
+        minutes += cost;
+      }
+    }
+    if (fitted.length === 0) throw new Error("Uma sessão ficou sem exercícios compatíveis com as restrições.");
+    return { day: String(day.day ?? ""), focus: String(day.focus ?? "").slice(0, 120), exercises: fitted };
+  });
+
+  return {
+    ...planData,
+    daysPerWeek: targetDays,
+    days: sanitizedDays,
+    description: String(planData.description ?? "").slice(0, 1000),
+    title: String(planData.title ?? "Plano FitForge").slice(0, 160),
+  };
+}
+
 function json(b: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(b), {
     status,
@@ -158,6 +231,7 @@ Nome: ${profile.name ?? "aluno"} | ${profile.age ?? "—"}a | ${profile.sex ?? "
 Objetivo: ${profile.goal ?? "hipertrofia"} | Nível: ${profile.level ?? "intermediario"}
 Frequência: ${profile.days_per_week ?? 4}x/semana · ~${profile.hours_per_session ?? 1}h por sessão
 Músculos priorizados: ${(profile.selected_muscles ?? []).join(", ") || "todos"} | Split de pernas: ${profile.split_legs ? "sim" : "não"}
+Restrições físicas: ${(profile.injuries ?? []).join(", ") || "nenhuma"}
 ${advanced && activeMethod ? `Modo avançado ATIVO — aplicar método "${activeMethod.name}": ${activeMethod.short_description}` : "Modo padrão — hipertrofia clássica com progressão dupla."}
 
 ## Histórico (60 dias)
@@ -210,6 +284,12 @@ ${librarySummary.slice(0, 4000)}`;
     try { planData = JSON.parse(args); } catch { return json({ error: "Resposta inválida da IA." }, 502, req); }
     if (!Array.isArray(planData?.days) || planData.days.length === 0) {
       return json({ error: "A IA não retornou dias de treino." }, 502, req);
+    }
+    try {
+      planData = sanitizePlan(planData, profile);
+    } catch (e) {
+      console.error("Plano rejeitado após validação:", e);
+      return json({ error: e instanceof Error ? e.message : "Plano incompatível com o perfil." }, 502, req);
     }
 
     // Mantém o histórico: planos anteriores ficam arquivados (is_active = false).

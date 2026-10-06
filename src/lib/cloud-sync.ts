@@ -45,6 +45,7 @@ export async function syncProfile(profile?: UserProfile | null, userId?: string 
     hours_per_session: safeProfile.hoursPerSession,
     selected_muscles: safeProfile.selectedMuscles ?? null,
     split_legs: safeProfile.splitLegs ?? false,
+    preferences: { injuries: safeProfile.injuries ?? [] },
     last_synced_at: new Date().toISOString(),
   }, { onConflict: "user_id" });
   if (error) throw error;
@@ -71,6 +72,9 @@ export async function pullProfile(): Promise<UserProfile | null> {
     hoursPerSession: Number(data.hours_per_session ?? 1),
     selectedMuscles: (data.selected_muscles as UserProfile["selectedMuscles"]) ?? undefined,
     splitLegs: data.split_legs ?? false,
+    injuries: Array.isArray((data.preferences as { injuries?: unknown } | null)?.injuries)
+      ? ((data.preferences as { injuries: unknown[] }).injuries.filter(Boolean) as UserProfile["injuries"])
+      : [],
   };
   try {
     const profile = normalizeUserProfile(candidate);

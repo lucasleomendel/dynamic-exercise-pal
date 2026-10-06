@@ -293,7 +293,7 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
   };
 
   const parseSeconds = (rest: string): number => {
-    const match = rest.match(/(\\d+)s/);
+    const match = rest.match(/(\d+)s/);
     return match ? Number(match[1]) : 60;
   };
 

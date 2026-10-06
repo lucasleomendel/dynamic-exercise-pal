@@ -1074,6 +1074,14 @@ export type Database = {
       }
       is_master_admin: { Args: { uid: string }; Returns: boolean }
       is_personal_trainer: { Args: { uid: string }; Returns: boolean }
+      list_personals: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          email: string
+          id: string
+          role: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

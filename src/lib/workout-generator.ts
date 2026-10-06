@@ -37,6 +37,39 @@ export interface WorkoutPlan {
   days: WorkoutDay[];
 }
 
+export function validateUserProfile(profile: Partial<UserProfile>): string[] {
+  const errors: string[] = [];
+  const name = typeof profile.name === "string" ? profile.name.trim() : "";
+  if (name.length < 2 || name.length > 80) errors.push("Nome deve ter entre 2 e 80 caracteres.");
+  if (!Number.isFinite(profile.age) || (profile.age as number) < 13 || (profile.age as number) > 100) errors.push("Idade deve estar entre 13 e 100 anos.");
+  if (!Number.isFinite(profile.weight) || (profile.weight as number) < 25 || (profile.weight as number) > 350) errors.push("Peso deve estar entre 25 e 350 kg.");
+  if (!Number.isFinite(profile.height) || (profile.height as number) < 120 || (profile.height as number) > 230) errors.push("Altura deve estar entre 120 e 230 cm.");
+  if (!["masculino", "feminino"].includes(profile.sex ?? "")) errors.push("Sexo inválido.");
+  if (!["hipertrofia", "emagrecimento", "resistencia", "forca"].includes(profile.goal ?? "")) errors.push("Objetivo inválido.");
+  if (!["iniciante", "intermediario", "avancado"].includes(profile.level ?? "")) errors.push("Nível inválido.");
+  if (!Number.isInteger(profile.daysPerWeek) || (profile.daysPerWeek as number) < 2 || (profile.daysPerWeek as number) > 6) errors.push("Frequência deve estar entre 2 e 6 dias por semana.");
+  if (![0.5, 0.75, 1, 1.5].includes(profile.hoursPerSession as number)) errors.push("Duração de sessão inválida.");
+  if (profile.selectedMuscles && (profile.selectedMuscles.length < 2 || profile.selectedMuscles.some(m => !ALL_MUSCLE_GROUPS.includes(m)))) errors.push("Seleção muscular inválida.");
+  return errors;
+}
+
+export function normalizeUserProfile(profile: UserProfile): UserProfile {
+  const normalized: UserProfile = {
+    ...profile,
+    name: profile.name.trim(),
+    age: Math.round(profile.age),
+    weight: Number(profile.weight),
+    height: Number(profile.height),
+    daysPerWeek: Math.round(profile.daysPerWeek),
+    hoursPerSession: Number(profile.hoursPerSession),
+    selectedMuscles: profile.selectedMuscles?.filter(m => ALL_MUSCLE_GROUPS.includes(m)) ?? [...ALL_MUSCLE_GROUPS],
+    splitLegs: Boolean(profile.splitLegs),
+  };
+  const errors = validateUserProfile(normalized);
+  if (errors.length) throw new Error(errors.join(" "));
+  return normalized;
+}
+
 const exerciseDatabase: Record<string, Exercise[]> = {
   peito: [
     { name: 'Supino Reto com Barra', sets: 4, reps: '8-12', rest: '90s', muscle: 'Peito', tip: 'Mantenha escápulas retraídas e pés firmes no chão' },
@@ -230,7 +263,8 @@ function padDay(exercises: Exercise[], allowed: MuscleGroup[], goal: string, lev
 }
 
 export function generateWorkout(profile: UserProfile): WorkoutPlan {
-  const { goal, level, daysPerWeek, hoursPerSession, selectedMuscles, splitLegs } = profile;
+  const safeProfile = normalizeUserProfile(profile);
+  const { goal, level, daysPerWeek, hoursPerSession, selectedMuscles, splitLegs } = safeProfile;
   const allowed = selectedMuscles && selectedMuscles.length >= 2 ? selectedMuscles : [...ALL_MUSCLE_GROUPS];
 
   const goalLabels: Record<string, string> = {
@@ -342,7 +376,7 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
 
   return {
     title: `Treino ${goalLabels[goal]} - ${levelLabels[level]}`,
-    description: `Plano personalizado para ${profile.name}. ${days.length}x por semana, sessões de ~${timeLabel}.`,
+    description: `Plano personalizado para ${safeProfile.name}. ${days.length}x por semana, sessões de ~${timeLabel}.`,
     daysPerWeek: days.length,
     days,
   };

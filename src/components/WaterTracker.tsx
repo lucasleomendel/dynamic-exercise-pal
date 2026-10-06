@@ -80,7 +80,6 @@ const WaterTracker = ({ weight, hoursPerSession, daysPerWeek }: Props) => {
     return () => document.removeEventListener("visibilitychange", refreshDate);
   }, []);
 
-  const dailyTarget = useMemo(() => calculateDailyWater(weight, hoursPerSession, daysPerWeek), [weight, hoursPerSession, daysPerWeek]);
   const glassSize = 0.25; // 250ml per glass
   const targetGlasses = Math.max(1, Math.ceil(dailyTarget / glassSize));
   const currentLiters = (water.glasses * glassSize).toFixed(2);

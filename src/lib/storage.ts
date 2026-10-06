@@ -72,7 +72,7 @@ export function loadPlan(): WorkoutPlan | null {
 
 export function saveChecked(checked: Record<string, boolean>) {
   localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
-  bg("auto-sync", async () => (await cloud()).syncChecks());
+  bgAuthenticated("auto-sync", async (userId) => (await cloud()).syncChecks(userId));
 }
 
 export function loadChecked(): Record<string, boolean> {

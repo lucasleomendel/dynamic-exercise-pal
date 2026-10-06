@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode, useC
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { hydrateFromCloud, maybeDailySync } from "@/lib/cloud-sync";
+import { clearAll } from "@/lib/storage";
 
 const GUEST_KEY = "fitforge_guest_mode";
 
@@ -49,6 +50,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setLoading(false);
         if (session?.user) {
+          let wasGuest = false;
+          try { wasGuest = localStorage.getItem(GUEST_KEY) === "1"; } catch { /* ignore */ }
+
+          // Guest data is deliberately local-only and must never be pushed into
+          // an authenticated user's cloud account.
+          if (wasGuest) clearAll();
+
           try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
           setIsGuest(false);
         }
@@ -80,6 +88,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Prevent the next account/session from inheriting this user's cached data.
+    clearAll();
     try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
     setIsGuest(false);
     hydratedRef.current = false;

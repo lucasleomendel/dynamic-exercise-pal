@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UserProfile, ALL_MUSCLE_GROUPS, MuscleGroup, validateUserProfile } from "@/lib/workout-generator";
+import { UserProfile, ALL_MUSCLE_GROUPS, MuscleGroup, INJURY_AREAS, InjuryArea, validateUserProfile } from "@/lib/workout-generator";
 import { ChevronRight } from "lucide-react";
 import logoImg from "@/assets/logo-fitforge.png";
 
@@ -14,6 +14,7 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
   const [selectedMuscles, setSelectedMuscles] = useState<MuscleGroup[]>(
     initialProfile?.selectedMuscles || [...ALL_MUSCLE_GROUPS]
   );
+  const [injuries, setInjuries] = useState<InjuryArea[]>(initialProfile?.injuries || []);
 
   const update = (field: keyof UserProfile, value: string | number | boolean) => {
     setProfile(prev => ({ ...prev, [field]: value }));
@@ -25,13 +26,19 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
     );
   };
 
+  const toggleInjury = (injury: InjuryArea) => {
+    setInjuries(prev =>
+      prev.includes(injury) ? prev.filter(x => x !== injury) : [...prev, injury]
+    );
+  };
+
   const nextStep = () => {
     if (step < steps.length - 1) {
       setStep(step + 1);
       return;
     }
 
-    const candidate = { ...profile, name: typeof profile.name === "string" ? profile.name.trim() : "", selectedMuscles } as UserProfile;
+    const candidate = { ...profile, name: typeof profile.name === "string" ? profile.name.trim() : "", selectedMuscles, injuries } as UserProfile;
     const errors = validateUserProfile(candidate);
     if (errors.length === 0) onSubmit(candidate);
   };
@@ -185,6 +192,45 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
       valid: [2, 3, 4, 5, 6].includes(profile.daysPerWeek ?? 0) &&
         [0.5, 0.75, 1, 1.5].includes(profile.hoursPerSession ?? 0),
     },
+    {
+      title: "Há alguma restrição física?",
+      content: (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Selecione regiões com lesão, dor ou limitação que devem ser consideradas pelo gerador.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              ["ombro", "🦾 Ombro"],
+              ["joelho", "🦵 Joelho"],
+              ["lombar", "🔻 Lombar"],
+              ["punho", "✋ Punho"],
+              ["cotovelo", "💪 Cotovelo"],
+              ["quadril", "🦴 Quadril"],
+              ["tornozelo", "🦶 Tornozelo"],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => toggleInjury(value)}
+                aria-pressed={injuries.includes(value)}
+                className={`p-4 rounded-xl border text-left transition-all ${
+                  injuries.includes(value)
+                    ? "bg-primary/10 border-primary card-glow"
+                    : "bg-secondary border-border text-muted-foreground hover:border-primary/50"
+                }`}
+              >
+                <span className="text-sm font-semibold block">{label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Isso não substitui avaliação profissional. O FitForge usa essas informações para excluir exercícios potencialmente incompatíveis.
+          </p>
+        </div>
+      ),
+      valid: true,
+    },
     ...((profile.sex === 'masculino' || profile.sex === 'feminino') ? [{
       title: "Quais grupos musculares quer treinar?",
       content: (
@@ -233,7 +279,7 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
         {/* Eyebrow + title */}
         <div className="mt-6">
           <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">
-            {step === 0 ? "Identificação" : step === 1 ? "Perfil físico" : step === 2 ? "Objetivo" : step === 3 ? "Experiência" : step === 4 ? "Rotina" : "Foco muscular"}
+            {step === 0 ? "Identificação" : step === 1 ? "Perfil físico" : step === 2 ? "Objetivo" : step === 3 ? "Experiência" : step === 4 ? "Rotina" : step === 5 ? "Foco muscular" : "Restrições"}
           </span>
           <h2 className="font-display text-3xl tracking-wide mt-1 text-foreground leading-none">{current.title}</h2>
         </div>

@@ -45,7 +45,7 @@ export async function syncProfile(profile?: UserProfile | null, userId?: string 
     hours_per_session: safeProfile.hoursPerSession,
     selected_muscles: safeProfile.selectedMuscles ?? null,
     split_legs: safeProfile.splitLegs ?? false,
-    preferences: { injuries: safeProfile.injuries ?? [] },
+    injuries: safeProfile.injuries ?? [],
     last_synced_at: new Date().toISOString(),
   }, { onConflict: "user_id" });
   if (error) throw error;
@@ -72,9 +72,7 @@ export async function pullProfile(): Promise<UserProfile | null> {
     hoursPerSession: Number(data.hours_per_session ?? 1),
     selectedMuscles: (data.selected_muscles as UserProfile["selectedMuscles"]) ?? undefined,
     splitLegs: data.split_legs ?? false,
-    injuries: Array.isArray((data.preferences as { injuries?: unknown } | null)?.injuries)
-      ? ((data.preferences as { injuries: unknown[] }).injuries.filter(Boolean) as UserProfile["injuries"])
-      : [],
+    injuries: (data.injuries as UserProfile["injuries"]) ?? [],
   };
   try {
     const profile = normalizeUserProfile(candidate);
@@ -300,7 +298,7 @@ async function resolveProfileConflict() {
   const localTs = Number(localStorage.getItem(PROFILE_TS_KEY) ?? 0);
   const { data } = await supabase
     .from("profiles")
-    .select("updated_at,name,age,weight,height,sex,goal,level,days_per_week,hours_per_session,selected_muscles,split_legs")
+.select("updated_at,name,age,weight,height,sex,goal,level,days_per_week,hours_per_session,selected_muscles,split_legs,injuries")
     .eq("user_id", userId)
     .maybeSingle();
   const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
@@ -321,6 +319,7 @@ async function resolveProfileConflict() {
       hoursPerSession: Number(data.hours_per_session ?? 1),
       selectedMuscles: (data.selected_muscles as UserProfile["selectedMuscles"]) ?? undefined,
       splitLegs: data.split_legs ?? false,
+      injuries: (data.injuries as UserProfile["injuries"]) ?? [],
     };
     try {
       const profile = normalizeUserProfile(candidate);

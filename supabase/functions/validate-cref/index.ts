@@ -15,7 +15,8 @@ function getCorsHeaders(req: Request) {
     "Vary": "Origin",
     "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+  };
+}
 
 function isValidCrefFormat(cref: string): boolean {
   return /^\d{6}-[GP]\/[A-Z]{2}$/.test(cref.toUpperCase());

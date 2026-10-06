@@ -18,4 +18,21 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    target: "es2020",
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        // Separa bibliotecas grandes em arquivos próprios (cache melhor, carga inicial menor).
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          supabase: ["@supabase/supabase-js"],
+          charts: ["recharts"],
+          pdf: ["jspdf"],
+          motion: ["framer-motion"],
+          markdown: ["react-markdown"],
+        },
+      },
+    },
+  },
 }));

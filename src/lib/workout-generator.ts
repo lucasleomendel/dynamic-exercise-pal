@@ -495,8 +495,9 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
   // Isso corrige cenários como 4 dias + somente peito/costas, nos quais os
   // templates padrão poderiam deixar dias sem exercícios.
   const represented = new Set<string>();
-  result.forEach(day => day.exercises.forEach(exercise => {
-    const group = ALL_MUSCLE_GROUPS.find(candidate => {
+  result.forEach(day => {
+    day.exercises.forEach(exercise => {
+      const group = ALL_MUSCLE_GROUPS.find(candidate => {
       if (exerciseDatabase[candidate]?.some(item => item.name === exercise.name)) {
         return true;
       }
@@ -506,8 +507,9 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
         );
       }
       return false;
+      });
+      if (group) represented.add(group);
     });
-    if (group) represented.add(group);
   });
 
   const missing = allowed.filter(group => !represented.has(group));

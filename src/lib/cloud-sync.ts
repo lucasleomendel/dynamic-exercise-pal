@@ -175,6 +175,20 @@ export async function syncBodyComp(data?: BodyCompData | null, userId?: string |
   if (!uid) return;
   const bc = data ?? loadBodyComp();
   if (!bc?.result) return;
+
+  // A composição corporal é histórica, mas o mesmo registro local pode ser
+  // sincronizado várias vezes. Evita duplicar a mesma medição em cada
+  // auto-sync sem exigir uma constraint destrutiva no banco existente.
+  const { data: existing, error: lookupError } = await supabase
+    .from("body_compositions")
+    .select("id")
+    .eq("user_id", uid)
+    .eq("measured_at", bc.date)
+    .limit(1)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (existing?.id) return;
+
   const { error } = await supabase.from("body_compositions").insert({
     user_id: uid,
     measured_at: bc.date,

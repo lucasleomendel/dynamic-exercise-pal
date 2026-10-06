@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UserProfile, ALL_MUSCLE_GROUPS, MuscleGroup, INJURY_AREAS, InjuryArea, validateUserProfile } from "@/lib/workout-generator";
+import { UserProfile, ALL_MUSCLE_GROUPS, MuscleGroup, InjuryArea, validateUserProfile } from "@/lib/workout-generator";
 import { ChevronRight } from "lucide-react";
 import logoImg from "@/assets/logo-fitforge.png";
 
@@ -279,7 +279,7 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
         {/* Eyebrow + title */}
         <div className="mt-6">
           <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">
-            {step === 0 ? "Identificação" : step === 1 ? "Perfil físico" : step === 2 ? "Objetivo" : step === 3 ? "Experiência" : step === 4 ? "Rotina" : step === 5 ? "Foco muscular" : "Restrições"}
+            {step === 0 ? "Identificação" : step === 1 ? "Perfil físico" : step === 2 ? "Objetivo" : step === 3 ? "Experiência" : step === 4 ? "Rotina" : step === 5 ? "Restrições" : "Foco muscular"}
           </span>
           <h2 className="font-display text-3xl tracking-wide mt-1 text-foreground leading-none">{current.title}</h2>
         </div>

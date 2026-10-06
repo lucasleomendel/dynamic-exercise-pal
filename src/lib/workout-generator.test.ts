@@ -59,6 +59,61 @@ describe("workout generator", () => {
     }
   });
 
+
+  it("changes prescription according to the training goal", () => {
+    const strength = generateWorkout({
+      ...baseProfile,
+      goal: "forca",
+      selectedMuscles: ["peito", "costas"],
+    });
+    const hypertrophy = generateWorkout({
+      ...baseProfile,
+      goal: "hipertrofia",
+      selectedMuscles: ["peito", "costas"],
+    });
+
+    const strengthExercises = strength.days.flatMap(day => day.exercises);
+    const hypertrophyExercises = hypertrophy.days.flatMap(day => day.exercises);
+
+    expect(strengthExercises.length).toBeGreaterThan(0);
+    expect(hypertrophyExercises.length).toBeGreaterThan(0);
+    expect(strengthExercises.every(ex => ["3-6", "6-10"].includes(ex.reps))).toBe(true);
+    expect(strengthExercises.some(ex => ex.reps === "3-6")).toBe(true);
+    expect(strengthExercises.some(ex => ex.rest === "180s")).toBe(true);
+    expect(hypertrophyExercises.some(ex => ex.reps === "10-15")).toBe(true);
+    expect(hypertrophyExercises.some(ex => ex.rest === "60s")).toBe(true);
+  });
+
+  it("scales volume and exercise count by training level", () => {
+    const beginner = generateWorkout({
+      ...baseProfile,
+      level: "iniciante",
+      selectedMuscles: ["peito", "costas"],
+    });
+    const advanced = generateWorkout({
+      ...baseProfile,
+      level: "avancado",
+      selectedMuscles: ["peito", "costas"],
+    });
+
+    const beginnerSets = beginner.days.flatMap(day => day.exercises).reduce((sum, ex) => sum + ex.sets, 0);
+    const advancedSets = advanced.days.flatMap(day => day.exercises).reduce((sum, ex) => sum + ex.sets, 0);
+
+    expect(beginnerSets).toBeLessThanOrEqual(advancedSets);
+    expect(beginner.days.every(day => day.exercises.length <= 5)).toBe(true);
+  });
+
+  it("keeps short sessions from accumulating excessive exercise volume", () => {
+    const plan = generateWorkout({
+      ...baseProfile,
+      hoursPerSession: 0.5,
+      selectedMuscles: ["peito", "costas"],
+    });
+
+    expect(plan.days).toHaveLength(4);
+    expect(plan.days.every(day => day.exercises.length >= 1 && day.exercises.length <= 8)).toBe(true);
+  });
+
   it("rejects invalid profile values before generation", () => {
     const errors = validateUserProfile({
       ...baseProfile,

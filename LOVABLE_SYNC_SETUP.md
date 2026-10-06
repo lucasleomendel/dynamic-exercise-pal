@@ -6,4 +6,4 @@ Motivo: o repositório não usa mais o padrão descrito neste guia (hook useLova
 
 Se for necessário manter instruções de configuração, favor atualizar `README.md` ou criar documentação atualizada apontando para `src/lib/cloud-sync.ts`.
 
-Última atualização automática: 2026-09-02
+Última revisão: 2026-10-06

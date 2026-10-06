@@ -114,6 +114,29 @@ describe("workout generator", () => {
     expect(plan.days.every(day => day.exercises.length >= 1 && day.exercises.length <= 8)).toBe(true);
   });
 
+  it("excludes exercises incompatible with declared physical restrictions", () => {
+    const plan = generateWorkout({
+      ...baseProfile,
+      selectedMuscles: ["peito", "ombros"],
+      injuries: ["ombro"],
+    });
+    const names = plan.days.flatMap(day => day.exercises.map(ex => ex.name));
+
+    expect(names.every(name =>
+      !["Desenvolvimento com Halteres", "Desenvolvimento Arnold", "Desenvolvimento Militar com Barra", "Elevação Lateral"].some(blocked => name.includes(blocked))
+    )).toBe(true);
+  });
+
+  it("persists and validates an empty restriction list as a safe default", () => {
+    const plan = generateWorkout({
+      ...baseProfile,
+      injuries: [],
+    });
+
+    expect(plan.days).toHaveLength(4);
+    expect(plan.days.flatMap(day => day.exercises).length).toBeGreaterThan(0);
+  });
+
   it("rejects invalid profile values before generation", () => {
     const errors = validateUserProfile({
       ...baseProfile,

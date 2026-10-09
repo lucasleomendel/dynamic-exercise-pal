@@ -93,6 +93,7 @@ export async function pullProfile(): Promise<UserProfile | null> {
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
+  if (!(await isCurrentUser(userId))) return null;
   if (!data || !data.name) return null;
   const candidate: UserProfile = {
     name: data.name,
@@ -159,6 +160,7 @@ export async function pullPlan(): Promise<WorkoutPlan | null> {
     .limit(1)
     .maybeSingle();
   if (error) throw error;
+  if (!(await isCurrentUser(userId))) return null;
   if (!data?.plan_data) return null;
   const plan = data.plan_data as unknown as WorkoutPlan;
   savePlan(plan);
@@ -251,6 +253,7 @@ export async function pullChecks() {
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
+  if (!(await isCurrentUser(userId))) return;
   if (data?.checks_data) {
     saveChecked(data.checks_data as Record<string, boolean>);
   }

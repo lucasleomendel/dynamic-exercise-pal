@@ -50,6 +50,14 @@ async function resolveUserId(userId?: string | null): Promise<string | null> {
   return userId ?? (await getUserId());
 }
 
+async function isCurrentUser(userId: string): Promise<boolean> {
+  try {
+    return (await getUserId()) === userId;
+  } catch {
+    return false;
+  }
+}
+
 /* ============ PROFILE ============ */
 export async function syncProfile(profile?: UserProfile | null, userId?: string | null) {
   const uid = await resolveUserId(userId);
@@ -363,6 +371,8 @@ async function resolveProfileConflict() {
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
+  // Do not hydrate a stale account's profile into the shared browser cache.
+  if (!(await isCurrentUser(userId))) return;
   const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
 
   if (!data?.name && !localProfile) return;
@@ -411,6 +421,8 @@ async function resolvePlanConflict() {
     .limit(1)
     .maybeSingle();
   if (error) throw error;
+  // Do not hydrate a stale account's plan into the shared browser cache.
+  if (!(await isCurrentUser(userId))) return;
   const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
 
   if (!data?.plan_data && !localPlan) return;
@@ -432,6 +444,8 @@ async function resolveChecksConflict() {
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
+  // Prevent a late response from overwriting the next account's local checks.
+  if (!(await isCurrentUser(userId))) return;
   const local = loadChecked();
   const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
   // Se há um registro cloud com timestamp, ele é a fonte mais recente.

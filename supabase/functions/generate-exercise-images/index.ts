@@ -145,14 +145,14 @@ Deno.serve(async (req) => {
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { ...cors, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCors(req), "Content-Type": "application/json" },
     });
   }
   if (!pending || pending.length === 0) {
     const { count } = await sb.from("exercise_library").select("id", { count: "exact", head: true })
       .is("image_url", null).eq("active", true);
     return new Response(JSON.stringify({ done: true, processed: 0, remaining: count ?? 0, results: [] }), {
-      headers: { ...cors, "Content-Type": "application/json" },
+      headers: { ...getCors(req), "Content-Type": "application/json" },
     });
   }
 
@@ -235,5 +235,5 @@ Deno.serve(async (req) => {
     remaining: remaining ?? 0,
     dead_letter: dead ?? 0,
     results,
-  }), { headers: { ...cors, "Content-Type": "application/json" } });
+  }), { headers: { ...getCors(req), "Content-Type": "application/json" } });
 });

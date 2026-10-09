@@ -27,8 +27,8 @@ export function validateDietProfile(profile: Partial<DietProfile>): string[] {
   if (!['sedentario', 'leve', 'moderado', 'intenso', 'muito_intenso'].includes(profile.activityLevel ?? '')) {
     errors.push('Nível de atividade inválido.');
   }
-  if (!Number.isFinite(profile.mealsPerDay) || !Number.isInteger(profile.mealsPerDay) || (profile.mealsPerDay as number) < 1 || (profile.mealsPerDay as number) > 6) {
-    errors.push('Número de refeições deve ser um inteiro entre 1 e 6.');
+  if (!Number.isFinite(profile.mealsPerDay) || !Number.isInteger(profile.mealsPerDay) || (profile.mealsPerDay as number) < 1 || (profile.mealsPerDay as number) > 12) {
+    errors.push('Número de refeições deve ser um inteiro entre 1 e 12.');
   }
   for (const field of ['restrictions', 'preferences', 'dislikes'] as const) {
     if (!Array.isArray(profile[field]) || profile[field]?.some(value => typeof value !== 'string')) {

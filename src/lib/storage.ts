@@ -26,14 +26,35 @@ function safeParse<T>(raw: string | null, fallback: T): T {
 const cloud = () => import("./cloud-sync");
 
 const bgAuthenticated = (operation: string, fn: (userId: string) => Promise<unknown>) => {
-  bg(operation, async () => {
-    // Capture the authenticated identity at the moment the local write occurs.
-    // This prevents a guest save that is still queued in the background from
-    // being attributed to a different account after a subsequent login.
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user?.id) return;
-    await fn(data.user.id);
-  });
+  // Guest data must never be queued for cloud synchronization. Capture this
+  // state before scheduling async work because login clears the guest flag.
+  try {
+    if (localStorage.getItem("fitforge_guest_mode") === "1") return;
+  } catch {
+    // If storage cannot be read, fail closed and do not sync potentially
+    // guest-owned data to an authenticated account.
+    return;
+  }
+
+  // Resolve the identity immediately at the write boundary rather than later
+  // inside the background queue, where a subsequent login could change users.
+  void supabase.auth.getUser()
+    .then(async ({ data, error }) => {
+      if (error || !data.user?.id) return;
+      await bg(operation, async () => {
+        // If guest mode was entered while identity resolution was pending,
+        // do not send the captured local data to the cloud.
+        try {
+          if (localStorage.getItem("fitforge_guest_mode") === "1") return;
+        } catch {
+          return;
+        }
+        await fn(data.user.id);
+      });
+    })
+    .catch((error) => {
+      console.warn(`[FitForge] Falha ao identificar conta para sincronização: ${operation}`, error);
+    });
 };
 
 const PROFILE_KEY = "fitforge_profile";

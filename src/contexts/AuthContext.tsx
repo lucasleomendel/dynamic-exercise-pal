@@ -86,6 +86,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.warn("[FitForge] Não foi possível registrar o proprietário do cache local.", error);
           }
           setIsGuest(false);
+        } else {
+          // A persisted authenticated cache must not remain visible in a logged-out session.
+          try {
+            if (localStorage.getItem("fitforge_cache_owner_user_id")) clearAll();
+          } catch {
+            clearAll();
+          }
         }
 
         activeUserIdRef.current = nextUserId;
@@ -101,7 +108,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // auth event already arrived, its session is newer and must win.
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (authEventSeenRef.current) return;
-      activeUserIdRef.current = session?.user?.id ?? null;
+      const userId = session?.user?.id ?? null;
+      if (userId) {
+        let owner: string | null = null;
+        let wasGuest = false;
+        try {
+          owner = localStorage.getItem("fitforge_cache_owner_user_id");
+          wasGuest = localStorage.getItem(GUEST_KEY) === "1";
+        } catch {
+          clearAll();
+        }
+        if (wasGuest || owner !== userId) clearAll();
+        try {
+          localStorage.setItem("fitforge_cache_owner_user_id", userId);
+          localStorage.removeItem(GUEST_KEY);
+        } catch (error) {
+          console.warn("[FitForge] Não foi possível registrar o proprietário do cache local.", error);
+        }
+        setIsGuest(false);
+      } else {
+        try {
+          if (localStorage.getItem("fitforge_cache_owner_user_id")) clearAll();
+        } catch {
+          clearAll();
+        }
+      }
+      activeUserIdRef.current = userId;
       setSession(session);
       setLoading(false);
       if (session?.user) {

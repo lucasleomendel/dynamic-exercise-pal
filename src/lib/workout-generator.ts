@@ -216,6 +216,20 @@ function isCompoundExercise(exercise: Exercise): boolean {
   return COMPOUND_EXERCISE_HINTS.some(hint => exercise.name.includes(hint));
 }
 
+const PRIMARY_STRENGTH_LIFT_HINTS = [
+  'Agachamento Livre',
+  'Agachamento Frontal',
+  'Levantamento Terra',
+  'Supino Reto com Barra',
+  'Supino Reto com Halteres',
+  'Supino Inclinado',
+  'Desenvolvimento Militar com Barra',
+];
+
+function isPrimaryStrengthLift(exercise: Exercise): boolean {
+  return PRIMARY_STRENGTH_LIFT_HINTS.some(hint => exercise.name.includes(hint));
+}
+
 function adjustForGoal(exercises: Exercise[], goal: string): Exercise[] {
   return exercises.map(ex => {
     const e = { ...ex };
@@ -238,9 +252,22 @@ function adjustForGoal(exercises: Exercise[], goal: string): Exercise[] {
         e.rest = compound ? '60s' : '30s';
         break;
       case 'forca':
-        e.sets = compound ? Math.min(Math.max(e.sets, 3), 5) : Math.min(Math.max(e.sets, 2), 3);
-        e.reps = compound ? '3-6' : '6-10';
-        e.rest = compound ? '180s' : '90s';
+        // Reserve low reps and long rests for the main strength lifts.
+        // Compound accessories still use productive reps without making every
+        // exercise a near-maximal strength set.
+        if (isPrimaryStrengthLift(e)) {
+          e.sets = Math.min(Math.max(e.sets, 3), 5);
+          e.reps = '3-6';
+          e.rest = '180s';
+        } else if (compound) {
+          e.sets = Math.min(Math.max(e.sets, 3), 4);
+          e.reps = '6-10';
+          e.rest = '120s';
+        } else {
+          e.sets = Math.min(Math.max(e.sets, 2), 3);
+          e.reps = '8-12';
+          e.rest = '60-90s';
+        }
         break;
     }
     return e;

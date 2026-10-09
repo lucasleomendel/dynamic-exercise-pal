@@ -26,14 +26,43 @@ function safeParse<T>(raw: string | null, fallback: T): T {
 const cloud = () => import("./cloud-sync");
 
 const bgAuthenticated = (operation: string, fn: (userId: string) => Promise<unknown>) => {
-  bg(operation, async () => {
-    // Capture the authenticated identity at the moment the local write occurs.
-    // This prevents a guest save that is still queued in the background from
-    // being attributed to a different account after a subsequent login.
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user?.id) return;
-    await fn(data.user.id);
-  });
+  // Guest data must never be queued for cloud synchronization. Capture this
+  // state before scheduling async work because login clears the guest flag.
+  try {
+    if (localStorage.getItem("fitforge_guest_mode") === "1") return;
+  } catch {
+    // If storage cannot be read, fail closed and do not sync potentially
+    // guest-owned data to an authenticated account.
+    return;
+  }
+
+  // Resolve the identity immediately at the write boundary rather than later
+  // inside the background queue, where a subsequent login could change users.
+  void supabase.auth.getUser()
+    .then(async ({ data, error }) => {
+      if (error || !data.user?.id) return;
+      await bg(operation, async () => {
+        // Re-check guest mode and authenticated identity immediately before
+        // sending data. A logout/account switch may have happened while this
+        // operation was waiting in the background queue.
+        try {
+          if (localStorage.getItem("fitforge_guest_mode") === "1") return;
+        } catch {
+          return;
+        }
+
+        const { data: currentData, error: currentError } = await supabase.auth.getUser();
+        if (currentError || currentData.user?.id !== data.user.id) {
+          console.warn(`[FitForge] Sincronização cancelada: identidade mudou durante ${operation}.`);
+          return;
+        }
+
+        await fn(data.user.id);
+      });
+    })
+    .catch((error) => {
+      console.warn(`[FitForge] Falha ao identificar conta para sincronização: ${operation}`, error);
+    });
 };
 
 const PROFILE_KEY = "fitforge_profile";
@@ -156,7 +185,12 @@ export function clearAll() {
   localStorage.removeItem(BODY_COMP_KEY);
   localStorage.removeItem(WORKOUT_HISTORY_KEY);
   localStorage.removeItem("fitforge_water");
+  // Chat history can contain personal information and must not cross accounts.
+  localStorage.removeItem("fitforge_chat_history_v2");
   localStorage.removeItem("fitforge_profile_ts");
   localStorage.removeItem("fitforge_plan_ts");
   localStorage.removeItem("fitforge_last_sync");
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("fitforge:local-cache-cleared"));
+  }
 }

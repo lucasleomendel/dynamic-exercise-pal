@@ -36,6 +36,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const hydratedRef = useRef(false);
+  const activeUserIdRef = useRef<string | null>(null);
+  const authEventSeenRef = useRef(false);
 
   const runHydration = () => {
     if (hydratedRef.current) return;
@@ -50,6 +52,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        authEventSeenRef.current = true;
+        const nextUserId = session?.user?.id ?? null;
+        const previousUserId = activeUserIdRef.current;
+        // If the browser changes accounts without an explicit sign-out, discard
+        // the previous account's shared local cache before hydrating the new one.
+        if (previousUserId && nextUserId && previousUserId !== nextUserId) {
+          clearAll();
+          hydratedRef.current = false;
+        }
+        activeUserIdRef.current = nextUserId;
         setSession(session);
         setLoading(false);
         if (session?.user) {
@@ -69,17 +81,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
+    // The initial session lookup can resolve after onAuthStateChange. If an
+    // auth event already arrived, its session is newer and must win.
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (authEventSeenRef.current) return;
+      activeUserIdRef.current = session?.user?.id ?? null;
       setSession(session);
       setLoading(false);
       if (session?.user) {
         setTimeout(runHydration, 0);
       }
+    }).catch((error) => {
+      console.warn("[FitForge] Não foi possível recuperar a sessão inicial.", error);
+      if (!authEventSeenRef.current) setLoading(false);
     });
 
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        maybeDailySync().catch(() => {});
+        maybeDailySync().catch((error) => {
+          console.warn("[FitForge] Falha ao retomar sincronização diária.", error);
+          window.dispatchEvent(new CustomEvent("fitforge:sync-error", {
+            detail: { operation: "visibility-daily-sync", error },
+          }));
+        });
       }
     };
     document.addEventListener("visibilitychange", onVisible);

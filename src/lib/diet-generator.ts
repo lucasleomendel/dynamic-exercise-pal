@@ -326,6 +326,12 @@ export function generateDietPlan(profile: DietProfile): DietPlan {
     targetCarbs: totalCarbs,
     targetFat: totalFat,
     meals,
-    tips: [...(goalTips[profile.goal] || goalTips.hipertrofia), ...qualityWarnings],
+    tips: [
+      ...(goalTips[profile.goal] || goalTips.hipertrofia),
+      ...(profile.restrictions.some(restriction => restriction === 'sem_gluten' || restriction === 'sem_lactose')
+        ? ['Importante: os filtros alimentares são estimativas baseadas nos dados cadastrados e não garantem ausência de alérgenos, contaminação cruzada ou adequação para doença celíaca/intolerâncias. Confira rótulos e confirme opções com profissional de saúde.']
+        : []),
+      ...qualityWarnings,
+    ],
   };
 }

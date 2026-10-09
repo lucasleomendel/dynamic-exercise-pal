@@ -292,19 +292,57 @@ ${librarySummary.slice(0, 4000)}`;
       return json({ error: e instanceof Error ? e.message : "Plano incompatível com o perfil." }, 502, req);
     }
 
-    // Mantém o histórico: planos anteriores ficam arquivados (is_active = false).
-    await sb.from("workout_plans").update({ is_active: false }).eq("user_id", userId).eq("is_active", true);
-    const { data: inserted, error: insErr } = await sb.from("workout_plans").insert({
-      user_id: userId,
-      title: planData.title,
-      description: planData.description,
-      days_per_week: planData.daysPerWeek ?? planData.days.length,
-      plan_data: planData,
-      is_active: true,
-    }).select("id,created_at").single();
-    if (insErr || !inserted) {
-      console.error(insErr);
-      return json({ error: "Falha ao salvar o plano." }, 500, req);
+    let inserted: { id: string; created_at: string } | null = null;
+    if (userId === callerId) {
+      // User-scoped JWT lets the database RPC enforce auth.uid() and RLS.
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${jwt}` } },
+      });
+      const { error: syncErr } = await userClient.rpc("sync_active_workout_plan", {
+        p_title: planData.title,
+        p_description: planData.description ?? null,
+        p_days_per_week: planData.daysPerWeek ?? planData.days.length,
+        p_plan_data: planData,
+      });
+      if (syncErr) {
+        console.error("atomic workout plan sync failed", syncErr);
+        return json({ error: "Falha ao salvar o plano." }, 500, req);
+      }
+      const { data: saved, error: lookupErr } = await userClient
+        .from("workout_plans")
+        .select("id,created_at")
+        .eq("user_id", callerId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lookupErr || !saved) {
+        console.error("saved workout plan lookup failed", lookupErr);
+        return json({ error: "Plano salvo, mas não foi possível confirmar o registro." }, 500, req);
+      }
+      inserted = saved;
+    } else {
+      // Preserve the existing master-admin workflow for generating a plan for another user.
+      // This privileged path remains separate because auth.uid() intentionally identifies the caller.
+      const { error: archiveErr } = await sb.from("workout_plans").update({ is_active: false })
+        .eq("user_id", userId).eq("is_active", true);
+      if (archiveErr) {
+        console.error("failed to archive previous admin-target plan", archiveErr);
+        return json({ error: "Falha ao salvar o plano." }, 500, req);
+      }
+      const { data: saved, error: insErr } = await sb.from("workout_plans").insert({
+        user_id: userId,
+        title: planData.title,
+        description: planData.description,
+        days_per_week: planData.daysPerWeek ?? planData.days.length,
+        plan_data: planData,
+        is_active: true,
+      }).select("id,created_at").single();
+      if (insErr || !saved) {
+        console.error(insErr);
+        return json({ error: "Falha ao salvar o plano." }, 500, req);
+      }
+      inserted = saved;
     }
 
     // Registra a progressão que originou este plano (histórico do aluno).

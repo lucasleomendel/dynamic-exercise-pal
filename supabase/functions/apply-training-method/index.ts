@@ -229,18 +229,18 @@ Use exercícios consagrados + variações modernas. Cada dia deve ter 5-8 exerc�
       return json({ error: e instanceof Error ? e.message : "Plano incompatível com o perfil." }, 502, req);
     }
 
-    // Desativa antigos e insere novo
-    await supabase.from("workout_plans").update({ is_active: false }).eq("user_id", userId).eq("is_active", true);
-    const { data: inserted, error: insErr } = await supabase.from("workout_plans").insert({
-      user_id: userId,
-      title: planData.title,
-      description: planData.description,
-      days_per_week: planData.daysPerWeek,
-      plan_data: planData,
-      is_active: true,
-    }).select().maybeSingle();
-    if (insErr) {
-      console.error(insErr);
+    // Replace the active plan in one transaction; a failed insert cannot leave no active plan.
+    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
+    });
+    const { error: syncErr } = await userClient.rpc("sync_active_workout_plan", {
+      p_title: planData.title,
+      p_description: planData.description ?? null,
+      p_days_per_week: planData.daysPerWeek ?? planData.days.length,
+      p_plan_data: planData,
+    });
+    if (syncErr) {
+      console.error("atomic workout plan sync failed", syncErr);
       return json({ error: "Falha ao salvar plano" }, 500, req);
     }
 

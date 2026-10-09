@@ -95,6 +95,7 @@ const openVideoSearch = (name: string, provider: "auto" | "youtube" | "google" =
 };
 
 // Dispara a IA em segundo plano para gerar imagens dos exercícios que ainda não têm.
+const ENABLE_EXERCISE_IMAGE_GENERATION = import.meta.env.VITE_ENABLE_EXERCISE_IMAGE_GENERATION === "true";
 const SUPABASE_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-exercise-images`;
 async function triggerBackgroundImageGen(limit = 3): Promise<{ processed: number; remaining: number } | null> {
   try {
@@ -180,7 +181,7 @@ export default function ExerciseLibrary() {
 
   // Gera imagens pendentes em segundo plano, sem recarregar a lista inteira.
   useEffect(() => {
-    if (loading) return;
+    if (loading || !ENABLE_EXERCISE_IMAGE_GENERATION) return;
     let cancelled = false;
 
     const tick = async () => {

@@ -301,7 +301,7 @@ const INJURY_EXCLUSION_RULES: Record<InjuryArea, string[]> = {
   joelho: ['Agachamento', 'Leg Press', 'Extensora', 'Hack', 'Avanço', 'Passada', 'Búlgaro', 'Sissy', 'Panturrilha no Leg Press'],
   lombar: ['Levantamento Terra', 'Remada Curvada', 'Stiff', 'Good Morning', 'Agachamento Livre', 'Agachamento Frontal', 'Agachamento Sumô', 'Avanço', 'Passada', 'Agachamento Búlgaro'],
   punho: ['Supino Reto com Barra', 'Supino Declinado', 'Supino Inclinado com Halteres', 'Supino Reto com Halteres', 'Flexão de Braço', 'Flexão Diamante', 'Rosca Direta com Barra', 'Rosca Inversa', 'Tríceps Testa', 'Mergulho'],
-  cotovelo: ['Rosca Direta', 'Rosca Alternada', 'Rosca Martelo', 'Rosca Scott', 'Rosca Concentrada', 'Rosca no Cabo', 'Rosca Inversa', 'Rosca 21', 'Rosca Spider', 'Rosca Inclinada', 'Tríceps Pulley', 'Tríceps Testa', 'Tríceps Francês', 'Tríceps Corda', 'Tríceps Coice', 'Mergulho', 'Supino Fechado', 'JM Press'],
+  cotovelo: ['Rosca Direta', 'Rosca Alternada', 'Rosca Martelo', 'Rosca Scott', 'Rosca Concentrada', 'Rosca no Cabo', 'Rosca Inversa', 'Rosca 21', 'Rosca Spider', 'Rosca Inclinada', 'Tríceps Pulley', 'Tríceps Testa', 'Tríceps Francês', 'Tríceps Corda', 'Tríceps Coice', 'Mergulho', 'Supino Fechado', 'JM Press', 'Tríceps no Cross'],
   quadril: ['Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Búlgaro', 'Stiff', 'Good Morning', 'Elevação Pélvica', 'Abdução de Quadril', 'Glúteo no Cabo', 'Extensão de Quadril', 'Nordic Curl'],
   tornozelo: ['Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Búlgaro', 'Sissy', 'Panturrilha', 'Mountain Climber'],
 };

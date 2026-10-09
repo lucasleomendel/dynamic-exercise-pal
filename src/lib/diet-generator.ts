@@ -22,10 +22,16 @@ export interface Meal {
 }
 
 export interface DietPlan {
+  /** Actual sum of the foods selected for this plan. */
   totalCalories: number;
   totalProtein: number;
   totalCarbs: number;
   totalFat: number;
+  /** Estimated daily targets used to guide the plan. */
+  targetCalories: number;
+  targetProtein: number;
+  targetCarbs: number;
+  targetFat: number;
   meals: Meal[];
   tips: string[];
 }
@@ -118,20 +124,39 @@ const foodDatabase: Record<string, FoodItem[]> = {
 };
 
 function filterByRestrictions(foods: FoodItem[], restrictions: string[], dislikes: string[]): FoodItem[] {
+  const normalizedDislikes = dislikes.map(value => value.trim().toLocaleLowerCase()).filter(Boolean);
   return foods.filter(f => {
-    for (const d of dislikes) {
-      if (f.item.toLowerCase().includes(d.toLowerCase())) return false;
-    }
+    const name = f.item.toLocaleLowerCase();
+    if (normalizedDislikes.some(dislike => name.includes(dislike))) return false;
     if (restrictions.includes('vegano') && !f.tags.includes('vegano')) return false;
     if (restrictions.includes('vegetariano') && !f.tags.includes('vegano') && !f.tags.includes('vegetariano')) return false;
     if (restrictions.includes('sem_lactose') && f.tags.includes('laticinio')) return false;
-    if (restrictions.includes('sem_gluten') && !f.tags.includes('sem glúten') && (f.item.toLowerCase().includes('pão') || f.item.toLowerCase().includes('macarrão') || f.item.toLowerCase().includes('aveia'))) return false;
+    // Conservative name-based fallback until the food database has verified allergen metadata.
+    if (restrictions.includes('sem_gluten')) {
+      const likelyContainsGluten = /pão|macarrão|trigo|cevada|centeio/i.test(name);
+      const explicitlyGlutenFree = f.tags.some(tag => tag.toLocaleLowerCase() === 'sem glúten');
+      if (likelyContainsGluten && !explicitlyGlutenFree) return false;
+      if (/aveia/i.test(name) && !explicitlyGlutenFree) return false;
+    }
     return true;
   });
 }
 
+function prioritizePreferences(foods: FoodItem[], preferences: string[]): FoodItem[] {
+  const terms = preferences.map(value => value.trim().toLocaleLowerCase()).filter(Boolean);
+  if (!terms.length) return foods;
+  const matches = foods.filter(food => terms.some(term => food.item.toLocaleLowerCase().includes(term)));
+  // Preferences guide selection without making a diet impossible when no food matches.
+  return matches.length ? matches : foods;
+}
+
 function pickRandom<T>(arr: T[], n: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  const shuffled = [...arr];
+  // Fisher-Yates produces an unbiased shuffle unlike sort(() => Math.random() - 0.5).
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   return shuffled.slice(0, Math.min(n, shuffled.length));
 }
 
@@ -177,12 +202,14 @@ export function generateDietPlan(profile: DietProfile): DietPlan {
   const mealsCount = Math.min(Math.max(profile.mealsPerDay, 3), 6);
   const mealSlots = mealTimes[mealsCount] || mealTimes[4];
 
-  const filteredProteins = filterByRestrictions(foodDatabase.proteinas, profile.restrictions, profile.dislikes);
-  const filteredCarbs = filterByRestrictions(foodDatabase.carboidratos, profile.restrictions, profile.dislikes);
-  const filteredFats = filterByRestrictions(foodDatabase.gorduras, profile.restrictions, profile.dislikes);
-  const filteredVeggies = filterByRestrictions(foodDatabase.vegetais, profile.restrictions, profile.dislikes);
-
-  const caloriesPerMeal = Math.round(targetCalories / mealsCount);
+  const applyFoodFilters = (foods: FoodItem[]) => prioritizePreferences(
+    filterByRestrictions(foods, profile.restrictions, profile.dislikes),
+    profile.preferences,
+  );
+  const filteredProteins = applyFoodFilters(foodDatabase.proteinas);
+  const filteredCarbs = applyFoodFilters(foodDatabase.carboidratos);
+  const filteredFats = applyFoodFilters(foodDatabase.gorduras);
+  const filteredVeggies = applyFoodFilters(foodDatabase.vegetais);
 
   const meals: Meal[] = mealSlots.map((slot, idx) => {
     const isMain = slot.name === 'Almoço' || slot.name === 'Jantar';
@@ -256,11 +283,22 @@ export function generateDietPlan(profile: DietProfile): DietPlan {
     ],
   };
 
+  const actualTotals = meals.reduce((totals, meal) => ({
+    calories: totals.calories + meal.totalCalories,
+    protein: totals.protein + meal.totalProtein,
+    carbs: totals.carbs + meal.totalCarbs,
+    fat: totals.fat + meal.totalFat,
+  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
   return {
-    totalCalories: targetCalories,
-    totalProtein,
-    totalCarbs,
-    totalFat,
+    totalCalories: actualTotals.calories,
+    totalProtein: actualTotals.protein,
+    totalCarbs: actualTotals.carbs,
+    totalFat: actualTotals.fat,
+    targetCalories,
+    targetProtein: totalProtein,
+    targetCarbs: totalCarbs,
+    targetFat: totalFat,
     meals,
     tips: goalTips[profile.goal] || goalTips.hipertrofia,
   };

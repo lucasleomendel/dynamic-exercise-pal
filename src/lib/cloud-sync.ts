@@ -90,9 +90,31 @@ export async function syncPlan(plan?: WorkoutPlan | null, userId?: string | null
   if (!uid) return;
   const p = plan ?? loadPlan();
   if (!p) return;
-  // desativa planos anteriores e insere novo ativo
-  const { error: deactivateError } = await supabase.from("workout_plans").update({ is_active: false }).eq("user_id", uid).eq("is_active", true);
+
+  // Avoid creating a new historical row on every background sync when the
+  // active plan has not changed.
+  const { data: activePlan, error: activePlanError } = await supabase
+    .from("workout_plans")
+    .select("id,plan_data")
+    .eq("user_id", uid)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (activePlanError) throw activePlanError;
+
+  const samePlan = activePlan?.plan_data != null
+    && JSON.stringify(activePlan.plan_data) === JSON.stringify(p);
+
+  if (samePlan) return;
+
+  const { error: deactivateError } = await supabase
+    .from("workout_plans")
+    .update({ is_active: false })
+    .eq("user_id", uid)
+    .eq("is_active", true);
   if (deactivateError) throw deactivateError;
+
   const { error: insertError } = await supabase.from("workout_plans").insert({
     user_id: uid,
     title: p.title,
@@ -102,7 +124,9 @@ export async function syncPlan(plan?: WorkoutPlan | null, userId?: string | null
     is_active: true,
   });
   if (insertError) throw insertError;
-  // Limpa planos inativos antigos (> 30 dias) para evitar acúmulo
+
+  // Clean up old inactive plans (> 30 days) only after the replacement
+  // was inserted successfully.
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const { error: cleanupError } = await supabase
     .from("workout_plans")

@@ -128,6 +128,20 @@ describe("workout generator", () => {
     )).toBe(true);
   });
 
+  it("warns when physical restrictions leave one or more training days empty", () => {
+    const plan = generateWorkout({
+      ...baseProfile,
+      daysPerWeek: 6,
+      selectedMuscles: ["biceps", "triceps"],
+      injuries: ["cotovelo"],
+    });
+
+    if (plan.days.some(day => day.exercises.length === 0)) {
+      expect(plan.description).toContain("um ou mais dias ficaram sem exercícios");
+      expect(plan.description).toContain("não adicionou exercícios potencialmente incompatíveis");
+    }
+  });
+
   it("persists and validates an empty restriction list as a safe default", () => {
     const plan = generateWorkout({
       ...baseProfile,

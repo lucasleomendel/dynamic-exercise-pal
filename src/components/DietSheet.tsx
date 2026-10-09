@@ -186,7 +186,7 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
             </>
           ) : (
             (() => {
-              const diff = plan.targetCalories - tdee;
+              const diff = plan.totalCalories - tdee;
               const foodGap = plan.totalCalories - plan.targetCalories;
               const foodGapPct = plan.targetCalories > 0
                 ? Math.round((Math.abs(foodGap) / plan.targetCalories) * 100)
@@ -233,7 +233,7 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
                       {isBalanced ? 'Equilibrado' : isSurplus ? `Superávit de ${absDiff} kcal (+${pctDiff}%)` : `Déficit de ${absDiff} kcal (-${pctDiff}%)`}
                     </span>
                     <span className="text-muted-foreground block mt-0.5">
-                      {isBalanced ? 'Dieta alinhada ao seu gasto calórico' : isSurplus ? 'Ideal para ganho de massa muscular' : 'Ideal para perda de gordura'}
+                      {isBalanced ? 'Alimentos selecionados alinhados ao gasto calórico estimado' : isSurplus ? 'Alimentos selecionados acima do gasto calórico estimado' : 'Alimentos selecionados abaixo do gasto calórico estimado'}
                     </span>
                   </div>
                 </div>

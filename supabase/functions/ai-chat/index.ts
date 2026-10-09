@@ -1,11 +1,23 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://dynamic-exercise-pal.lovable.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://dynamic-exercise-pal.lovable.app";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
 
 const SYSTEM_PROMPT = `Você é o **FitForge AI**, assistente sênior em fitness, musculação, nutrição esportiva, composição corporal e performance, e também o **gestor autônomo** do treino do usuário dentro do app.
 
@@ -55,14 +67,14 @@ Responda brevemente e redirecione para fitness/saúde.
 Emojis com moderação (💪 🏋️ 🥗 📊) — só quando agregam.`;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const authHeader = req.headers.get("Authorization");
     const jwt = authHeader?.replace("Bearer ", "");
     if (!jwt) {
       return new Response(JSON.stringify({ error: "Não autenticado" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        { status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
     const supabaseAuth = createClient(
@@ -72,13 +84,13 @@ serve(async (req) => {
     const { data: userData, error: authError } = await supabaseAuth.auth.getUser(jwt);
     if (authError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Sessão inválida" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        { status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
     const body = await req.json().catch(() => null);
     if (!body || !Array.isArray(body.messages)) {
       return new Response(JSON.stringify({ error: "Campo 'messages' (array) é obrigatório" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
     const { messages, profile } = body;
@@ -87,7 +99,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) {
       console.error("LOVABLE_API_KEY ausente");
       return new Response(JSON.stringify({ error: "Serviço de IA não configurado." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
     const sanitizedMessages = messages
@@ -194,22 +206,22 @@ Se houver estagnação, baixa adesão ou queda de desempenho, aponte isso proati
 
       if (status === 429) {
         return new Response(JSON.stringify({ error: "Muitas requisições. Aguarde alguns segundos." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          { status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
       }
       if (status === 402) {
         return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
       }
       return new Response(JSON.stringify({ error: "Erro ao conectar com a IA." }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        { status: 502, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
     return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "text/event-stream" },
     });
   } catch (e) {
     console.error("ai-chat error:", e);
     return new Response(JSON.stringify({ error: "Erro interno do servidor" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
   }
 });

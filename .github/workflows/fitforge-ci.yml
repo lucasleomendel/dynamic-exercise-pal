@@ -1,0 +1,49 @@
+name: FitForge CI
+
+on:
+  push:
+    branches:
+      - main
+      - "fitforge-fixes-*"
+  pull_request:
+    branches:
+      - main
+
+# CI validates untrusted pull-request code and must not have write access.
+permissions:
+  contents: read
+
+concurrency:
+  group: fitforge-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Keep dependency changes explicit and reviewable in a normal PR.
+      - name: Install dependencies from lockfile
+        run: npm ci
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build

@@ -1,6 +1,9 @@
 export const ALL_MUSCLE_GROUPS = ['peito', 'costas', 'pernas', 'ombros', 'biceps', 'triceps', 'abdomen'] as const;
 export type MuscleGroup = typeof ALL_MUSCLE_GROUPS[number];
 
+export const INJURY_AREAS = ['ombro', 'joelho', 'lombar', 'punho', 'cotovelo', 'quadril', 'tornozelo'] as const;
+export type InjuryArea = typeof INJURY_AREAS[number];
+
 export interface UserProfile {
   name: string;
   age: number;
@@ -13,6 +16,7 @@ export interface UserProfile {
   hoursPerSession: number;
   selectedMuscles?: MuscleGroup[];
   splitLegs?: boolean;
+  injuries?: InjuryArea[];
 }
 
 export interface Exercise {
@@ -35,6 +39,41 @@ export interface WorkoutPlan {
   description: string;
   daysPerWeek: number;
   days: WorkoutDay[];
+}
+
+export function validateUserProfile(profile: Partial<UserProfile>): string[] {
+  const errors: string[] = [];
+  const name = typeof profile.name === "string" ? profile.name.trim() : "";
+  if (name.length < 2 || name.length > 80) errors.push("Nome deve ter entre 2 e 80 caracteres.");
+  if (!Number.isFinite(profile.age) || (profile.age as number) < 13 || (profile.age as number) > 100) errors.push("Idade deve estar entre 13 e 100 anos.");
+  if (!Number.isFinite(profile.weight) || (profile.weight as number) < 25 || (profile.weight as number) > 350) errors.push("Peso deve estar entre 25 e 350 kg.");
+  if (!Number.isFinite(profile.height) || (profile.height as number) < 120 || (profile.height as number) > 230) errors.push("Altura deve estar entre 120 e 230 cm.");
+  if (!["masculino", "feminino"].includes(profile.sex ?? "")) errors.push("Sexo inválido.");
+  if (!["hipertrofia", "emagrecimento", "resistencia", "forca"].includes(profile.goal ?? "")) errors.push("Objetivo inválido.");
+  if (!["iniciante", "intermediario", "avancado"].includes(profile.level ?? "")) errors.push("Nível inválido.");
+  if (!Number.isInteger(profile.daysPerWeek) || (profile.daysPerWeek as number) < 2 || (profile.daysPerWeek as number) > 6) errors.push("Frequência deve estar entre 2 e 6 dias por semana.");
+  if (![0.5, 0.75, 1, 1.5].includes(profile.hoursPerSession as number)) errors.push("Duração de sessão inválida.");
+  if (profile.selectedMuscles && (profile.selectedMuscles.length < 2 || profile.selectedMuscles.some(m => !ALL_MUSCLE_GROUPS.includes(m)))) errors.push("Seleção muscular inválida.");
+  if (profile.injuries && profile.injuries.some(injury => !INJURY_AREAS.includes(injury))) errors.push("Restrição física inválida.");
+  return errors;
+}
+
+export function normalizeUserProfile(profile: UserProfile): UserProfile {
+  const normalized: UserProfile = {
+    ...profile,
+    name: profile.name.trim(),
+    age: Math.round(profile.age),
+    weight: Number(profile.weight),
+    height: Number(profile.height),
+    daysPerWeek: Math.round(profile.daysPerWeek),
+    hoursPerSession: Number(profile.hoursPerSession),
+    selectedMuscles: profile.selectedMuscles?.filter(m => ALL_MUSCLE_GROUPS.includes(m)) ?? [...ALL_MUSCLE_GROUPS],
+    splitLegs: Boolean(profile.splitLegs),
+    injuries: profile.injuries?.filter(injury => INJURY_AREAS.includes(injury)) ?? [],
+  };
+  const errors = validateUserProfile(normalized);
+  if (errors.length) throw new Error(errors.join(" "));
+  return normalized;
 }
 
 const exerciseDatabase: Record<string, Exercise[]> = {
@@ -166,27 +205,42 @@ const exerciseDatabase: Record<string, Exercise[]> = {
   ],
 };
 
+const COMPOUND_EXERCISE_HINTS = [
+  'Supino', 'Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Stiff', 'Levantamento Terra',
+  'Remada', 'Puxada', 'Barra Fixa', 'Desenvolvimento', 'Mergulho em Paralelas', 'Supino Fechado',
+  'Elevação Pélvica', 'Hip Thrust', 'Good Morning', 'Nordic Curl', 'Agachamento Hack',
+  'Agachamento Búlgaro', 'Agachamento Sumô'
+];
+
+function isCompoundExercise(exercise: Exercise): boolean {
+  return COMPOUND_EXERCISE_HINTS.some(hint => exercise.name.includes(hint));
+}
+
 function adjustForGoal(exercises: Exercise[], goal: string): Exercise[] {
   return exercises.map(ex => {
     const e = { ...ex };
+    const compound = isCompoundExercise(e);
+
     switch (goal) {
       case 'hipertrofia':
-        e.sets = Math.min(e.sets + 1, 5);
-        e.reps = '8-12';
-        e.rest = '90s';
+        e.sets = compound ? Math.min(Math.max(e.sets, 3), 4) : Math.min(Math.max(e.sets, 2), 3);
+        e.reps = compound ? '6-10' : '10-15';
+        e.rest = compound ? '120s' : '60s';
         break;
       case 'emagrecimento':
-        e.reps = '15-20';
-        e.rest = '30s';
+        e.sets = Math.min(Math.max(e.sets - 1, 2), 3);
+        e.reps = compound ? '8-12' : '10-15';
+        e.rest = compound ? '90s' : '45s';
         break;
       case 'resistencia':
-        e.reps = '15-25';
-        e.rest = '30s';
+        e.sets = Math.min(Math.max(e.sets - 1, 2), 3);
+        e.reps = compound ? '12-20' : '15-25';
+        e.rest = compound ? '60s' : '30s';
         break;
       case 'forca':
-        e.sets = 5;
-        e.reps = '3-6';
-        e.rest = '180s';
+        e.sets = compound ? Math.min(Math.max(e.sets, 3), 5) : Math.min(Math.max(e.sets, 2), 3);
+        e.reps = compound ? '3-6' : '6-10';
+        e.rest = compound ? '180s' : '90s';
         break;
     }
     return e;
@@ -196,42 +250,47 @@ function adjustForGoal(exercises: Exercise[], goal: string): Exercise[] {
 function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
   switch (level) {
     case 'iniciante':
-      return exercises.slice(0, 5).map(e => ({ ...e, sets: Math.max(e.sets - 1, 2) }));
+      return exercises.slice(0, 5).map(e => ({
+        ...e,
+        sets: Math.max(Math.min(e.sets - 1, 3), 2),
+        rest: isCompoundExercise(e)
+          ? (e.rest === '30s' || e.rest === '45s' ? '60s' : e.rest)
+          : e.rest,
+      }));
     case 'intermediario':
-      return exercises.slice(0, 7);
+      return exercises.slice(0, 7).map(e => ({ ...e }));
     case 'avancado':
-      return exercises.map(e => ({ ...e, sets: Math.min(e.sets + 1, 6) }));
+      return exercises.slice(0, 8).map(e => ({
+        ...e,
+        sets: Math.min(e.sets + (isCompoundExercise(e) ? 1 : 0), 5),
+      }));
     default:
       return exercises;
   }
 }
 
-const MIN_EXERCISES_PER_DAY = 4;
+const INJURY_EXCLUSION_RULES: Record<InjuryArea, string[]> = {
+  ombro: ['Desenvolvimento', 'Arnold', 'Militar', 'Elevação Frontal', 'Elevação Lateral', 'Remada Alta', 'Mergulho', 'Flexão Diamante', 'Face Pull', 'Y-Raise', 'Crucifixo Inverso'],
+  joelho: ['Agachamento', 'Leg Press', 'Extensora', 'Hack', 'Avanço', 'Passada', 'Búlgaro', 'Sissy', 'Panturrilha no Leg Press'],
+  lombar: ['Levantamento Terra', 'Remada Curvada', 'Stiff', 'Good Morning', 'Agachamento Livre', 'Agachamento Frontal', 'Agachamento Sumô', 'Avanço', 'Passada', 'Agachamento Búlgaro'],
+  punho: ['Supino Reto com Barra', 'Supino Declinado', 'Supino Inclinado com Halteres', 'Supino Reto com Halteres', 'Flexão de Braço', 'Flexão Diamante', 'Rosca Direta com Barra', 'Rosca Inversa', 'Tríceps Testa', 'Mergulho'],
+  cotovelo: ['Rosca Direta', 'Rosca Alternada', 'Rosca Martelo', 'Rosca Scott', 'Rosca Concentrada', 'Rosca no Cabo', 'Rosca Inversa', 'Rosca 21', 'Rosca Spider', 'Rosca Inclinada', 'Tríceps Pulley', 'Tríceps Testa', 'Tríceps Francês', 'Tríceps Corda', 'Tríceps Coice', 'Mergulho', 'Supino Fechado', 'JM Press'],
+  quadril: ['Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Búlgaro', 'Stiff', 'Good Morning', 'Elevação Pélvica', 'Abdução de Quadril', 'Glúteo no Cabo', 'Extensão de Quadril', 'Nordic Curl'],
+  tornozelo: ['Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Búlgaro', 'Sissy', 'Panturrilha', 'Mountain Climber'],
+};
 
-function padDay(exercises: Exercise[], allowed: MuscleGroup[], goal: string, level: string): Exercise[] {
-  if (exercises.length >= MIN_EXERCISES_PER_DAY) return exercises;
-
-  const existing = new Set(exercises.map(e => e.name));
-  const fillGroups: string[] = ['abdomen', 'ombros', 'biceps', 'triceps', 'costas', 'peito'];
-
-  for (const group of fillGroups) {
-    if (exercises.length >= MIN_EXERCISES_PER_DAY) break;
-    if (!allowed.includes(group as MuscleGroup)) continue;
-    const pool = adjustForLevel(adjustForGoal(exerciseDatabase[group] || [], goal), level);
-    for (const ex of pool) {
-      if (exercises.length >= MIN_EXERCISES_PER_DAY) break;
-      if (!existing.has(ex.name)) {
-        exercises.push(ex);
-        existing.add(ex.name);
-      }
-    }
-  }
-  return exercises;
+function isExerciseRestricted(exercise: Exercise, injuries: InjuryArea[]): boolean {
+  return injuries.some(injury =>
+    INJURY_EXCLUSION_RULES[injury].some(keyword => exercise.name.includes(keyword))
+  );
 }
 
 export function generateWorkout(profile: UserProfile): WorkoutPlan {
-  const { goal, level, daysPerWeek, hoursPerSession, selectedMuscles, splitLegs } = profile;
-  const allowed = selectedMuscles && selectedMuscles.length >= 2 ? selectedMuscles : [...ALL_MUSCLE_GROUPS];
+  const safeProfile = normalizeUserProfile(profile);
+  const { goal, level, daysPerWeek, hoursPerSession, selectedMuscles, splitLegs, injuries = [] } = safeProfile;
+  const allowed = selectedMuscles && selectedMuscles.length >= 2
+    ? [...selectedMuscles]
+    : [...ALL_MUSCLE_GROUPS];
 
   const goalLabels: Record<string, string> = {
     hipertrofia: 'Hipertrofia',
@@ -246,103 +305,241 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     avancado: 'Avançado',
   };
 
-  const maxExercisesPerDay = Math.max(MIN_EXERCISES_PER_DAY, Math.min(12, Math.floor(hoursPerSession * 60 / 5)));
+  const adjusted = (group: string): Exercise[] =>
+    adjustForLevel(adjustForGoal(exerciseDatabase[group] || [], goal), level)
+      .filter(exercise => !isExerciseRestricted(exercise, injuries));
 
-  const pick = (group: string) => {
-    if (!allowed.includes(group as MuscleGroup) && group !== 'pernas_anterior' && group !== 'pernas_posterior') return [];
-    if ((group === 'pernas_anterior' || group === 'pernas_posterior') && !allowed.includes('pernas')) return [];
-    return adjustForLevel(adjustForGoal(exerciseDatabase[group] || [], goal), level);
+  const pick = (group: string): Exercise[] => {
+    if (group === 'pernas_anterior' || group === 'pernas_posterior') {
+      return allowed.includes('pernas') ? adjusted(group) : [];
+    }
+    return allowed.includes(group as MuscleGroup) ? adjusted(group) : [];
   };
 
-  const dayNames = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-
-  const trimAndPad = (exercises: Exercise[]) => {
-    const trimmed = exercises.slice(0, maxExercisesPerDay);
-    return padDay(trimmed, allowed, goal, level);
+  const parseSeconds = (rest: string): number => {
+    const match = rest.match(/(\d+)s/);
+    return match ? Number(match[1]) : 60;
   };
 
-  const useSplitLegs = splitLegs && allowed.includes('pernas') && daysPerWeek >= 4;
+  // Estimativa conservadora: tempo das séries + descanso entre séries.
+  // Ela é usada para impedir que o gerador coloque mais volume do que cabe
+  // razoavelmente na duração escolhida pelo usuário.
+  const estimateExerciseMinutes = (exercise: Exercise): number => {
+    const restMinutes = (parseSeconds(exercise.rest) * Math.max(exercise.sets - 1, 0)) / 60;
+    const executionMinutesPerSet = isCompoundExercise(exercise) ? 0.85 : 0.65;
+    const setMinutes = exercise.sets * executionMinutesPerSet;
+    const setupMinutes = isCompoundExercise(exercise) ? 1 : 0.75;
+    return setMinutes + restMinutes + setupMinutes;
+  };
 
-  function buildSplit(): WorkoutDay[] {
-    const result: WorkoutDay[] = [];
+  const fitToSession = (exercises: Exercise[]): Exercise[] => {
+    const budget = hoursPerSession * 60;
+    const result: Exercise[] = [];
+    let minutes = 0;
 
-    if (daysPerWeek === 2) {
-      result.push({
-        day: dayNames[0], focus: 'Superior',
-        exercises: trimAndPad([...pick('peito').slice(0, 3), ...pick('costas').slice(0, 2), ...pick('ombros').slice(0, 1), ...pick('biceps').slice(0, 1), ...pick('triceps').slice(0, 1)]),
-      });
-      result.push({
-        day: dayNames[3], focus: 'Inferior + Core',
-        exercises: trimAndPad([...pick('pernas'), ...pick('abdomen').slice(0, 2)]),
-      });
-    } else if (daysPerWeek === 3) {
-      result.push({
-        day: dayNames[0], focus: 'Push (Peito + Ombro + Tríceps)',
-        exercises: trimAndPad([...pick('peito').slice(0, 3), ...pick('ombros').slice(0, 2), ...pick('triceps').slice(0, 2)]),
-      });
-      result.push({
-        day: dayNames[2], focus: 'Pull (Costas + Bíceps)',
-        exercises: trimAndPad([...pick('costas').slice(0, 4), ...pick('biceps').slice(0, 2), ...pick('abdomen').slice(0, 1)]),
-      });
-      result.push({
-        day: dayNames[4], focus: 'Pernas + Abdômen',
-        exercises: trimAndPad([...pick('pernas'), ...pick('abdomen').slice(0, 2)]),
-      });
-    } else if (daysPerWeek === 4) {
-      if (useSplitLegs) {
-        result.push({ day: dayNames[0], focus: 'Peito + Tríceps', exercises: trimAndPad([...pick('peito').slice(0, 4), ...pick('triceps').slice(0, 3)]) });
-        result.push({ day: dayNames[1], focus: 'Quadríceps + Panturrilha', exercises: trimAndPad([...pick('pernas_anterior'), ...pick('abdomen').slice(0, 1)]) });
-        result.push({ day: dayNames[3], focus: 'Costas + Bíceps', exercises: trimAndPad([...pick('costas').slice(0, 4), ...pick('biceps').slice(0, 3)]) });
-        result.push({ day: dayNames[4], focus: 'Posterior + Glúteo + Ombros', exercises: trimAndPad([...pick('pernas_posterior').slice(0, 4), ...pick('ombros').slice(0, 2)]) });
-      } else {
-        result.push({ day: dayNames[0], focus: 'Peito + Tríceps', exercises: trimAndPad([...pick('peito').slice(0, 4), ...pick('triceps').slice(0, 3)]) });
-        result.push({ day: dayNames[1], focus: 'Costas + Bíceps', exercises: trimAndPad([...pick('costas').slice(0, 4), ...pick('biceps').slice(0, 3)]) });
-        result.push({ day: dayNames[3], focus: 'Pernas + Abdômen', exercises: trimAndPad([...pick('pernas'), ...pick('abdomen').slice(0, 2)]) });
-        result.push({ day: dayNames[4], focus: 'Ombros + Braços', exercises: trimAndPad([...pick('ombros').slice(0, 3), ...pick('biceps').slice(0, 2), ...pick('triceps').slice(0, 2)]) });
+    for (const exercise of exercises) {
+      if (result.length >= 8) break;
+      const cost = estimateExerciseMinutes(exercise);
+
+      // Prioriza o limite de tempo informado pelo usuário. Um único
+      // exercício pode ultrapassar o orçamento se, sozinho, já exigir mais
+      // tempo do que a sessão, mas não adicionamos um segundo exercício
+      // quando ele faria a sessão ultrapassar o limite.
+      if (result.length === 0 || minutes + cost <= budget) {
+        result.push(exercise);
+        minutes += cost;
       }
-    } else if (daysPerWeek === 5) {
-      if (useSplitLegs) {
-        result.push({ day: dayNames[0], focus: 'Peito', exercises: trimAndPad([...pick('peito'), ...pick('abdomen').slice(0, 1)]) });
-        result.push({ day: dayNames[1], focus: 'Quadríceps + Panturrilha', exercises: trimAndPad([...pick('pernas_anterior')]) });
-        result.push({ day: dayNames[2], focus: 'Costas + Bíceps', exercises: trimAndPad([...pick('costas').slice(0, 4), ...pick('biceps').slice(0, 2)]) });
-        result.push({ day: dayNames[3], focus: 'Posterior + Glúteo', exercises: trimAndPad([...pick('pernas_posterior'), ...pick('abdomen').slice(0, 1)]) });
-        result.push({ day: dayNames[4], focus: 'Ombros + Tríceps', exercises: trimAndPad([...pick('ombros').slice(0, 3), ...pick('triceps').slice(0, 3)]) });
-      } else {
-        result.push({ day: dayNames[0], focus: 'Peito', exercises: trimAndPad([...pick('peito'), ...pick('abdomen').slice(0, 1)]) });
-        result.push({ day: dayNames[1], focus: 'Costas', exercises: trimAndPad([...pick('costas'), ...pick('abdomen').slice(0, 1)]) });
-        result.push({ day: dayNames[2], focus: 'Pernas', exercises: trimAndPad(pick('pernas')) });
-        result.push({ day: dayNames[3], focus: 'Ombros + Trapézio', exercises: trimAndPad([...pick('ombros'), ...pick('abdomen').slice(0, 2)]) });
-        result.push({ day: dayNames[4], focus: 'Braços', exercises: trimAndPad([...pick('biceps'), ...pick('triceps')]) });
-      }
-    } else {
-      // 6 days
-      if (useSplitLegs) {
-        result.push({ day: dayNames[0], focus: 'Peito + Tríceps', exercises: trimAndPad([...pick('peito').slice(0, 4), ...pick('triceps').slice(0, 3)]) });
-        result.push({ day: dayNames[1], focus: 'Quadríceps + Panturrilha', exercises: trimAndPad([...pick('pernas_anterior')]) });
-        result.push({ day: dayNames[2], focus: 'Costas + Bíceps', exercises: trimAndPad([...pick('costas').slice(0, 4), ...pick('biceps').slice(0, 3)]) });
-        result.push({ day: dayNames[3], focus: 'Posterior + Glúteo', exercises: trimAndPad([...pick('pernas_posterior')]) });
-        result.push({ day: dayNames[4], focus: 'Ombros + Abdômen', exercises: trimAndPad([...pick('ombros'), ...pick('abdomen')]) });
-        result.push({ day: dayNames[5], focus: 'Braços + Core', exercises: trimAndPad([...pick('biceps'), ...pick('triceps'), ...pick('abdomen').slice(0, 1)]) });
-      } else {
-        result.push({ day: dayNames[0], focus: 'Peito + Tríceps', exercises: trimAndPad([...pick('peito').slice(0, 4), ...pick('triceps').slice(0, 3)]) });
-        result.push({ day: dayNames[1], focus: 'Costas + Bíceps', exercises: trimAndPad([...pick('costas').slice(0, 4), ...pick('biceps').slice(0, 3)]) });
-        result.push({ day: dayNames[2], focus: 'Pernas', exercises: trimAndPad(pick('pernas')) });
-        result.push({ day: dayNames[3], focus: 'Ombros + Abdômen', exercises: trimAndPad([...pick('ombros'), ...pick('abdomen')]) });
-        result.push({ day: dayNames[4], focus: 'Peito + Costas', exercises: trimAndPad([...pick('peito').slice(0, 3), ...pick('costas').slice(0, 3)]) });
-        result.push({ day: dayNames[5], focus: 'Braços + Core', exercises: trimAndPad([...pick('biceps'), ...pick('triceps'), ...pick('abdomen').slice(0, 1)]) });
+    }
+
+    return result.filter((exercise, index, list) =>
+      list.findIndex(item => item.name === exercise.name) === index
+    );
+  };
+
+  const fillFromAllowed = (exercises: Exercise[], groups: string[]): Exercise[] => {
+    const result = [...exercises];
+    const used = new Set(result.map(exercise => exercise.name));
+
+    for (const group of groups) {
+      if (result.length >= 8) break;
+      for (const exercise of pick(group)) {
+        if (used.has(exercise.name)) continue;
+        result.push(exercise);
+        used.add(exercise.name);
+        if (result.length >= 8) break;
       }
     }
 
     return result;
-  }
+  };
 
-  const days = buildSplit().filter(d => d.exercises.length > 0);
+  const trimAndPad = (exercises: Exercise[], fallbackGroups: string[]): Exercise[] => {
+    const unique = exercises.filter((exercise, index, list) =>
+      list.findIndex(item => item.name === exercise.name) === index
+    );
 
-  const timeLabel = hoursPerSession < 1 ? `${Math.round(hoursPerSession * 60)}min` : `${hoursPerSession}h`;
+    const padded = fillFromAllowed(unique, fallbackGroups);
+    const fitted = fitToSession(padded);
+
+    // Não força um número mínimo artificial de exercícios: respeitar o
+    // tempo escolhido é mais importante do que preencher a sessão com volume
+    // que não cabe nela.
+    return fitted.length > 0 ? fitted : padded.slice(0, 1);
+  };
+
+  const groupsForGeneralDays = [...allowed];
+
+  const templates: string[][] = (() => {
+    if (daysPerWeek === 2) {
+      return [
+        ['peito', 'costas', 'ombros', 'biceps', 'triceps'],
+        ['pernas', 'abdomen', 'peito', 'costas'],
+      ];
+    }
+
+    if (daysPerWeek === 3) {
+      return [
+        ['peito', 'ombros', 'triceps'],
+        ['costas', 'biceps'],
+        ['pernas', 'abdomen'],
+      ];
+    }
+
+    if (daysPerWeek === 4) {
+      if (splitLegs && allowed.includes('pernas')) {
+        return [
+          ['peito', 'triceps'],
+          ['pernas_anterior', 'abdomen'],
+          ['costas', 'biceps'],
+          ['pernas_posterior', 'ombros'],
+        ];
+      }
+      return [
+        ['peito', 'triceps'],
+        ['costas', 'biceps'],
+        ['pernas', 'abdomen'],
+        ['ombros', 'biceps', 'triceps'],
+      ];
+    }
+
+    if (daysPerWeek === 5) {
+      if (splitLegs && allowed.includes('pernas')) {
+        return [
+          ['peito', 'abdomen'],
+          ['pernas_anterior'],
+          ['costas', 'biceps'],
+          ['pernas_posterior', 'abdomen'],
+          ['ombros', 'triceps'],
+        ];
+      }
+      return [
+        ['peito', 'abdomen'],
+        ['costas', 'abdomen'],
+        ['pernas'],
+        ['ombros', 'abdomen'],
+        ['biceps', 'triceps'],
+      ];
+    }
+
+    if (splitLegs && allowed.includes('pernas')) {
+      return [
+        ['peito', 'triceps'],
+        ['pernas_anterior'],
+        ['costas', 'biceps'],
+        ['pernas_posterior'],
+        ['ombros', 'abdomen'],
+        ['biceps', 'triceps', 'abdomen'],
+      ];
+    }
+
+    return [
+      ['peito', 'triceps'],
+      ['costas', 'biceps'],
+      ['pernas'],
+      ['ombros', 'abdomen'],
+      ['peito', 'costas'],
+      ['biceps', 'triceps', 'abdomen'],
+    ];
+  })();
+
+  const dayNames = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+
+  // Filtra os templates pelos grupos realmente escolhidos. Isso evita, por
+  // exemplo, que alguém que escolheu apenas peito + costas receba pernas.
+  const buildDayExercises = (template: string[], dayIndex: number): Exercise[] => {
+    const selectedTemplate = template.filter(group =>
+      allowed.includes(group as MuscleGroup) ||
+      ((group === 'pernas_anterior' || group === 'pernas_posterior') && allowed.includes('pernas'))
+    );
+
+    const fallback = groupsForGeneralDays.filter(group => !selectedTemplate.includes(group));
+    const primary = selectedTemplate.flatMap(group => pick(group).slice(0, 4));
+
+    // Se o template ficou vazio por causa das restrições do usuário,
+    // distribui os grupos permitidos de forma determinística.
+    if (primary.length === 0) {
+      const group = groupsForGeneralDays[dayIndex % groupsForGeneralDays.length];
+      return trimAndPad(pick(group).slice(0, 4), groupsForGeneralDays);
+    }
+
+    return trimAndPad(primary, [...selectedTemplate, ...fallback]);
+  };
+
+  const result: WorkoutDay[] = templates.map((template, index) => ({
+    day: dayNames[index],
+    focus: template.join(' + '),
+    exercises: buildDayExercises(template, index),
+  }));
+
+  // Garante que todo grupo selecionado apareça ao menos uma vez na semana.
+  // Isso corrige cenários como 4 dias + somente peito/costas, nos quais os
+  // templates padrão poderiam deixar dias sem exercícios.
+  const represented = new Set<string>();
+  result.forEach(day => {
+    day.exercises.forEach(exercise => {
+      const group = ALL_MUSCLE_GROUPS.find(candidate => {
+      if (exerciseDatabase[candidate]?.some(item => item.name === exercise.name)) {
+        return true;
+      }
+      if (candidate === 'pernas') {
+        return ['pernas_anterior', 'pernas_posterior'].some(part =>
+          exerciseDatabase[part]?.some(item => item.name === exercise.name)
+        );
+      }
+      return false;
+      });
+      if (group) represented.add(group);
+    });
+  });
+
+  const missing = allowed.filter(group => !represented.has(group));
+  missing.forEach((group, index) => {
+    const target = result[index % result.length];
+    const additions = pick(group).slice(0, 2);
+    target.exercises = trimAndPad([...target.exercises, ...additions], [group, ...allowed]);
+  });
+
+  const days = result.map(day => {
+    const muscles = [...new Set(day.exercises.map(ex => ex.muscle).filter(Boolean))];
+    return {
+      ...day,
+      // O foco exibido é derivado dos exercícios reais, nunca de um template
+      // que possa ter sido parcialmente removido pelas preferências do usuário.
+      focus: muscles.length > 0 ? muscles.slice(0, 4).join(' + ') : 'Treino personalizado',
+    };
+  });
+
+  const timeLabel = hoursPerSession < 1
+    ? `${Math.round(hoursPerSession * 60)}min`
+    : `${hoursPerSession}h`;
+
+  const injuryNote = injuries.length > 0
+    ? ' Exercícios incompatíveis com as restrições informadas foram excluídos automaticamente; em caso de dor ou condição clínica, confirme a seleção com um profissional de saúde ou educação física.'
+    : '';
 
   return {
     title: `Treino ${goalLabels[goal]} - ${levelLabels[level]}`,
-    description: `Plano personalizado para ${profile.name}. ${days.length}x por semana, sessões de ~${timeLabel}.`,
+    description: `Plano personalizado para ${safeProfile.name}. ${days.length}x por semana, sessões de ~${timeLabel}.${injuryNote}`,
     daysPerWeek: days.length,
     days,
   };

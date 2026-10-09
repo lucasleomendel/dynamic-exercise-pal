@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UserProfile, ALL_MUSCLE_GROUPS, MuscleGroup } from "@/lib/workout-generator";
+import { UserProfile, ALL_MUSCLE_GROUPS, MuscleGroup, InjuryArea, validateUserProfile } from "@/lib/workout-generator";
 import { ChevronRight } from "lucide-react";
 import logoImg from "@/assets/logo-fitforge.png";
 
@@ -14,8 +14,9 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
   const [selectedMuscles, setSelectedMuscles] = useState<MuscleGroup[]>(
     initialProfile?.selectedMuscles || [...ALL_MUSCLE_GROUPS]
   );
+  const [injuries, setInjuries] = useState<InjuryArea[]>(initialProfile?.injuries || []);
 
-  const update = (field: string, value: string | number | boolean) => {
+  const update = (field: keyof UserProfile, value: string | number | boolean) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
@@ -25,11 +26,21 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
     );
   };
 
+  const toggleInjury = (injury: InjuryArea) => {
+    setInjuries(prev =>
+      prev.includes(injury) ? prev.filter(x => x !== injury) : [...prev, injury]
+    );
+  };
+
   const nextStep = () => {
-    if (step < steps.length - 1) setStep(step + 1);
-    else if (profile.name && profile.age && profile.weight && profile.height && profile.sex && profile.goal && profile.level && profile.daysPerWeek && profile.hoursPerSession) {
-      onSubmit({ ...profile, selectedMuscles } as UserProfile);
+    if (step < steps.length - 1) {
+      setStep(step + 1);
+      return;
     }
+
+    const candidate = { ...profile, name: typeof profile.name === "string" ? profile.name.trim() : "", selectedMuscles, injuries } as UserProfile;
+    const errors = validateUserProfile(candidate);
+    if (errors.length === 0) onSubmit(candidate);
   };
 
   const muscleLabels: Record<MuscleGroup, { emoji: string; label: string }> = {
@@ -48,13 +59,15 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
       content: (
         <input
           type="text"
+          maxLength={80}
+          autoComplete="name"
           placeholder="Seu nome"
           value={profile.name || ""}
           onChange={e => update("name", e.target.value)}
           className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground text-lg focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
         />
       ),
-      valid: !!profile.name,
+      valid: typeof profile.name === "string" && profile.name.trim().length >= 2 && profile.name.trim().length <= 80,
     },
     {
       title: "Informações básicas",
@@ -62,7 +75,7 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-sm text-muted-foreground mb-1 block">Idade</label>
-            <input type="number" placeholder="25" value={profile.age || ""} onChange={e => update("age", +e.target.value)}
+            <input type="number" min={13} max={100} step={1} inputMode="numeric" placeholder="25" value={profile.age ?? ""} onChange={e => update("age", +e.target.value)}
               className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
           </div>
           <div>
@@ -78,17 +91,20 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-1 block">Peso (kg)</label>
-            <input type="number" placeholder="75" value={profile.weight || ""} onChange={e => update("weight", +e.target.value)}
+            <input type="number" min={25} max={350} step={0.1} inputMode="decimal" placeholder="75" value={profile.weight ?? ""} onChange={e => update("weight", +e.target.value)}
               className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-1 block">Altura (cm)</label>
-            <input type="number" placeholder="175" value={profile.height || ""} onChange={e => update("height", +e.target.value)}
+            <input type="number" min={120} max={230} step={1} inputMode="numeric" placeholder="175" value={profile.height ?? ""} onChange={e => update("height", +e.target.value)}
               className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
           </div>
         </div>
       ),
-      valid: !!profile.age && !!profile.weight && !!profile.height && !!profile.sex,
+      valid: Number.isFinite(profile.age) && profile.age >= 13 && profile.age <= 100 &&
+        Number.isFinite(profile.weight) && profile.weight >= 25 && profile.weight <= 350 &&
+        Number.isFinite(profile.height) && profile.height >= 120 && profile.height <= 230 &&
+        !!profile.sex,
     },
     {
       title: "Qual seu objetivo?",
@@ -173,7 +189,47 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
           )}
         </div>
       ),
-      valid: !!profile.daysPerWeek && !!profile.hoursPerSession,
+      valid: [2, 3, 4, 5, 6].includes(profile.daysPerWeek ?? 0) &&
+        [0.5, 0.75, 1, 1.5].includes(profile.hoursPerSession ?? 0),
+    },
+    {
+      title: "Há alguma restrição física?",
+      content: (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Selecione regiões com lesão, dor ou limitação que devem ser consideradas pelo gerador.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              ["ombro", "🦾 Ombro"],
+              ["joelho", "🦵 Joelho"],
+              ["lombar", "🔻 Lombar"],
+              ["punho", "✋ Punho"],
+              ["cotovelo", "💪 Cotovelo"],
+              ["quadril", "🦴 Quadril"],
+              ["tornozelo", "🦶 Tornozelo"],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => toggleInjury(value)}
+                aria-pressed={injuries.includes(value)}
+                className={`p-4 rounded-xl border text-left transition-all ${
+                  injuries.includes(value)
+                    ? "bg-primary/10 border-primary card-glow"
+                    : "bg-secondary border-border text-muted-foreground hover:border-primary/50"
+                }`}
+              >
+                <span className="text-sm font-semibold block">{label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Isso não substitui avaliação profissional. O FitForge usa essas informações para excluir exercícios potencialmente incompatíveis.
+          </p>
+        </div>
+      ),
+      valid: true,
     },
     ...((profile.sex === 'masculino' || profile.sex === 'feminino') ? [{
       title: "Quais grupos musculares quer treinar?",
@@ -223,7 +279,7 @@ const UserProfileForm = ({ onSubmit, initialProfile }: Props) => {
         {/* Eyebrow + title */}
         <div className="mt-6">
           <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">
-            {step === 0 ? "Identificação" : step === 1 ? "Perfil físico" : step === 2 ? "Objetivo" : step === 3 ? "Experiência" : step === 4 ? "Rotina" : "Foco muscular"}
+            {step === 0 ? "Identificação" : step === 1 ? "Perfil físico" : step === 2 ? "Objetivo" : step === 3 ? "Experiência" : step === 4 ? "Rotina" : step === 5 ? "Restrições" : "Foco muscular"}
           </span>
           <h2 className="font-display text-3xl tracking-wide mt-1 text-foreground leading-none">{current.title}</h2>
         </div>

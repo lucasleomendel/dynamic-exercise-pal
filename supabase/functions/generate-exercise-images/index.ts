@@ -4,10 +4,21 @@
 // - Retry: reprocessa itens que falharam se attempts < MAX_ATTEMPTS e passou o cooldown.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://dynamic-exercise-pal.lovable.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
+
+function getCors(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "https://dynamic-exercise-pal.lovable.app",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -72,24 +83,28 @@ interface Pending {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: getCors(req) });
 
-  // Auth obrigatória: JWT de usuário autenticado OU service-role (cron/job-runner).
-  // Sem isso o endpoint seria público e queimaria créditos de IA.
-  const auth = req.headers.get("authorization")?.replace("Bearer ", "") ?? "";
+  // Geração de imagens consome créditos e altera a biblioteca global:
+  // somente master_admin ou o runner interno pode dispará-la.
+  const auth = req.headers.get("authorization")?.replace(/^Bearer\\s+/i, "").trim() ?? "";
   if (!auth) {
     return new Response(JSON.stringify({ error: "unauthenticated" }), {
-      status: 401, headers: { ...cors, "Content-Type": "application/json" },
+      status: 401, headers: { ...getCors(req), "Content-Type": "application/json" },
     });
   }
-  if (auth !== SERVICE_ROLE) {
-    const authClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!);
+
+  const authClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!);
+  let privileged = auth === SERVICE_ROLE;
+  if (!privileged) {
     const { data: u, error: authErr } = await authClient.auth.getUser(auth);
-    if (authErr || !u?.user) {
-      return new Response(JSON.stringify({ error: "invalid session" }), {
-        status: 401, headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
+    privileged = !authErr && u.user?.app_metadata?.role === "master_admin";
+  }
+
+  if (!privileged) {
+    return new Response(JSON.stringify({ error: "forbidden" }), {
+      status: 403, headers: { ...getCors(req), "Content-Type": "application/json" },
+    });
   }
 
   // limit pode vir por query (frontend) ou pelo corpo JSON (job-runner/cron)

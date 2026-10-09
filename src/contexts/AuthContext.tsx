@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode, useC
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { hydrateFromCloud, maybeDailySync } from "@/lib/cloud-sync";
+import { clearAll } from "@/lib/storage";
 
 const GUEST_KEY = "fitforge_guest_mode";
 
@@ -39,8 +40,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const runHydration = () => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
-    hydrateFromCloud().catch(() => {});
-    maybeDailySync().catch(() => {});
+    Promise.all([hydrateFromCloud(), maybeDailySync()]).catch((error) => {
+      // Allow a later visibility/auth event to retry after a transient outage.
+      hydratedRef.current = false;
+      console.warn("[FitForge] Falha ao hidratar dados da conta.", error);
+    });
   };
 
   useEffect(() => {
@@ -49,6 +53,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setLoading(false);
         if (session?.user) {
+          let wasGuest = false;
+          try { wasGuest = localStorage.getItem(GUEST_KEY) === "1"; } catch { /* ignore */ }
+
+          // Guest data is deliberately local-only and must never be pushed into
+          // an authenticated user's cloud account.
+          if (wasGuest) clearAll();
+
           try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
           setIsGuest(false);
         }
@@ -80,18 +91,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Prevent the next account/session from inheriting this user's cached data.
+    clearAll();
     try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
     setIsGuest(false);
     hydratedRef.current = false;
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
   }, []);
 
   const enterGuestMode = useCallback(() => {
+    // Guest mode must start from a clean app cache so no previous account data
+    // can be displayed or later queued for synchronization.
+    clearAll();
     try { localStorage.setItem(GUEST_KEY, "1"); } catch { /* ignore */ }
     setIsGuest(true);
   }, []);
 
   const exitGuestMode = useCallback(() => {
+    // Leaving guest mode discards guest-only data instead of carrying it into
+    // the next authenticated account.
+    clearAll();
     try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
     setIsGuest(false);
   }, []);

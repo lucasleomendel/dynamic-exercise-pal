@@ -30,7 +30,7 @@ function findMuscle(text: string): string | null {
 }
 
 async function exercisesFor(muscle: string, level?: string) {
-  let q = supabase.from("exercise_library")
+  const q = supabase.from("exercise_library")
     .select("name,equipment,difficulty,default_sets,default_reps,default_rest,technique_tip")
     .eq("active", true).eq("muscle_group", muscle).limit(40);
   const { data } = await q;

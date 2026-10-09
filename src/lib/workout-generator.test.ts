@@ -136,10 +136,9 @@ describe("workout generator", () => {
       injuries: ["cotovelo"],
     });
 
-    if (plan.days.some(day => day.exercises.length === 0)) {
-      expect(plan.description).toContain("um ou mais dias ficaram sem exercícios");
-      expect(plan.description).toContain("não adicionou exercícios potencialmente incompatíveis");
-    }
+    expect(plan.days.every(day => day.exercises.length === 0)).toBe(true);
+    expect(plan.description).toContain("um ou mais dias ficaram sem exercícios");
+    expect(plan.description).toContain("não adicionou exercícios potencialmente incompatíveis");
   });
 
   it("persists and validates an empty restriction list as a safe default", () => {

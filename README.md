@@ -26,7 +26,7 @@ Variáveis esperadas pelo cliente:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-Nunca coloque chaves `service_role`, tokens privados ou segredos no frontend, em arquivos versionados ou em logs.
+Toda variável com prefixo `VITE_` pode ser exposta no bundle do navegador. Use somente valores públicos, como a URL do Supabase e a publishable key; nunca coloque `service_role`, `LOVABLE_API_KEY`, tokens privados ou outros segredos no frontend, em arquivos versionados ou em logs. O exemplo de ambiente não inclui mais variáveis `VITE_LOVABLE_API_KEY`/`VITE_LOVABLE_PROJECT_ID`, pois não são consumidas pelo código atual.
 
 ## Verificações
 

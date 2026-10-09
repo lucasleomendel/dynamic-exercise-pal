@@ -107,6 +107,14 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Image generation uses paid AI credits. Keep it disabled unless an operator
+  // explicitly enables the IMAGE_GENERATION_ENABLED project secret.
+  if (Deno.env.get("IMAGE_GENERATION_ENABLED") !== "true") {
+    return new Response(JSON.stringify({ error: "image_generation_disabled" }), {
+      status: 503, headers: { ...getCors(req), "Content-Type": "application/json" },
+    });
+  }
+
   // limit pode vir por query (frontend) ou pelo corpo JSON (job-runner/cron)
   const url = new URL(req.url);
   let rawLimit = url.searchParams.get("limit");

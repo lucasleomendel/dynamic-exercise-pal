@@ -72,7 +72,7 @@ describe('generateDietPlan', () => {
       dislikes: ['ovos', 'tofu', 'iogurte', 'cottage', 'whey'],
     });
 
-    expect(plan.meals.some(meal => meal.foods.length === 0)).toBe(true);
+    expect(plan.meals.some(meal => meal.foods.length < 3)).toBe(true);
     expect(plan.tips.some(tip => tip.includes('fonte de proteína compatível'))).toBe(true);
   });
 

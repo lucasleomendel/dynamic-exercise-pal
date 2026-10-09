@@ -55,6 +55,16 @@ describe('generateDietPlan', () => {
     expect(names.some(name => name.includes('banana'))).toBe(false);
   });
 
+  it('excludes generic whey when lactose-free restriction is active because lactose status is unknown', () => {
+    const plan = generateDietPlan({ ...baseProfile, restrictions: ['sem_lactose'] });
+    const names = plan.meals.flatMap(meal => meal.foods.map(food => food.item));
+
+    expect(names).not.toContain('Whey Protein');
+    expect(names).not.toContain('Iogurte grego natural');
+    expect(names).not.toContain('Cottage');
+    expect(names).not.toContain('Queijo minas');
+  });
+
   it('selects only vegan-tagged foods when vegan restriction is active', () => {
     const plan = generateDietPlan({ ...baseProfile, restrictions: ['vegano'] });
     const names = plan.meals.flatMap(meal => meal.foods.map(food => food.item));

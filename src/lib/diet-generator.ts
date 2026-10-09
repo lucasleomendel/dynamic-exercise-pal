@@ -91,7 +91,7 @@ const foodDatabase: Record<string, FoodItem[]> = {
     { item: 'Ovos mexidos', portion: '3 unidades', calories: 231, protein: 18, carbs: 2, fat: 16, tags: ['vegetariano'] },
     { item: 'Patinho moído', portion: '150g', calories: 270, protein: 40, carbs: 0, fat: 11, tags: [] },
     { item: 'Tilápia grelhada', portion: '150g', calories: 162, protein: 34, carbs: 0, fat: 3, tags: ['peixe'] },
-    { item: 'Whey Protein', portion: '1 scoop (30g)', calories: 120, protein: 24, carbs: 3, fat: 1, tags: ['suplemento'] },
+    { item: 'Whey Protein', portion: '1 scoop (30g)', calories: 120, protein: 24, carbs: 3, fat: 1, tags: ['suplemento', 'laticinio'] },
     { item: 'Iogurte grego natural', portion: '170g', calories: 150, protein: 15, carbs: 8, fat: 7, tags: ['vegetariano', 'laticinio'] },
     { item: 'Tofu grelhado', portion: '150g', calories: 144, protein: 16, carbs: 4, fat: 8, tags: ['vegano', 'vegetariano'] },
     { item: 'Atum em água', portion: '1 lata (120g)', calories: 132, protein: 30, carbs: 0, fat: 1, tags: ['peixe'] },

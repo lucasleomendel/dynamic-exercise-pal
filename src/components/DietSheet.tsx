@@ -231,7 +231,7 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
 
               {foodGapPct > 10 && (
                 <div className="rounded-lg border border-accent/40 bg-accent/10 p-3 text-xs text-foreground" role="status">
-                  <span className="font-semibold block">Atenção: refeições ainda não atingem a meta calórica</span>
+                  <span className="font-semibold block">{foodGap < 0 ? "Atenção: refeições abaixo da meta calórica" : "Atenção: refeições acima da meta calórica"}</span>
                   <span className="block mt-1">
                     Os alimentos selecionados somam {plan.totalCalories} kcal, {Math.abs(foodGap)} kcal ({foodGapPct}%) {foodGap < 0 ? 'abaixo' : 'acima'} da meta de {plan.targetCalories} kcal.
                     Os valores são estimativas; ajuste as porções e confirme os dados nutricionais antes de seguir o plano.

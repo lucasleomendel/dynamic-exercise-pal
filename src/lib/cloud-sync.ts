@@ -16,8 +16,33 @@ import {
 const LAST_SYNC_KEY = "fitforge_last_sync";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Sync-log failures must be observable, but must not mask the actual sync result. */
+async function writeSyncLog(
+  userId: string,
+  status: "success" | "error",
+  details: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const { error } = await supabase.from("sync_log").insert({
+      user_id: userId,
+      sync_type: "full",
+      status,
+      details,
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.warn("[FitForge] Não foi possível registrar o resultado da sincronização.", error);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("fitforge:sync-error", {
+        detail: { operation: "write-sync-log", error },
+      }));
+    }
+  }
+}
+
 async function getUserId(): Promise<string | null> {
-  const { data } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
   return data.user?.id ?? null;
 }
 
@@ -266,8 +291,15 @@ export async function pullWater(date: string, userId?: string | null): Promise<C
 
 /* ============ FULL SYNC ============ */
 export async function fullSync(opts?: { silent?: boolean }) {
-  const userId = await getUserId();
+  let userId: string | null;
+  try {
+    userId = await getUserId();
+  } catch (error) {
+    console.warn("[FitForge] Não foi possível confirmar a sessão antes da sincronização.", error);
+    return { ok: false, reason: error instanceof Error ? error.message : String(error) };
+  }
   if (!userId) return { ok: false, reason: "not_authenticated" };
+
   try {
     const results = await Promise.allSettled([
       syncProfile(undefined, userId),
@@ -282,31 +314,26 @@ export async function fullSync(opts?: { silent?: boolean }) {
       .map(result => result.reason instanceof Error ? result.reason.message : String(result.reason));
 
     if (failures.length > 0) {
-      await supabase.from("sync_log").insert({
-        user_id: userId,
-        sync_type: "full",
-        status: "error",
-        details: { ts: Date.now(), errors: failures, silent: opts?.silent ?? false },
+      await writeSyncLog(userId, "error", {
+        ts: Date.now(),
+        errors: failures,
+        silent: opts?.silent ?? false,
       });
       return { ok: false, reason: failures.join("; ") };
     }
 
-    await supabase.from("sync_log").insert({
-      user_id: userId,
-      sync_type: "full",
-      status: "success",
-      details: { ts: Date.now(), silent: opts?.silent ?? false },
+    await writeSyncLog(userId, "success", {
+      ts: Date.now(),
+      silent: opts?.silent ?? false,
     });
     localStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
     return { ok: true };
-  } catch (e: any) {
-    await supabase.from("sync_log").insert({
-      user_id: userId,
-      sync_type: "full",
-      status: "error",
-      details: { error: e?.message ?? String(e) },
+  } catch (error) {
+    await writeSyncLog(userId, "error", {
+      error: error instanceof Error ? error.message : String(error),
+      silent: opts?.silent ?? false,
     });
-    return { ok: false, reason: e?.message };
+    return { ok: false, reason: error instanceof Error ? error.message : String(error) };
   }
 }
 

@@ -297,11 +297,11 @@ function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
 }
 
 const INJURY_EXCLUSION_RULES: Record<InjuryArea, string[]> = {
-  ombro: ['Desenvolvimento', 'Arnold', 'Militar', 'Elevação Frontal', 'Elevação Lateral', 'Remada Alta', 'Mergulho', 'Flexão Diamante', 'Face Pull', 'Y-Raise', 'Crucifixo Inverso'],
+  ombro: ['Desenvolvimento', 'Arnold', 'Militar', 'Elevação Frontal', 'Elevação Lateral', 'Remada Alta', 'Mergulho', 'Flexão', 'Supino', 'Crossover', 'Pullover', 'Face Pull', 'Y-Raise', 'Crucifixo Inverso'],
   joelho: ['Agachamento', 'Leg Press', 'Extensora', 'Hack', 'Avanço', 'Passada', 'Búlgaro', 'Sissy', 'Panturrilha no Leg Press'],
   lombar: ['Levantamento Terra', 'Remada Curvada', 'Stiff', 'Good Morning', 'Agachamento Livre', 'Agachamento Frontal', 'Agachamento Sumô', 'Avanço', 'Passada', 'Agachamento Búlgaro'],
   punho: ['Supino Reto com Barra', 'Supino Declinado', 'Supino Inclinado com Halteres', 'Supino Reto com Halteres', 'Flexão de Braço', 'Flexão Diamante', 'Rosca Direta com Barra', 'Rosca Inversa', 'Tríceps Testa', 'Mergulho'],
-  cotovelo: ['Rosca Direta', 'Rosca Alternada', 'Rosca Martelo', 'Rosca Scott', 'Rosca Concentrada', 'Rosca no Cabo', 'Rosca Inversa', 'Rosca 21', 'Rosca Spider', 'Rosca Inclinada', 'Tríceps Pulley', 'Tríceps Testa', 'Tríceps Francês', 'Tríceps Corda', 'Tríceps Coice', 'Mergulho', 'Supino Fechado', 'JM Press', 'Tríceps no Cross'],
+  cotovelo: ['Rosca Direta', 'Rosca Alternada', 'Rosca Martelo', 'Rosca Scott', 'Rosca Concentrada', 'Rosca no Cabo', 'Rosca Inversa', 'Rosca 21', 'Rosca Spider', 'Rosca Inclinada', 'Tríceps Pulley', 'Tríceps Testa', 'Tríceps Francês', 'Tríceps Corda', 'Tríceps Coice', 'Mergulho', 'Supino', 'Flexão', 'Crossover', 'Pullover', 'Chest Press', 'JM Press', 'Tríceps no Cross'],
   quadril: ['Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Búlgaro', 'Stiff', 'Good Morning', 'Elevação Pélvica', 'Abdução de Quadril', 'Glúteo no Cabo', 'Extensão de Quadril', 'Nordic Curl'],
   tornozelo: ['Agachamento', 'Leg Press', 'Avanço', 'Passada', 'Búlgaro', 'Sissy', 'Panturrilha', 'Mountain Climber'],
 };
@@ -561,7 +561,7 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     : `${hoursPerSession}h`;
 
   const injuryNote = injuries.length > 0
-    ? ' Exercícios incompatíveis com as restrições informadas foram excluídos automaticamente; em caso de dor ou condição clínica, confirme a seleção com um profissional de saúde ou educação física.'
+    ? ' O filtro de restrições é conservador, baseado nos nomes dos exercícios, e não garante segurança clínica nem substitui avaliação individual. Não treine movimentos que provoquem dor; confirme o plano com profissional de saúde ou educação física.'
     : '';
   const emptyDayNote = days.some(day => day.exercises.length === 0)
     ? ' Atenção: um ou mais dias ficaram sem exercícios porque as restrições selecionadas eliminaram as opções disponíveis. Revise os grupos musculares e as restrições com um profissional; o FitForge não adicionou exercícios potencialmente incompatíveis para preencher esses dias.'

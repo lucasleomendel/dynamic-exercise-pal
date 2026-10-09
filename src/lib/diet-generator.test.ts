@@ -65,6 +65,13 @@ describe('generateDietPlan', () => {
     expect(names).not.toContain('Queijo minas');
   });
 
+  it('warns when preferences have no match in one or more food groups and fallback foods are used', () => {
+    const plan = generateDietPlan({ ...baseProfile, preferences: ['frango'] });
+
+    expect(plan.tips.some(tip => tip.includes('preferências alimentares') && tip.includes('outras opções compatíveis'))).toBe(true);
+    expect(plan.meals.every(meal => meal.foods.length > 0)).toBe(true);
+  });
+
   it('warns when restrictions and dislikes leave a required food category empty', () => {
     const plan = generateDietPlan({
       ...baseProfile,

@@ -185,6 +185,8 @@ export function clearAll() {
   localStorage.removeItem(BODY_COMP_KEY);
   localStorage.removeItem(WORKOUT_HISTORY_KEY);
   localStorage.removeItem("fitforge_water");
+  // Chat history can contain personal information and must not cross accounts.
+  localStorage.removeItem("fitforge_chat_history_v2");
   localStorage.removeItem("fitforge_profile_ts");
   localStorage.removeItem("fitforge_plan_ts");
   localStorage.removeItem("fitforge_last_sync");

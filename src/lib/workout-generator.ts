@@ -563,10 +563,13 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
   const injuryNote = injuries.length > 0
     ? ' Exercícios incompatíveis com as restrições informadas foram excluídos automaticamente; em caso de dor ou condição clínica, confirme a seleção com um profissional de saúde ou educação física.'
     : '';
+  const emptyDayNote = days.some(day => day.exercises.length === 0)
+    ? ' Atenção: um ou mais dias ficaram sem exercícios porque as restrições selecionadas eliminaram as opções disponíveis. Revise os grupos musculares e as restrições com um profissional; o FitForge não adicionou exercícios potencialmente incompatíveis para preencher esses dias.'
+    : '';
 
   return {
     title: `Treino ${goalLabels[goal]} - ${levelLabels[level]}`,
-    description: `Plano personalizado para ${safeProfile.name}. ${days.length}x por semana, sessões de ~${timeLabel}.${injuryNote}`,
+    description: `Plano personalizado para ${safeProfile.name}. ${days.length}x por semana, sessões de ~${timeLabel}.${injuryNote}${emptyDayNote}`,
     daysPerWeek: days.length,
     days,
   };

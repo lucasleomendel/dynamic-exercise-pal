@@ -55,26 +55,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         authEventSeenRef.current = true;
         const nextUserId = session?.user?.id ?? null;
         const previousUserId = activeUserIdRef.current;
-        // If the browser changes accounts without an explicit sign-out, discard
-        // the previous account's shared local cache before hydrating the new one.
-        if (previousUserId && nextUserId && previousUserId !== nextUserId) {
+
+        // Any transition away from an authenticated identity invalidates the
+        // shared browser cache. This also covers expired sessions and sign-out
+        // events that did not originate from this component's signOut handler.
+        if (previousUserId && previousUserId !== nextUserId) {
           clearAll();
           hydratedRef.current = false;
         }
+
+        if (nextUserId) {
+          let cacheOwner: string | null = null;
+          let wasGuest = false;
+          try {
+            cacheOwner = localStorage.getItem("fitforge_cache_owner_user_id");
+            wasGuest = localStorage.getItem(GUEST_KEY) === "1";
+          } catch {
+            // Fail closed if local storage cannot establish cache ownership.
+            clearAll();
+          }
+
+          // Older versions did not tag local data with its account. If ownership
+          // is unknown, discard that ambiguous cache rather than expose one
+          // account's profile, plan, or history to another account.
+          if (wasGuest || cacheOwner !== nextUserId) clearAll();
+          try {
+            localStorage.setItem("fitforge_cache_owner_user_id", nextUserId);
+            localStorage.removeItem(GUEST_KEY);
+          } catch (error) {
+            console.warn("[FitForge] Não foi possível registrar o proprietário do cache local.", error);
+          }
+          setIsGuest(false);
+        }
+
         activeUserIdRef.current = nextUserId;
         setSession(session);
         setLoading(false);
-        if (session?.user) {
-          let wasGuest = false;
-          try { wasGuest = localStorage.getItem(GUEST_KEY) === "1"; } catch { /* ignore */ }
-
-          // Guest data is deliberately local-only and must never be pushed into
-          // an authenticated user's cloud account.
-          if (wasGuest) clearAll();
-
-          try { localStorage.removeItem(GUEST_KEY); } catch { /* ignore */ }
-          setIsGuest(false);
-        }
         if (event === "SIGNED_IN" && session?.user) {
           setTimeout(runHydration, 0);
         }

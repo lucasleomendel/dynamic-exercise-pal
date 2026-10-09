@@ -439,7 +439,17 @@ export async function hydrateFromCloud() {
 /** Chama fullSync se a última sincronização foi há mais de 24h */
 export async function maybeDailySync() {
   const last = Number(localStorage.getItem(LAST_SYNC_KEY) ?? 0);
-  if (Date.now() - last > ONE_DAY_MS) {
-    await fullSync({ silent: true });
+  if (Date.now() - last <= ONE_DAY_MS) return;
+
+  const result = await fullSync({ silent: true });
+  if (!result.ok && result.reason !== "not_authenticated") {
+    // Background sync failures must remain observable instead of being
+    // silently treated as a successful daily sync.
+    console.warn("[FitForge] Sincronização diária incompleta.", result.reason);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("fitforge:sync-error", {
+        detail: { operation: "daily-sync", error: result.reason },
+      }));
+    }
   }
 }

@@ -190,6 +190,8 @@ export function clearAll() {
   localStorage.removeItem("fitforge_profile_ts");
   localStorage.removeItem("fitforge_plan_ts");
   localStorage.removeItem("fitforge_last_sync");
+  // Cache ownership must be re-established by AuthContext after account changes.
+  localStorage.removeItem("fitforge_cache_owner_user_id");
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("fitforge:local-cache-cleared"));
   }

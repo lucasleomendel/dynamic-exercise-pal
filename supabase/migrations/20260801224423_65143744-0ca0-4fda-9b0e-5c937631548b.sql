@@ -6,7 +6,7 @@ SELECT cron.schedule(
   '*/10 * * * *',
   $$
   SELECT net.http_post(
-    url := 'https://lepswwvnbbyilijjldga.supabase.co/functions/v1/job-runner',
+    url := 'https://jscquwhtsjdzripqfugf.supabase.co/functions/v1/job-runner',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'job_runner_secret' LIMIT 1)

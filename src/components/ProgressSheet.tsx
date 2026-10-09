@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { TrendingUp, TrendingDown, Minus, BarChart3, AlertCircle, Flame, Trophy, Target, Zap, Calendar, Award, Dumbbell } from "lucide-react";
-import { ProgressReport, generateProgressReport } from "@/lib/progress";
-import { loadWeights } from "@/lib/storage";
+import { ProgressReport, generateProgressReport, shouldRegenerateReport } from "@/lib/progress";
+import { loadWeights, loadReport, saveReport } from "@/lib/storage";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -33,13 +33,19 @@ const ProgressSheet = () => {
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Regenerate on open for real-time updates
+  // Regenerate on open, mas usa cache se ainda fresco (5 min)
   useEffect(() => {
     if (isOpen) {
       const weights = loadWeights();
       setTotalEntries(weights.length);
-      const fresh = generateProgressReport();
-      setReport(fresh);
+      const cached = loadReport();
+      if (shouldRegenerateReport(cached)) {
+        const fresh = generateProgressReport();
+        setReport(fresh);
+        if (fresh) saveReport(fresh);
+      } else {
+        setReport(cached);
+      }
     }
   }, [isOpen]);
 
@@ -78,7 +84,7 @@ const ProgressSheet = () => {
       </SheetTrigger>
       <SheetContent side="right" className="bg-background border-border overflow-y-auto w-full sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <SheetTitle className="text-foreground" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
             Análise de Progressão
           </SheetTitle>
         </SheetHeader>

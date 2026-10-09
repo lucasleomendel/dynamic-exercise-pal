@@ -85,13 +85,14 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
         </SheetTrigger>
       )}
       <SheetContent side="right" className="bg-background border-border overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Planejador de Dieta
+        <SheetHeader className="border-b border-border pb-3">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold">Nutrição</span>
+          <SheetTitle className="text-foreground font-display text-2xl tracking-wide leading-none" style={{ fontFamily: "'Bebas Neue', 'Barlow', sans-serif" }}>
+            PLANEJADOR DE DIETA
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-5 space-y-4">
           {!plan ? (
             <>
               {/* Activity Level */}

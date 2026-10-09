@@ -1,4 +1,22 @@
-project_id = "lepswwvnbbyilijjldga"
+project_id = "jscquwhtsjdzripqfugf"
 
+# Internal scheduler accepts a dedicated runner secret in addition to the
+# service-role JWT, so its handler performs its own authentication.
 [functions.job-runner]
 verify_jwt = false
+
+# All user-facing functions require a valid Supabase JWT.
+[functions.generate-exercise-images]
+verify_jwt = true
+
+[functions.validate-cref]
+verify_jwt = true
+
+[functions.smart-plan]
+verify_jwt = true
+
+[functions.apply-training-method]
+verify_jwt = true
+
+[functions.ai-chat]
+verify_jwt = true

@@ -42,13 +42,21 @@ const bgAuthenticated = (operation: string, fn: (userId: string) => Promise<unkn
     .then(async ({ data, error }) => {
       if (error || !data.user?.id) return;
       await bg(operation, async () => {
-        // If guest mode was entered while identity resolution was pending,
-        // do not send the captured local data to the cloud.
+        // Re-check guest mode and authenticated identity immediately before
+        // sending data. A logout/account switch may have happened while this
+        // operation was waiting in the background queue.
         try {
           if (localStorage.getItem("fitforge_guest_mode") === "1") return;
         } catch {
           return;
         }
+
+        const { data: currentData, error: currentError } = await supabase.auth.getUser();
+        if (currentError || currentData.user?.id !== data.user.id) {
+          console.warn(`[FitForge] Sincronização cancelada: identidade mudou durante ${operation}.`);
+          return;
+        }
+
         await fn(data.user.id);
       });
     })

@@ -186,7 +186,7 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
             </>
           ) : (
             (() => {
-              const diff = plan.totalCalories - tdee;
+              const diff = plan.targetCalories - tdee;
               const absDiff = Math.abs(diff);
               const pctDiff = Math.round((absDiff / tdee) * 100);
               const isBalanced = absDiff <= 100;
@@ -206,9 +206,10 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
                     <span className="text-[10px] text-muted-foreground"> kcal</span>
                   </div>
                   <div className="rounded-lg bg-secondary/50 p-3 text-center">
-                    <span className="text-[10px] text-muted-foreground block">Dieta Gerada</span>
-                    <span className="text-lg font-bold text-foreground">{plan.totalCalories}</span>
+                    <span className="text-[10px] text-muted-foreground block">Meta da Dieta</span>
+                    <span className="text-lg font-bold text-foreground">{plan.targetCalories}</span>
                     <span className="text-[10px] text-muted-foreground"> kcal</span>
+                    <span className="text-[10px] text-muted-foreground block mt-1">Selecionados: {plan.totalCalories} kcal</span>
                   </div>
                 </div>
               <div className={`rounded-lg p-3 flex items-center gap-2 ${isBalanced ? 'bg-primary/10 border border-primary/30' : isSurplus ? 'bg-accent/10 border border-accent/30' : 'bg-destructive/10 border border-destructive/30'}`}>
@@ -229,14 +230,17 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
                 <div className="rounded-xl bg-secondary/50 p-3 text-center">
                   <span className="text-[10px] text-muted-foreground block">Proteína</span>
                   <span className="text-sm font-bold text-foreground">{plan.totalProtein}g</span>
+                  <span className="text-[10px] text-muted-foreground block">Meta: {plan.targetProtein}g</span>
                 </div>
                 <div className="rounded-xl bg-secondary/50 p-3 text-center">
                   <span className="text-[10px] text-muted-foreground block">Carbos</span>
                   <span className="text-sm font-bold text-foreground">{plan.totalCarbs}g</span>
+                  <span className="text-[10px] text-muted-foreground block">Meta: {plan.targetCarbs}g</span>
                 </div>
                 <div className="rounded-xl bg-secondary/50 p-3 text-center">
                   <span className="text-[10px] text-muted-foreground block">Gordura</span>
                   <span className="text-sm font-bold text-foreground">{plan.totalFat}g</span>
+                  <span className="text-[10px] text-muted-foreground block">Meta: {plan.targetFat}g</span>
                 </div>
               </div>
 

@@ -149,6 +149,20 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
   }, [messages, open]);
 
   useEffect(() => { saveChatHistory(messages); }, [messages]);
+
+  // When auth clears the shared cache, also clear the mounted chat state so
+  // a later render cannot restore another account's conversation to storage.
+  useEffect(() => {
+    const onCacheCleared = () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setIsStreaming(false);
+      setMessages([]);
+      messagesRef.current = [];
+    };
+    window.addEventListener("fitforge:local-cache-cleared", onCacheCleared);
+    return () => window.removeEventListener("fitforge:local-cache-cleared", onCacheCleared);
+  }, []);
   useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
 
   // NOTE: do NOT abort on unmount when streaming — keep AI running in background.

@@ -291,6 +291,18 @@ export function generateDietPlan(profile: DietProfile): DietPlan {
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
   const qualityWarnings: string[] = [];
+  const preferenceTerms = profile.preferences.map(value => value.trim().toLocaleLowerCase()).filter(Boolean);
+  if (preferenceTerms.length > 0) {
+    const categories = [filteredProteins, filteredCarbs, filteredFats, filteredVeggies];
+    const hasFallbackCategory = categories.some(category =>
+      category.length > 0 && !category.some(food =>
+        preferenceTerms.some(term => food.item.toLocaleLowerCase().includes(term)),
+      ),
+    );
+    if (hasFallbackCategory) {
+      qualityWarnings.push('Algumas preferências alimentares não têm correspondência em todos os grupos de alimentos; nesses grupos, foram usadas outras opções compatíveis.');
+    }
+  }
   if (filteredProteins.length === 0) {
     qualityWarnings.push('Atenção: não foi encontrada uma fonte de proteína compatível com as restrições e alimentos evitados; algumas refeições podem ficar incompletas.');
   }

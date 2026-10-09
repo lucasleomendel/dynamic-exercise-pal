@@ -77,7 +77,8 @@ describe("workout generator", () => {
 
     expect(strengthExercises.length).toBeGreaterThan(0);
     expect(hypertrophyExercises.length).toBeGreaterThan(0);
-    expect(strengthExercises.every(ex => ["3-6", "6-10"].includes(ex.reps))).toBe(true);
+    // Main lifts use 3-6 reps, compound accessories 6-10, and isolations 8-12.
+    expect(strengthExercises.every(ex => ["3-6", "6-10", "8-12"].includes(ex.reps))).toBe(true);
     expect(strengthExercises.some(ex => ex.reps === "3-6")).toBe(true);
     expect(strengthExercises.some(ex => ex.rest === "180s")).toBe(true);
     expect(hypertrophyExercises.some(ex => ex.reps === "10-15")).toBe(true);

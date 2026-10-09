@@ -1,73 +1,51 @@
-# Welcome to your Lovable project
+# FitForge
 
-## Project info
+Aplicação de planejamento de treinos personalizados, acompanhamento de progresso e hidratação, construída com React, TypeScript, Vite e Supabase.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+- **Aplicação publicada:** https://dynamic-exercise-pal.lovable.app
+- **Projeto Lovable:** https://lovable.dev/projects/c2ba9560-bd20-48d7-a5b0-f2651063d841
+- **Repositório:** https://github.com/lucasleomendel/dynamic-exercise-pal
 
-## How can I edit this code?
+## Desenvolvimento local
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requisitos: Node.js 22 e npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+git clone https://github.com/lucasleomendel/dynamic-exercise-pal.git
+cd dynamic-exercise-pal
+npm ci
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Variáveis de ambiente
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Crie um arquivo `.env` local com as configurações do seu projeto Supabase. Use `.env.example` como referência e mantenha valores específicos da sua instalação fora do controle de versão.
 
-**Use GitHub Codespaces**
+Variáveis esperadas pelo cliente:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-## What technologies are used for this project?
+Nunca coloque chaves `service_role`, tokens privados ou segredos no frontend, em arquivos versionados ou em logs.
 
-This project is built with:
+## Verificações
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```sh
+npm test
+npm run lint
+npm run build
+npm audit --omit=dev --audit-level=high
+```
 
-## How can I deploy this project?
+O workflow **FitForge CI** executa testes, lint, build de produção e auditoria de dependências de produção em cada pull request para `main`. Atualizações de dependências devem ser feitas explicitamente em commits revisáveis; o CI não deve escrever no repositório.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Sincronização com a nuvem
 
-## Can I connect a custom domain to my Lovable project?
+A sincronização atual é implementada em `src/lib/cloud-sync.ts`. O documento histórico `LOVABLE_SYNC_SETUP.md` está obsoleto e não descreve o fluxo atual.
 
-Yes, you can!
+## Segurança e publicação
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- Mudanças são revisadas em pull requests antes de chegar à branch `main`.
+- Não faça merge enquanto o CI/preview não estiver verde e as alterações não forem revisadas.
+- A proteção contra senhas vazadas deve ser habilitada nas configurações do Supabase Auth.
+- Se uma chave privilegiada tiver sido exposta no histórico do repositório, revogue-a/rotacione-a no painel do Supabase e verifique os logs de uso. Remover a chave de um commit posterior não invalida a chave exposta.

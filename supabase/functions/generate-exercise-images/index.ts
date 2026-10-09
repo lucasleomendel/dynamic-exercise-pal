@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
 
   // Geração de imagens consome créditos e altera a biblioteca global:
   // somente master_admin ou o runner interno pode dispará-la.
-  const auth = req.headers.get("authorization")?.replace(/^Bearer\\s+/i, "").trim() ?? "";
+  const auth = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ?? "";
   if (!auth) {
     return new Response(JSON.stringify({ error: "unauthenticated" }), {
       status: 401, headers: { ...getCors(req), "Content-Type": "application/json" },

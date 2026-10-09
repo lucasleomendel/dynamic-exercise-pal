@@ -61,7 +61,7 @@ async function isCurrentUser(userId: string): Promise<boolean> {
 /* ============ PROFILE ============ */
 export async function syncProfile(profile?: UserProfile | null, userId?: string | null) {
   const uid = await resolveUserId(userId);
-  if (!uid) return;
+  if (!uid || !(await isCurrentUser(uid))) return;
   const p = profile ?? loadProfile();
   if (!p) return;
   const safeProfile = normalizeUserProfile(p);
@@ -122,12 +122,14 @@ export async function pullProfile(): Promise<UserProfile | null> {
 /* ============ PLAN ============ */
 export async function syncPlan(plan?: WorkoutPlan | null, userId?: string | null) {
   const uid = await resolveUserId(userId);
-  if (!uid) return;
+  if (!uid || !(await isCurrentUser(uid))) return;
   const p = plan ?? loadPlan();
   if (!p) return;
 
   // Replace the active plan atomically on the server. This avoids losing the
   // active plan if inserting its replacement fails, and serializes concurrent syncs.
+  // The RPC acts on auth.uid(); reject stale identities before invoking it.
+  if (!(await isCurrentUser(uid))) return;
   const { error: syncError } = await supabase.rpc("sync_active_workout_plan", {
     p_title: p.title,
     p_description: p.description ?? null,
@@ -138,6 +140,8 @@ export async function syncPlan(plan?: WorkoutPlan | null, userId?: string | null
 
   // Clean up old inactive plans (> 30 days) only after the replacement
   // was inserted successfully.
+  // The account may change while the RPC is in flight. Recheck before cleanup.
+  if (!(await isCurrentUser(uid))) return;
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const { error: cleanupError } = await supabase
     .from("workout_plans")
@@ -170,7 +174,7 @@ export async function pullPlan(): Promise<WorkoutPlan | null> {
 /* ============ WEIGHTS ============ */
 export async function syncWeights(weights?: WeightEntry[], userId?: string | null) {
   const uid = await resolveUserId(userId);
-  if (!uid) return;
+  if (!uid || !(await isCurrentUser(uid))) return;
   const list = weights ?? loadWeights();
   if (!list.length) return;
 
@@ -191,7 +195,7 @@ export async function syncWeights(weights?: WeightEntry[], userId?: string | nul
 /* ============ HISTORY ============ */
 export async function syncHistory(history?: WorkoutHistoryEntry[], userId?: string | null) {
   const uid = await resolveUserId(userId);
-  if (!uid) return;
+  if (!uid || !(await isCurrentUser(uid))) return;
   const list = history ?? loadWorkoutHistory();
   if (!list.length) return;
 
@@ -211,7 +215,7 @@ export async function syncHistory(history?: WorkoutHistoryEntry[], userId?: stri
 /* ============ BODY COMP ============ */
 export async function syncBodyComp(data?: BodyCompData | null, userId?: string | null) {
   const uid = await resolveUserId(userId);
-  if (!uid) return;
+  if (!uid || !(await isCurrentUser(uid))) return;
   const bc = data ?? loadBodyComp();
   if (!bc?.result) return;
 
@@ -235,7 +239,7 @@ export async function syncBodyComp(data?: BodyCompData | null, userId?: string |
 /* ============ EXERCISE CHECKS ============ */
 export async function syncChecks(userId?: string | null) {
   const uid = await resolveUserId(userId);
-  if (!uid) return;
+  if (!uid || !(await isCurrentUser(uid))) return;
   const checks = loadChecked();
   const { error } = await supabase.from("exercise_checks").upsert({
     user_id: uid,
@@ -271,7 +275,7 @@ export async function syncWater(
   userId?: string | null,
 ) {
   const uid = await resolveUserId(userId);
-  if (!uid) return;
+  if (!uid || !(await isCurrentUser(uid))) return;
   const amountMl = Math.max(0, Math.round(state.glasses * 250));
   const { error } = await supabase.from("water_logs").upsert({
     user_id: uid,

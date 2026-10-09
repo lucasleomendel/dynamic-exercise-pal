@@ -190,4 +190,7 @@ export function clearAll() {
   localStorage.removeItem("fitforge_profile_ts");
   localStorage.removeItem("fitforge_plan_ts");
   localStorage.removeItem("fitforge_last_sync");
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("fitforge:local-cache-cleared"));
+  }
 }

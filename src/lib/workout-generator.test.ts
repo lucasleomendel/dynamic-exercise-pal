@@ -128,6 +128,26 @@ describe("workout generator", () => {
     )).toBe(true);
   });
 
+  it("conservatively excludes pressing movements for shoulder and elbow restrictions", () => {
+    for (const injury of ["ombro", "cotovelo"] as const) {
+      const plan = generateWorkout({
+        ...baseProfile,
+        selectedMuscles: ["peito", "triceps"],
+        injuries: [injury],
+      });
+      const names = plan.days.flatMap(day => day.exercises.map(ex => ex.name));
+      expect(names.every(name =>
+        !["Supino", "Flexão", "Crossover", "Pullover", "Chest Press", "Mergulho"].some(blocked => name.includes(blocked))
+      )).toBe(true);
+    }
+  });
+
+  it("explains that restriction filtering is conservative and not clinical clearance", () => {
+    const plan = generateWorkout({ ...baseProfile, injuries: ["ombro"] });
+    expect(plan.description).toContain("não garante segurança clínica");
+    expect(plan.description).toContain("Não treine movimentos que provoquem dor");
+  });
+
   it("warns when physical restrictions leave one or more training days empty", () => {
     const plan = generateWorkout({
       ...baseProfile,

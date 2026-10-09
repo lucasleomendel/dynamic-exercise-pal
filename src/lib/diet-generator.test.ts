@@ -83,6 +83,20 @@ describe('generateDietPlan', () => {
     expect(plan.tips.some(tip => tip.includes('fonte de proteína compatível'))).toBe(true);
   });
 
+  it('warns that gluten and lactose filters do not guarantee allergen safety', () => {
+    const glutenPlan = generateDietPlan({ ...baseProfile, restrictions: ['sem_gluten'] });
+    const lactosePlan = generateDietPlan({ ...baseProfile, restrictions: ['sem_lactose'] });
+
+    expect(glutenPlan.tips.some(tip => tip.includes('não garantem ausência de alérgenos'))).toBe(true);
+    expect(lactosePlan.tips.some(tip => tip.includes('não garantem ausência de alérgenos'))).toBe(true);
+  });
+
+  it('does not show allergen-specific caution when no related restriction is selected', () => {
+    const plan = generateDietPlan(baseProfile);
+
+    expect(plan.tips.some(tip => tip.includes('não garantem ausência de alérgenos'))).toBe(false);
+  });
+
   it('selects only vegan-tagged foods when vegan restriction is active', () => {
     const plan = generateDietPlan({ ...baseProfile, restrictions: ['vegano'] });
     const names = plan.meals.flatMap(meal => meal.foods.map(food => food.item));

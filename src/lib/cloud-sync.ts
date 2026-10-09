@@ -391,7 +391,9 @@ async function resolveProfileConflict() {
       console.warn("[FitForge] Ignoring invalid cloud profile during conflict resolution.");
     }
   } else if (localTs > cloudTs && localProfile) {
-    await syncProfile(localProfile);
+    // Keep the write bound to the account whose cloud timestamp was read.
+    // Resolving the current session again here could write this cache to a different account.
+    await syncProfile(localProfile, userId);
   }
 }
 
@@ -416,7 +418,8 @@ async function resolvePlanConflict() {
     savePlan(data.plan_data as unknown as WorkoutPlan);
     localStorage.setItem(PLAN_TS_KEY, String(cloudTs));
   } else if (localTs > cloudTs && localPlan) {
-    await syncPlan(localPlan);
+    // Keep the write bound to the account whose active plan was read.
+    await syncPlan(localPlan, userId);
   }
 }
 

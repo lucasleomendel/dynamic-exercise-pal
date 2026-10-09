@@ -54,11 +54,12 @@ export async function syncProfile(profile?: UserProfile | null, userId?: string 
 export async function pullProfile(): Promise<UserProfile | null> {
   const userId = await getUserId();
   if (!userId) return null;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
+  if (error) throw error;
   if (!data || !data.name) return null;
   const candidate: UserProfile = {
     name: data.name,
@@ -140,7 +141,7 @@ export async function syncPlan(plan?: WorkoutPlan | null, userId?: string | null
 export async function pullPlan(): Promise<WorkoutPlan | null> {
   const userId = await getUserId();
   if (!userId) return null;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("workout_plans")
     .select("plan_data")
     .eq("user_id", userId)
@@ -148,6 +149,7 @@ export async function pullPlan(): Promise<WorkoutPlan | null> {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error) throw error;
   if (!data?.plan_data) return null;
   const plan = data.plan_data as unknown as WorkoutPlan;
   savePlan(plan);
@@ -234,11 +236,12 @@ export async function syncChecks(userId?: string | null) {
 export async function pullChecks() {
   const userId = await getUserId();
   if (!userId) return;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("exercise_checks")
     .select("checks_data")
     .eq("user_id", userId)
     .maybeSingle();
+  if (error) throw error;
   if (data?.checks_data) {
     saveChecked(data.checks_data as Record<string, boolean>);
   }
@@ -351,11 +354,12 @@ async function resolveProfileConflict() {
   if (!userId) return;
   const localProfile = loadProfile();
   const localTs = Number(localStorage.getItem(PROFILE_TS_KEY) ?? 0);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
-.select("updated_at,name,age,weight,height,sex,goal,level,days_per_week,hours_per_session,selected_muscles,split_legs,injuries")
+    .select("updated_at,name,age,weight,height,sex,goal,level,days_per_week,hours_per_session,selected_muscles,split_legs,injuries")
     .eq("user_id", userId)
     .maybeSingle();
+  if (error) throw error;
   const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
 
   if (!data?.name && !localProfile) return;
@@ -393,7 +397,7 @@ async function resolvePlanConflict() {
   if (!userId) return;
   const localPlan = loadPlan();
   const localTs = Number(localStorage.getItem(PLAN_TS_KEY) ?? 0);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("workout_plans")
     .select("plan_data,updated_at")
     .eq("user_id", userId)
@@ -401,6 +405,7 @@ async function resolvePlanConflict() {
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error) throw error;
   const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
 
   if (!data?.plan_data && !localPlan) return;
@@ -415,11 +420,12 @@ async function resolvePlanConflict() {
 async function resolveChecksConflict() {
   const userId = await getUserId();
   if (!userId) return;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("exercise_checks")
     .select("checks_data,updated_at")
     .eq("user_id", userId)
     .maybeSingle();
+  if (error) throw error;
   const local = loadChecked();
   const cloudTs = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
   // Se há um registro cloud com timestamp, ele é a fonte mais recente.
@@ -436,11 +442,21 @@ async function resolveChecksConflict() {
 export async function hydrateFromCloud() {
   const userId = await getUserId();
   if (!userId) return;
-  await Promise.allSettled([
-    resolveProfileConflict(),
-    resolvePlanConflict(),
-    resolveChecksConflict(),
-  ]);
+
+  const operations = [
+    ["hydrate-profile", resolveProfileConflict],
+    ["hydrate-plan", resolvePlanConflict],
+    ["hydrate-checks", resolveChecksConflict],
+  ] as const;
+  const results = await Promise.allSettled(operations.map(([, operation]) => operation()));
+  results.forEach((result, index) => {
+    if (result.status !== "rejected") return;
+    const [operation] = operations[index];
+    console.warn(`[FitForge] Falha na hidratação da nuvem: ${operation}`, result.reason);
+    window.dispatchEvent(new CustomEvent("fitforge:sync-error", {
+      detail: { operation, error: result.reason },
+    }));
+  });
 }
 
 /* ============ DAILY AUTO-SYNC ============ */

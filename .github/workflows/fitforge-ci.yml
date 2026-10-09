@@ -9,8 +9,9 @@ on:
     branches:
       - main
 
+# CI validates untrusted pull-request code and must not have write access.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: fitforge-ci-${{ github.ref }}
@@ -30,26 +31,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Apply compatible dependency security fixes
-        if: github.event_name == 'push'
-        run: npm audit fix --package-lock-only || true
-
-      - name: Reconcile npm lockfile
-        run: npm install --package-lock-only
-
-      - name: Commit dependency lockfile updates
-        if: github.event_name == 'push'
-        run: |
-          if git diff --quiet -- package-lock.json package.json; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json package.json
-          git commit -m "chore: update dependency security fixes"
-          git push
-
-      - name: Install dependencies
+      # Keep dependency changes explicit and reviewable in a normal PR.
+      - name: Install dependencies from lockfile
         run: npm ci
 
       - name: Production dependency audit

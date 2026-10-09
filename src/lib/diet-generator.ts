@@ -11,6 +11,33 @@ export interface DietProfile {
   dislikes: string[];
 }
 
+export function validateDietProfile(profile: Partial<DietProfile>): string[] {
+  const errors: string[] = [];
+  if (!Number.isFinite(profile.weight) || (profile.weight as number) < 25 || (profile.weight as number) > 350) {
+    errors.push('Peso deve estar entre 25 e 350 kg.');
+  }
+  if (!Number.isFinite(profile.height) || (profile.height as number) < 120 || (profile.height as number) > 230) {
+    errors.push('Altura deve estar entre 120 e 230 cm.');
+  }
+  if (!Number.isFinite(profile.age) || (profile.age as number) < 13 || (profile.age as number) > 100) {
+    errors.push('Idade deve estar entre 13 e 100 anos.');
+  }
+  if (!['masculino', 'feminino'].includes(profile.sex ?? '')) errors.push('Sexo inválido.');
+  if (!['hipertrofia', 'emagrecimento', 'resistencia', 'forca'].includes(profile.goal ?? '')) errors.push('Objetivo inválido.');
+  if (!['sedentario', 'leve', 'moderado', 'intenso', 'muito_intenso'].includes(profile.activityLevel ?? '')) {
+    errors.push('Nível de atividade inválido.');
+  }
+  if (!Number.isFinite(profile.mealsPerDay) || !Number.isInteger(profile.mealsPerDay) || (profile.mealsPerDay as number) < 1 || (profile.mealsPerDay as number) > 12) {
+    errors.push('Número de refeições deve ser um inteiro entre 1 e 12.');
+  }
+  for (const field of ['restrictions', 'preferences', 'dislikes'] as const) {
+    if (!Array.isArray(profile[field]) || profile[field]?.some(value => typeof value !== 'string')) {
+      errors.push(`O campo ${field} deve ser uma lista de textos.`);
+    }
+  }
+  return errors;
+}
+
 export interface Meal {
   name: string;
   time: string;
@@ -190,6 +217,11 @@ const mealTimes: Record<number, { name: string; time: string }[]> = {
 };
 
 export function generateDietPlan(profile: DietProfile): DietPlan {
+  const validationErrors = validateDietProfile(profile);
+  if (validationErrors.length > 0) {
+    throw new Error(validationErrors.join(' '));
+  }
+
   const tdee = calculateTDEE(profile);
   const adjustment = getCalorieAdjustment(profile.goal);
   const targetCalories = tdee + adjustment;

@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const hydratedRef = useRef(false);
+  const activeUserIdRef = useRef<string | null>(null);
 
   const runHydration = () => {
     if (hydratedRef.current) return;
@@ -50,6 +51,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        const nextUserId = session?.user?.id ?? null;
+        const previousUserId = activeUserIdRef.current;
+        // If the browser changes accounts without an explicit sign-out, discard
+        // the previous account's shared local cache before hydrating the new one.
+        if (previousUserId && nextUserId && previousUserId !== nextUserId) {
+          clearAll();
+          hydratedRef.current = false;
+        }
+        activeUserIdRef.current = nextUserId;
         setSession(session);
         setLoading(false);
         if (session?.user) {

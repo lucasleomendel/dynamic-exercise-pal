@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateDietPlan, type DietProfile } from './diet-generator';
+import { generateDietPlan, validateDietProfile, type DietProfile } from './diet-generator';
 
 const baseProfile: DietProfile = {
   goal: 'hipertrofia',
@@ -13,6 +13,29 @@ const baseProfile: DietProfile = {
   preferences: [],
   dislikes: [],
 };
+
+describe('diet profile validation', () => {
+  it('rejects invalid body measurements, age, activity level and meal count', () => {
+    const errors = validateDietProfile({
+      ...baseProfile,
+      weight: 0,
+      height: 300,
+      age: 0,
+      activityLevel: 'invalid' as DietProfile['activityLevel'],
+      mealsPerDay: 0,
+    });
+
+    expect(errors).toContain('Peso deve estar entre 25 e 350 kg.');
+    expect(errors).toContain('Altura deve estar entre 120 e 230 cm.');
+    expect(errors).toContain('Idade deve estar entre 13 e 100 anos.');
+    expect(errors).toContain('Nível de atividade inválido.');
+    expect(errors).toContain('Número de refeições deve ser um inteiro entre 1 e 6.');
+  });
+
+  it('prevents generating nutrition targets from an invalid profile', () => {
+    expect(() => generateDietPlan({ ...baseProfile, weight: Number.NaN })).toThrow('Peso deve estar entre 25 e 350 kg.');
+  });
+});
 
 describe('generateDietPlan', () => {
   it('returns daily totals equal to the sum of its meals and foods', () => {

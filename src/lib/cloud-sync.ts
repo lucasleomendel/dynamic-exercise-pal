@@ -92,39 +92,15 @@ export async function syncPlan(plan?: WorkoutPlan | null, userId?: string | null
   const p = plan ?? loadPlan();
   if (!p) return;
 
-  // Avoid creating a new historical row on every background sync when the
-  // active plan has not changed.
-  const { data: activePlan, error: activePlanError } = await supabase
-    .from("workout_plans")
-    .select("id,plan_data")
-    .eq("user_id", uid)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (activePlanError) throw activePlanError;
-
-  const samePlan = activePlan?.plan_data != null
-    && JSON.stringify(activePlan.plan_data) === JSON.stringify(p);
-
-  if (samePlan) return;
-
-  const { error: deactivateError } = await supabase
-    .from("workout_plans")
-    .update({ is_active: false })
-    .eq("user_id", uid)
-    .eq("is_active", true);
-  if (deactivateError) throw deactivateError;
-
-  const { error: insertError } = await supabase.from("workout_plans").insert({
-    user_id: uid,
-    title: p.title,
-    description: p.description,
-    days_per_week: p.daysPerWeek,
-    plan_data: p as any,
-    is_active: true,
+  // Replace the active plan atomically on the server. This avoids losing the
+  // active plan if inserting its replacement fails, and serializes concurrent syncs.
+  const { error: syncError } = await supabase.rpc("sync_active_workout_plan", {
+    p_title: p.title,
+    p_description: p.description ?? null,
+    p_days_per_week: p.daysPerWeek,
+    p_plan_data: p,
   });
-  if (insertError) throw insertError;
+  if (syncError) throw syncError;
 
   // Clean up old inactive plans (> 30 days) only after the replacement
   // was inserted successfully.

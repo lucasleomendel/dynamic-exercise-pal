@@ -79,7 +79,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        maybeDailySync().catch(() => {});
+        maybeDailySync().catch((error) => {
+          console.warn("[FitForge] Falha ao retomar sincronização diária.", error);
+          window.dispatchEvent(new CustomEvent("fitforge:sync-error", {
+            detail: { operation: "visibility-daily-sync", error },
+          }));
+        });
       }
     };
     document.addEventListener("visibilitychange", onVisible);

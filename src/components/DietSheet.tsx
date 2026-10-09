@@ -191,6 +191,16 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
               const foodGapPct = plan.targetCalories > 0
                 ? Math.round((Math.abs(foodGap) / plan.targetCalories) * 100)
                 : 0;
+              const macroGaps = [
+                { label: 'proteína', actual: plan.totalProtein, target: plan.targetProtein },
+                { label: 'carboidratos', actual: plan.totalCarbs, target: plan.targetCarbs },
+                { label: 'gorduras', actual: plan.totalFat, target: plan.targetFat },
+              ].filter(macro => macro.target > 0 && Math.abs(macro.actual - macro.target) / macro.target > 0.15)
+                .map(macro => ({
+                  ...macro,
+                  percentage: Math.round((Math.abs(macro.actual - macro.target) / macro.target) * 100),
+                  direction: macro.actual < macro.target ? 'abaixo' : 'acima',
+                }));
               const absDiff = Math.abs(diff);
               const pctDiff = Math.round((absDiff / tdee) * 100);
               const isBalanced = absDiff <= 100;
@@ -235,6 +245,16 @@ const DietSheet = ({ goal, weight, height, age, sex, open, onOpenChange }: Props
                   <span className="block mt-1">
                     Os alimentos selecionados somam {plan.totalCalories} kcal, {Math.abs(foodGap)} kcal ({foodGapPct}%) {foodGap < 0 ? 'abaixo' : 'acima'} da meta de {plan.targetCalories} kcal.
                     Os valores são estimativas; ajuste as porções e confirme os dados nutricionais antes de seguir o plano.
+                  </span>
+                </div>
+              )}
+
+              {macroGaps.length > 0 && (
+                <div className="rounded-lg border border-accent/40 bg-accent/10 p-3 text-xs text-foreground" role="status">
+                  <span className="font-semibold block">Atenção: macros diferentes das metas</span>
+                  <span className="block mt-1">
+                    {macroGaps.map(macro => `${macro.label}: ${macro.actual}g, ${macro.percentage}% ${macro.direction} da meta de ${macro.target}g`).join('; ')}.
+                    As metas são estimativas e os alimentos selecionados ainda não foram ajustados automaticamente para alcançá-las.
                   </span>
                 </div>
               )}

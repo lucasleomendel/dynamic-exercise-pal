@@ -65,6 +65,17 @@ describe('generateDietPlan', () => {
     expect(names).not.toContain('Queijo minas');
   });
 
+  it('warns when restrictions and dislikes leave a required food category empty', () => {
+    const plan = generateDietPlan({
+      ...baseProfile,
+      restrictions: ['vegetariano'],
+      dislikes: ['ovos', 'tofu', 'iogurte', 'cottage', 'whey'],
+    });
+
+    expect(plan.meals.filter(meal => meal.name === 'Almoço').every(meal => meal.foods.length < 4)).toBe(true);
+    expect(plan.tips.some(tip => tip.includes('fonte de proteína compatível'))).toBe(true);
+  });
+
   it('selects only vegan-tagged foods when vegan restriction is active', () => {
     const plan = generateDietPlan({ ...baseProfile, restrictions: ['vegano'] });
     const names = plan.meals.flatMap(meal => meal.foods.map(food => food.item));

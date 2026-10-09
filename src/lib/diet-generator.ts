@@ -290,6 +290,20 @@ export function generateDietPlan(profile: DietProfile): DietPlan {
     fat: totals.fat + meal.totalFat,
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
+  const qualityWarnings: string[] = [];
+  if (filteredProteins.length === 0) {
+    qualityWarnings.push('Atenção: não foi encontrada uma fonte de proteína compatível com as restrições e alimentos evitados; algumas refeições podem ficar incompletas.');
+  }
+  if (filteredCarbs.length === 0) {
+    qualityWarnings.push('Atenção: não foi encontrada uma fonte de carboidratos compatível; algumas refeições podem ficar incompletas.');
+  }
+  if (filteredFats.length === 0 && mealSlots.some(slot => slot.name === 'Almoço' || slot.name === 'Jantar' || slot.name === 'Café da Manhã')) {
+    qualityWarnings.push('Atenção: não foi encontrada uma fonte de gordura compatível; algumas refeições podem ficar incompletas.');
+  }
+  if (filteredVeggies.length === 0 && mealSlots.some(slot => slot.name === 'Almoço' || slot.name === 'Jantar')) {
+    qualityWarnings.push('Atenção: não foi encontrado um vegetal compatível para almoço/jantar; essas refeições podem ficar incompletas.');
+  }
+
   return {
     totalCalories: actualTotals.calories,
     totalProtein: actualTotals.protein,
@@ -300,6 +314,6 @@ export function generateDietPlan(profile: DietProfile): DietPlan {
     targetCarbs: totalCarbs,
     targetFat: totalFat,
     meals,
-    tips: goalTips[profile.goal] || goalTips.hipertrofia,
+    tips: [...(goalTips[profile.goal] || goalTips.hipertrofia), ...qualityWarnings],
   };
 }

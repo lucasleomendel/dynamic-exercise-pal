@@ -36,10 +36,29 @@ const INJURY_KEYWORDS: Record<string, string[]> = {
   tornozelo: ["Agachamento", "Leg Press", "Avanço", "Passada", "Búlgaro", "Sissy", "Panturrilha", "Mountain Climber"],
 };
 
+function normalizeForMatching(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function exerciseBlocked(name: string, injuries: unknown[]): boolean {
-  return injuries.some((injury) =>
-    typeof injury === "string" && (INJURY_KEYWORDS[injury] ?? []).some((keyword) => name.includes(keyword))
-  );
+  const normalizedName = normalizeForMatching(name);
+  return injuries.some((injury) => {
+    if (typeof injury !== "string") return false;
+    const key = normalizeForMatching(injury);
+    const canonicalKey = Object.keys(INJURY_KEYWORDS).find(
+      (candidate) => normalizeForMatching(candidate) === key,
+    );
+    if (!canonicalKey) return false;
+    return INJURY_KEYWORDS[canonicalKey].some((keyword) => {
+      const normalizedKeyword = normalizeForMatching(keyword);
+      return normalizedName.includes(normalizedKeyword);
+    });
+  });
 }
 
 function estimateMinutes(exercise: any): number {

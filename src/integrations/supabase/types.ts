@@ -14,30 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      achievements: {
-        Row: {
-          achievement_id: string
-          earned_at: string | null
-          id: string
-          progress: Json | null
-          user_id: string | null
-        }
-        Insert: {
-          achievement_id: string
-          earned_at?: string | null
-          id?: string
-          progress?: Json | null
-          user_id?: string | null
-        }
-        Update: {
-          achievement_id?: string
-          earned_at?: string | null
-          id?: string
-          progress?: Json | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       audit_log: {
         Row: {
           action: string
@@ -178,6 +154,9 @@ export type Database = {
           difficulty: string | null
           equipment: string | null
           id: string
+          image_attempts: number
+          image_last_error: string | null
+          image_last_try: string | null
           image_url: string | null
           last_verified_at: string | null
           muscle_group: string
@@ -199,6 +178,9 @@ export type Database = {
           difficulty?: string | null
           equipment?: string | null
           id?: string
+          image_attempts?: number
+          image_last_error?: string | null
+          image_last_try?: string | null
           image_url?: string | null
           last_verified_at?: string | null
           muscle_group: string
@@ -220,6 +202,9 @@ export type Database = {
           difficulty?: string | null
           equipment?: string | null
           id?: string
+          image_attempts?: number
+          image_last_error?: string | null
+          image_last_try?: string | null
           image_url?: string | null
           last_verified_at?: string | null
           muscle_group?: string
@@ -302,48 +287,6 @@ export type Database = {
         }
         Relationships: []
       }
-      nutrition_logs: {
-        Row: {
-          created_at: string | null
-          date: string | null
-          foods: Json
-          id: string
-          meal_type: string | null
-          notes: string | null
-          total_calories: number
-          total_carbs: number
-          total_fats: number
-          total_protein: number
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          date?: string | null
-          foods?: Json
-          id?: string
-          meal_type?: string | null
-          notes?: string | null
-          total_calories: number
-          total_carbs: number
-          total_fats: number
-          total_protein: number
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          date?: string | null
-          foods?: Json
-          id?: string
-          meal_type?: string | null
-          notes?: string | null
-          total_calories?: number
-          total_carbs?: number
-          total_fats?: number
-          total_protein?: number
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       personal_student_links: {
         Row: {
           created_at: string | null
@@ -375,21 +318,15 @@ export type Database = {
       }
       profiles: {
         Row: {
-          injuries: string[]
-
           advanced_mode: boolean | null
           age: number | null
           avatar_url: string | null
           birth_date: string | null
           cpf: string | null
-          created_at: string | null
+          created_at: string
           days_per_week: number | null
           email: string | null
-          fitness_level: string | null
-          full_name: string | null
-          gender: string | null
           goal: string | null
-          goals: Json | null
           height: number | null
           hours_per_session: number | null
           id: string
@@ -397,33 +334,24 @@ export type Database = {
           level: string | null
           name: string | null
           phone: string | null
-          preferences: Json | null
           selected_muscles: string[] | null
           sex: string | null
           split_legs: boolean | null
-          subscription_expires_at: string | null
-          subscription_tier: string | null
           training_method: string | null
-          updated_at: string | null
+          updated_at: string
           user_id: string
           weight: number | null
         }
         Insert: {
-          injuries?: string[]
-
           advanced_mode?: boolean | null
           age?: number | null
           avatar_url?: string | null
           birth_date?: string | null
           cpf?: string | null
-          created_at?: string | null
+          created_at?: string
           days_per_week?: number | null
           email?: string | null
-          fitness_level?: string | null
-          full_name?: string | null
-          gender?: string | null
           goal?: string | null
-          goals?: Json | null
           height?: number | null
           hours_per_session?: number | null
           id?: string
@@ -431,33 +359,24 @@ export type Database = {
           level?: string | null
           name?: string | null
           phone?: string | null
-          preferences?: Json | null
           selected_muscles?: string[] | null
           sex?: string | null
           split_legs?: boolean | null
-          subscription_expires_at?: string | null
-          subscription_tier?: string | null
           training_method?: string | null
-          updated_at?: string | null
+          updated_at?: string
           user_id: string
           weight?: number | null
         }
         Update: {
-          injuries?: string[]
-
           advanced_mode?: boolean | null
           age?: number | null
           avatar_url?: string | null
           birth_date?: string | null
           cpf?: string | null
-          created_at?: string | null
+          created_at?: string
           days_per_week?: number | null
           email?: string | null
-          fitness_level?: string | null
-          full_name?: string | null
-          gender?: string | null
           goal?: string | null
-          goals?: Json | null
           height?: number | null
           hours_per_session?: number | null
           id?: string
@@ -465,66 +384,12 @@ export type Database = {
           level?: string | null
           name?: string | null
           phone?: string | null
-          preferences?: Json | null
           selected_muscles?: string[] | null
           sex?: string | null
           split_legs?: boolean | null
-          subscription_expires_at?: string | null
-          subscription_tier?: string | null
           training_method?: string | null
-          updated_at?: string | null
+          updated_at?: string
           user_id?: string
-          weight?: number | null
-        }
-        Relationships: []
-      }
-      progress_metrics: {
-        Row: {
-          arms: number | null
-          body_fat: number | null
-          chest: number | null
-          created_at: string | null
-          date: string | null
-          hips: number | null
-          id: string
-          muscle_mass: number | null
-          notes: string | null
-          photos: string[] | null
-          thighs: number | null
-          user_id: string | null
-          waist: number | null
-          weight: number | null
-        }
-        Insert: {
-          arms?: number | null
-          body_fat?: number | null
-          chest?: number | null
-          created_at?: string | null
-          date?: string | null
-          hips?: number | null
-          id?: string
-          muscle_mass?: number | null
-          notes?: string | null
-          photos?: string[] | null
-          thighs?: number | null
-          user_id?: string | null
-          waist?: number | null
-          weight?: number | null
-        }
-        Update: {
-          arms?: number | null
-          body_fat?: number | null
-          chest?: number | null
-          created_at?: string | null
-          date?: string | null
-          hips?: number | null
-          id?: string
-          muscle_mass?: number | null
-          notes?: string | null
-          photos?: string[] | null
-          thighs?: number | null
-          user_id?: string | null
-          waist?: number | null
           weight?: number | null
         }
         Relationships: []
@@ -904,32 +769,6 @@ export type Database = {
         }
         Relationships: []
       }
-      workout_likes: {
-        Row: {
-          created_at: string
-          user_id: string
-          workout_id: string
-        }
-        Insert: {
-          created_at?: string
-          user_id: string
-          workout_id: string
-        }
-        Update: {
-          created_at?: string
-          user_id?: string
-          workout_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workout_likes_workout_id_fkey"
-            columns: ["workout_id"]
-            isOneToOne: false
-            referencedRelation: "workouts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       workout_plans: {
         Row: {
           created_at: string
@@ -948,7 +787,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
-          plan_data?: Json
+          plan_data: Json
           title: string
           updated_at?: string
           user_id: string
@@ -966,122 +805,51 @@ export type Database = {
         }
         Relationships: []
       }
-      workout_sessions: {
+    }
+    Views: {
+      job_alerts: {
         Row: {
-          calories_burned: number | null
-          created_at: string | null
-          duration: number | null
-          ended_at: string | null
-          exercises_completed: Json
-          id: string
-          mood: number | null
-          notes: string | null
+          attempt: number | null
+          error_message: string | null
+          finished_at: string | null
+          id: string | null
+          job_name: string | null
           started_at: string | null
-          user_id: string | null
-          workout_id: string | null
+          status: string | null
         }
         Insert: {
-          calories_burned?: number | null
-          created_at?: string | null
-          duration?: number | null
-          ended_at?: string | null
-          exercises_completed?: Json
-          id?: string
-          mood?: number | null
-          notes?: string | null
+          attempt?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string | null
+          job_name?: string | null
           started_at?: string | null
-          user_id?: string | null
-          workout_id?: string | null
+          status?: string | null
         }
         Update: {
-          calories_burned?: number | null
-          created_at?: string | null
-          duration?: number | null
-          ended_at?: string | null
-          exercises_completed?: Json
-          id?: string
-          mood?: number | null
-          notes?: string | null
+          attempt?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string | null
+          job_name?: string | null
           started_at?: string | null
-          user_id?: string | null
-          workout_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workout_sessions_workout_id_fkey"
-            columns: ["workout_id"]
-            isOneToOne: false
-            referencedRelation: "workouts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workouts: {
-        Row: {
-          completed_count: number | null
-          created_at: string | null
-          description: string | null
-          difficulty: string | null
-          estimated_duration: number | null
-          exercises: Json
-          id: string
-          is_public: boolean | null
-          likes_count: number | null
-          name: string
-          tags: string[] | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          completed_count?: number | null
-          created_at?: string | null
-          description?: string | null
-          difficulty?: string | null
-          estimated_duration?: number | null
-          exercises?: Json
-          id?: string
-          is_public?: boolean | null
-          likes_count?: number | null
-          name: string
-          tags?: string[] | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          completed_count?: number | null
-          created_at?: string | null
-          description?: string | null
-          difficulty?: string | null
-          estimated_duration?: number | null
-          exercises?: Json
-          id?: string
-          is_public?: boolean | null
-          likes_count?: number | null
-          name?: string
-          tags?: string[] | null
-          updated_at?: string | null
-          user_id?: string | null
+          status?: string | null
         }
         Relationships: []
       }
     }
-    Views: {
-      [_ in never]: never
-    }
     Functions: {
-      get_user_stats: {
-        Args: { user_id: string }
-        Returns: {
-          current_streak: number
-          total_calories: number
-          total_minutes: number
-          total_workouts: number
-        }[]
+      close_stale_job_runs: { Args: never; Returns: number }
+      daily_health_check: { Args: never; Returns: Json }
+      ensure_workout_history_partition: {
+        Args: { p_year: number }
+        Returns: undefined
       }
+      get_job_runner_secret: { Args: never; Returns: string }
       is_master_admin: { Args: { uid: string }; Returns: boolean }
       is_personal_trainer: { Args: { uid: string }; Returns: boolean }
       list_personals: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           email: string
           id: string

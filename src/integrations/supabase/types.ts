@@ -330,6 +330,7 @@ export type Database = {
           height: number | null
           hours_per_session: number | null
           id: string
+          injuries: string[]
           last_synced_at: string | null
           level: string | null
           name: string | null
@@ -355,6 +356,7 @@ export type Database = {
           height?: number | null
           hours_per_session?: number | null
           id?: string
+          injuries?: string[]
           last_synced_at?: string | null
           level?: string | null
           name?: string | null
@@ -380,6 +382,7 @@ export type Database = {
           height?: number | null
           hours_per_session?: number | null
           id?: string
+          injuries?: string[]
           last_synced_at?: string | null
           level?: string | null
           name?: string | null
@@ -855,6 +858,15 @@ export type Database = {
           id: string
           role: string
         }[]
+      }
+      sync_active_workout_plan: {
+        Args: {
+          p_days_per_week: number
+          p_description: string
+          p_plan_data: Json
+          p_title: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

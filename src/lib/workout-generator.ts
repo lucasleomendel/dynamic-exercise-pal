@@ -400,13 +400,15 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
     return setMinutes + restMinutes + setupMinutes;
   };
 
+  const maxPerDay = MAX_EXERCISES_PER_DAY[level] ?? 6;
+
   const fitToSession = (exercises: Exercise[]): Exercise[] => {
     const budget = hoursPerSession * 60;
     const result: Exercise[] = [];
     let minutes = 0;
 
-    for (const exercise of exercises) {
-      if (result.length >= 8) break;
+    for (const exercise of dedupeMovementPatterns(exercises)) {
+      if (result.length >= maxPerDay) break;
       const cost = estimateExerciseMinutes(exercise);
 
       // Prioriza o limite de tempo informado pelo usuário. Um único
@@ -427,14 +429,16 @@ export function generateWorkout(profile: UserProfile): WorkoutPlan {
   const fillFromAllowed = (exercises: Exercise[], groups: string[]): Exercise[] => {
     const result = [...exercises];
     const used = new Set(result.map(exercise => exercise.name));
+    const usedPatterns = new Set(result.map(movementPatternKey));
 
     for (const group of groups) {
-      if (result.length >= 8) break;
+      if (result.length >= maxPerDay) break;
       for (const exercise of pick(group)) {
-        if (used.has(exercise.name)) continue;
+        if (used.has(exercise.name) || usedPatterns.has(movementPatternKey(exercise))) continue;
         result.push(exercise);
         used.add(exercise.name);
-        if (result.length >= 8) break;
+        usedPatterns.add(movementPatternKey(exercise));
+        if (result.length >= maxPerDay) break;
       }
     }
 

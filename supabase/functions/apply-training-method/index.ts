@@ -154,7 +154,7 @@ Cargas: ${JSON.stringify(progress).slice(0, 800)}
 
 ${methodGuide}
 
-Use exercícios consagrados + variações modernas. Cada dia deve ter 5-8 exercícios coerentes com o split.`;
+Use exercícios consagrados + variações modernas. Cada dia deve ter 4-6 exercícios coerentes com o split (nunca mais que 6). NÃO inclua exercícios redundantes no mesmo dia: nunca dois exercícios com o mesmo padrão de movimento e ângulo (ex.: supino reto com barra + supino reto com halteres; puxada frontal + pulldown; várias roscas de bíceps semelhantes). Prefira 1 composto principal + 1 variação de ângulo + 1-2 isoladores por grupo. Duração alvo da sessão: 45-60 minutos.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

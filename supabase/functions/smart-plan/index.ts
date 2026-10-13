@@ -266,7 +266,9 @@ ${focusRequest || "nenhum"}
 - Distribua os grupos musculares com frequência 2x/semana quando a frequência permitir; 10-20 séries semanais por grupo.
 - Ajuste a intensidade ao histórico: adesão < 60% → simplifique (menos exercícios, sessões mais curtas). Estagnação → troque estímulo (variação, faixa de reps, método).
 - Descreva a progressão das próximas 4 semanas em "progressionNotes" (carga, reps, deload).
-- Cada dia: 5-8 exercícios coerentes com o foco, com séries, faixa de reps, descanso e dica curta de execução/RIR.
+- Cada dia: 4-6 exercícios coerentes com o foco (nunca mais que 6), com séries, faixa de reps, descanso e dica curta de execução/RIR.
+- PROIBIDO redundância no mesmo dia: nunca dois exercícios com o mesmo padrão de movimento e ângulo (ex.: supino reto com barra + supino reto com halteres; puxada frontal + pulldown; várias roscas semelhantes). Estruture 1 composto principal + 1 variação de ângulo + 1-2 isoladores por grupo.
+- Sessão deve caber em 45-60 minutos; priorize progressão de carga/reps em vez de acumular volume.
 - Prefira exercícios existentes na biblioteca abaixo (use o nome exato quando possível).
 
 ## Biblioteca disponível

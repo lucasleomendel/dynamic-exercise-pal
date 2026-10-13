@@ -100,9 +100,13 @@ Decida: aumentar carga/volume, manter, ou deload. Retorne JSON via tool.`;
 
   const planData = plan.plan_data as { days?: Array<{ exercises: Array<{ sets: number; reps: string }> }> };
   if (planData?.days && (decision.intensity_delta === "increase" || decision.volume_delta === "increase")) {
-    planData.days.forEach((d) => d.exercises.forEach((ex) => {
-      if (decision.volume_delta === "increase" && ex.sets < 5) ex.sets += 1;
-    }));
+    // Progressão sustentável: soma +1 série APENAS no primeiro exercício de
+    // cada dia (o composto principal), com teto de 4 séries. Somar em todos
+    // os exercícios tornava o treino longo e insustentável ao longo dos meses.
+    planData.days.forEach((d) => {
+      const main = d.exercises[0];
+      if (decision.volume_delta === "increase" && main && main.sets < 4) main.sets += 1;
+    });
     await supabase.from("workout_plans").update({ plan_data: planData, updated_at: new Date().toISOString() }).eq("id", plan.id);
   } else if (decision.intensity_delta === "deload" && planData?.days) {
     planData.days.forEach((d) => d.exercises.forEach((ex) => {

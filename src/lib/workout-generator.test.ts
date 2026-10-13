@@ -182,3 +182,34 @@ describe("workout generator", () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 });
+
+describe("regras anti-excesso", () => {
+  const base = {
+    name: "Teste", age: 30, weight: 80, height: 175,
+    sex: "masculino" as const, goal: "hipertrofia" as const,
+    daysPerWeek: 5, hoursPerSession: 1,
+  };
+
+  it("limita exercícios por dia conforme o nível", () => {
+    const caps = { iniciante: 5, intermediario: 6, avancado: 7 } as const;
+    for (const [level, cap] of Object.entries(caps)) {
+      const plan = generateWorkout({ ...base, level: level as "iniciante" | "intermediario" | "avancado" });
+      for (const day of plan.days) {
+        expect(day.exercises.length).toBeLessThanOrEqual(cap);
+      }
+    }
+  });
+
+  it("não repete o mesmo padrão de movimento no mesmo dia", () => {
+    const plan = generateWorkout({ ...base, level: "avancado", daysPerWeek: 6 });
+    const noise = ["com Barra", "com Halteres", "com Halter", "na Máquina", "no Smith", "no Cabo", "na Polia", "no Cross", "na Barra", "Unilateral"];
+    for (const day of plan.days) {
+      const keys = day.exercises.map(e => {
+        let k = e.name;
+        for (const n of noise) k = k.split(n).join("");
+        return k.replace(/\s+/g, " ").trim().toLowerCase();
+      });
+      expect(new Set(keys).size).toBe(keys.length);
+    }
+  });
+});

@@ -274,6 +274,14 @@ function adjustForGoal(exercises: Exercise[], goal: string): Exercise[] {
   });
 }
 
+// Teto de exercícios por dia conforme o nível. Acima disso o treino fica
+// longo demais e o volume extra vira "junk volume" (séries sem estímulo útil).
+export const MAX_EXERCISES_PER_DAY: Record<string, number> = {
+  iniciante: 5,
+  intermediario: 6,
+  avancado: 7,
+};
+
 function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
   switch (level) {
     case 'iniciante':
@@ -287,13 +295,46 @@ function adjustForLevel(exercises: Exercise[], level: string): Exercise[] {
     case 'intermediario':
       return exercises.slice(0, 7).map(e => ({ ...e }));
     case 'avancado':
-      return exercises.slice(0, 8).map(e => ({
-        ...e,
-        sets: Math.min(e.sets + (isCompoundExercise(e) ? 1 : 0), 5),
-      }));
+      // Apenas o primeiro composto ganha uma série extra (teto de 4-5).
+      // Somar +1 série em TODOS os exercícios inflava o treino inteiro.
+      let boosted = false;
+      return exercises.slice(0, 8).map(e => {
+        if (!boosted && isCompoundExercise(e)) {
+          boosted = true;
+          return { ...e, sets: Math.min(e.sets + 1, 5) };
+        }
+        return { ...e };
+      });
     default:
       return exercises;
   }
+}
+
+// Remove redundâncias biomecânicas: dois exercícios com o mesmo padrão de
+// movimento (ex.: Supino Reto com Barra + Supino Reto com Halteres) no mesmo
+// dia somam fadiga sem estímulo novo. A chave ignora equipamento e máquina,
+// mantendo apenas o padrão articular e o ângulo.
+const PATTERN_NOISE_WORDS = [
+  'com Barra', 'com Halteres', 'com Halter', 'na Máquina', 'no Smith',
+  'no Cabo', 'na Polia', 'no Cross', 'na Barra', 'Unilateral',
+];
+
+function movementPatternKey(exercise: Exercise): string {
+  let key = exercise.name;
+  for (const noise of PATTERN_NOISE_WORDS) {
+    key = key.split(noise).join('');
+  }
+  return key.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function dedupeMovementPatterns(exercises: Exercise[]): Exercise[] {
+  const seen = new Set<string>();
+  return exercises.filter(exercise => {
+    const key = movementPatternKey(exercise);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 const INJURY_EXCLUSION_RULES: Record<InjuryArea, string[]> = {

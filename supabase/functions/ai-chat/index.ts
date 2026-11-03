@@ -312,16 +312,20 @@ Nunca invente dados: se a ferramenta não retornar nada, diga isso.`;
           return data ?? [];
         }
         case "github_repo": {
-          const base = "https://api.github.com/repos/lucasleomendel/dynamic-exercise-pal";
+          const ghKey = Deno.env.get("GITHUB_API_KEY");
+          const base = ghKey
+            ? "https://connector-gateway.lovable.dev/github/repos/lucasleomendel/dynamic-exercise-pal"
+            : "https://api.github.com/repos/lucasleomendel/dynamic-exercise-pal";
           const path = String(args.caminho ?? "").replace(/^\/+|\.\./g, "").slice(0, 200);
-          const h = { Accept: "application/vnd.github+json", "User-Agent": "fitforge-agent" };
+          const h: Record<string, string> = { Accept: "application/vnd.github+json", "User-Agent": "fitforge-agent" };
+          if (ghKey) { h.Authorization = `Bearer ${LOVABLE_API_KEY}`; h["X-Connection-Api-Key"] = ghKey; }
           if (args.acao === "commits") {
             const r = await fetch(`${base}/commits?per_page=10`, { headers: h });
-            if (!r.ok) return { erro: `GitHub ${r.status}` };
+            if (!r.ok) return { erro: `GitHub ${r.status}: ${(await r.text()).slice(0, 300)}` };
             return (await r.json()).map((c: any) => ({ data: c.commit?.author?.date, msg: String(c.commit?.message ?? "").split("\n")[0], sha: c.sha?.slice(0, 7) }));
           }
           const r = await fetch(`${base}/contents/${path}`, { headers: h });
-          if (!r.ok) return { erro: `GitHub ${r.status}` };
+          if (!r.ok) return { erro: `GitHub ${r.status}: ${(await r.text()).slice(0, 300)}` };
           const d = await r.json();
           if (Array.isArray(d)) return d.map((f: any) => `${f.type === "dir" ? "📁" : "📄"} ${f.path}`);
           const txt = d.content ? new TextDecoder().decode(Uint8Array.from(atob(d.content.replace(/\n/g, "")), c => c.charCodeAt(0))) : "";

@@ -50,6 +50,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // Se o servidor de login demorar (ex.: religando), não prende o app na abertura.
+    const safety = setTimeout(() => setLoading(false), 6000);
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         authEventSeenRef.current = true;
@@ -157,6 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
+      clearTimeout(safety);
       subscription.unsubscribe();
       document.removeEventListener("visibilitychange", onVisible);
     };

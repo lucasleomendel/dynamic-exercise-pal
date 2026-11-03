@@ -1,0 +1,3 @@
+CREATE POLICY "Master admin views all history" ON public.workout_history FOR SELECT TO authenticated USING (public.is_master_admin(auth.uid()));
+CREATE POLICY "Master admin views all progression" ON public.progression_log FOR SELECT TO authenticated USING (public.is_master_admin(auth.uid()));
+CREATE POLICY "Master admin views all weights" ON public.weight_logs FOR SELECT TO authenticated USING (public.is_master_admin(auth.uid()));

@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { isMasterAdmin } from "@/lib/admin";
 import AdminCadastro from "@/components/AdminCadastro";
 import LibraryScanStats from "@/components/LibraryScanStats";
+import { AdminOverview, StudentHistoryDialog, type OvProfile } from "@/components/AdminOverview";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,7 @@ const AdminPanel = () => {
   const [editProfile, setEditProfile] = useState<ProfileRow | null>(null);
   const [editExercise, setEditExercise] = useState<Partial<ExerciseRow> | null>(null);
   const [viewPlan, setViewPlan] = useState<PlanRow | null>(null);
+  const [histStudent, setHistStudent] = useState<OvProfile | null>(null);
   const [confirm, setConfirm] = useState<{ label: string; run: () => Promise<void> } | null>(null);
 
   const loadAll = useCallback(async () => {
@@ -311,14 +313,19 @@ const AdminPanel = () => {
           <StatCard icon={<Dumbbell className="w-4 h-4" />} label="Exercícios" value={exercises.length} />
         </div>
 
-        <Tabs defaultValue="cadastro">
-          <TabsList className="w-full grid grid-cols-5">
+        <Tabs defaultValue="visao">
+          <TabsList className="w-full grid grid-cols-3 md:grid-cols-6 h-auto">
+            <TabsTrigger value="visao">Visão geral</TabsTrigger>
             <TabsTrigger value="cadastro">Cadastro</TabsTrigger>
             <TabsTrigger value="alunos">Alunos</TabsTrigger>
             <TabsTrigger value="treinos">Treinos</TabsTrigger>
             <TabsTrigger value="exercicios">Exercícios</TabsTrigger>
             <TabsTrigger value="varredura">Varredura</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="visao">
+            <AdminOverview profiles={profiles} plans={plans} onOpenStudent={setHistStudent} />
+          </TabsContent>
 
           <TabsContent value="cadastro">
             <AdminCadastro />
@@ -327,6 +334,7 @@ const AdminPanel = () => {
           <TabsContent value="varredura">
             <LibraryScanStats />
           </TabsContent>
+          <StudentHistoryDialog student={histStudent} plans={plans} onClose={() => setHistStudent(null)} />
 
 
           {/* ------------------------------ alunos ------------------------------ */}
@@ -348,6 +356,7 @@ const AdminPanel = () => {
                       </Badge>
                     </div>
                   </div>
+                  <Button size="sm" variant="outline" onClick={() => setHistStudent(p)}>Histórico</Button>
                   <Button size="icon" variant="ghost" onClick={() => setEditProfile(p)}>
                     <Pencil className="w-4 h-4" />
                   </Button>

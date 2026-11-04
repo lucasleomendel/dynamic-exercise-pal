@@ -121,7 +121,7 @@ export const StudentHistoryDialog = ({ student, plans, onClose }: { student: OvP
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{student?.name || student?.email} — histórico</DialogTitle></DialogHeader>
         {loading ? <p className="text-sm text-muted-foreground">Carregando…</p> : (
-          <div className="space-y-4 text-sm">
+          <div className="space-y-4 text-sm min-w-0 w-full overflow-hidden">
             <Section title={`Treinos (${userPlans.length})`}>
               {userPlans.map(p => <Row key={p.id} left={p.title} right={`${p.is_active ? "ativo · " : ""}${fmt(p.updated_at)}`} />)}
             </Section>
@@ -152,6 +152,6 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 };
 const Row = ({ left, right }: { left: string; right: string }) => (
   <div className="flex justify-between gap-3 rounded-md bg-muted/40 px-2 py-1">
-    <span className="truncate">{left}</span><span className="text-muted-foreground shrink-0 text-xs">{right}</span>
+    <span className="truncate min-w-0">{left}</span><span className="text-muted-foreground shrink-0 text-xs">{right}</span>
   </div>
 );

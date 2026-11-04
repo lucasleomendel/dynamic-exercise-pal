@@ -36,6 +36,31 @@
 
   <body>
     <div id="root"><div class="splash"><img src="/logo-splash.png" alt="FitForge" /><h1>FITFORGE</h1><p>Treino personalizado</p><div class="bar"></div></div></div>
+    <script>
+      // Se o app não iniciar (internet ruim ou versão antiga em cache), recarrega uma vez
+      // e depois mostra um botão para tentar de novo, em vez de ficar preso no logo.
+      setTimeout(function () {
+        if (window.__fitforgeBooted) return;
+        var k = "fitforge_boot_retry";
+        try {
+          if (!sessionStorage.getItem(k)) {
+            sessionStorage.setItem(k, "1");
+            location.replace(location.pathname + "?v=" + Date.now());
+            return;
+          }
+        } catch (e) {}
+        var s = document.querySelector(".splash");
+        if (s && !document.getElementById("boot-retry")) {
+          s.insertAdjacentHTML("beforeend",
+            '<p style="text-transform:none;letter-spacing:0;color:#d1d5db">Não foi possível abrir o app. Verifique a internet.</p>' +
+            '<button id="boot-retry" style="background:#f97316;color:#0f1419;border:0;border-radius:10px;padding:12px 22px;font-weight:700;font-size:14px">Tentar de novo</button>');
+          document.getElementById("boot-retry").onclick = function () {
+            try { sessionStorage.removeItem(k); } catch (e) {}
+            location.replace(location.pathname + "?v=" + Date.now());
+          };
+        }
+      }, 15000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -467,23 +467,28 @@ async function resolveChecksConflict() {
 /* ============ INITIAL HYDRATION ============ */
 /** Resolve conflitos cloud↔local na entrada (last-write-wins) */
 export async function hydrateFromCloud() {
-  const userId = await getUserId();
-  if (!userId) return;
+  try {
+    const userId = await getUserId();
+    if (!userId) return;
 
-  const operations = [
-    ["hydrate-profile", resolveProfileConflict],
-    ["hydrate-plan", resolvePlanConflict],
-    ["hydrate-checks", resolveChecksConflict],
-  ] as const;
-  const results = await Promise.allSettled(operations.map(([, operation]) => operation()));
-  results.forEach((result, index) => {
-    if (result.status !== "rejected") return;
-    const [operation] = operations[index];
-    console.warn(`[FitForge] Falha na hidratação da nuvem: ${operation}`, result.reason);
-    window.dispatchEvent(new CustomEvent("fitforge:sync-error", {
-      detail: { operation, error: result.reason },
-    }));
-  });
+    const operations = [
+      ["hydrate-profile", resolveProfileConflict],
+      ["hydrate-plan", resolvePlanConflict],
+      ["hydrate-checks", resolveChecksConflict],
+    ] as const;
+    const results = await Promise.allSettled(operations.map(([, operation]) => operation()));
+    results.forEach((result, index) => {
+      if (result.status !== "rejected") return;
+      const [operation] = operations[index];
+      console.warn(`[FitForge] Falha na hidratação da nuvem: ${operation}`, result.reason);
+      window.dispatchEvent(new CustomEvent("fitforge:sync-error", {
+        detail: { operation, error: result.reason },
+      }));
+    });
+  } finally {
+    // Screens that read the local cache on mount re-read it once cloud data lands.
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("fitforge:hydrated"));
+  }
 }
 
 /* ============ DAILY AUTO-SYNC ============ */

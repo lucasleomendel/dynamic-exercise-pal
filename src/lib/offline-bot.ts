@@ -1,6 +1,7 @@
 // Bot de respostas sem IA: usado quando os créditos de IA acabam.
 // Responde com base na biblioteca de exercícios, métodos de treino e no perfil.
 import { supabase } from "@/integrations/supabase/client";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import type { UserProfile } from "@/lib/workout-generator";
 
 const MUSCLES: Record<string, string[]> = {
@@ -20,6 +21,18 @@ const MUSCLES: Record<string, string[]> = {
 };
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+export async function queryBotReply(text: string, signal?: AbortSignal): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return "";
+  const { data, error } = await supabase.functions.invoke("bot-query", { body: { text }, signal });
+  if (signal?.aborted) return "";
+  if (error) {
+    const details = error instanceof FunctionsHttpError ? await error.context.json().catch(() => null) : null;
+    return `⚠️ ${details?.error ?? "Não foi possível consultar os dados agora."}`;
+  }
+  return data?.handled ? String(data.content ?? "") : "";
+}
 
 function findMuscle(text: string): string | null {
   const t = norm(text);
@@ -58,6 +71,8 @@ function macros(p?: UserProfile) {
 }
 
 export async function offlineReply(text: string, profile?: UserProfile): Promise<string> {
+  const toolReply = await queryBotReply(text);
+  if (toolReply) return toolReply;
   const t = norm(text);
   const note = "\n\n_Modo bot ativo: o assistente de IA está temporariamente indisponível._";
 
@@ -68,7 +83,7 @@ export async function offlineReply(text: string, profile?: UserProfile): Promise
     const hit = (data ?? []).filter(m => t.includes(norm(m.name).split(/[\s-]/)[0]));
     const list = hit.length ? hit : data ?? [];
     if (list.length) {
-      return "**Métodos de treino**\n\n" + list.map(m =>
+      return "_Consultou: métodos · training_methods_\n\n**Métodos de treino**\n\n" + list.map(m =>
         `- **${m.name}** — ${m.short_description}${m.recommended_for ? ` _(indicado: ${m.recommended_for})_` : ""}`
       ).join("\n") + note;
     }
@@ -79,7 +94,7 @@ export async function offlineReply(text: string, profile?: UserProfile): Promise
   if (muscle) {
     const list = await exercisesFor(muscle, (profile as any)?.level);
     if (list.length) {
-      return `**Exercícios para ${muscle}**\n\n` + list.map(e =>
+      return `_Consultou: catálogo · exercise_library_\n\n**Exercícios para ${muscle}**\n\n` + list.map(e =>
         `- **${e.name}**${e.equipment ? ` (${e.equipment})` : ""} — ${e.default_sets ?? 3}x${e.default_reps ?? "8-12"}, descanso ${e.default_rest ?? "60-90s"}${e.technique_tip ? `\n  _Dica: ${e.technique_tip}_` : ""}`
       ).join("\n") + "\n\nVeja fotos e detalhes na **Biblioteca de exercícios**." + note;
     }
@@ -102,5 +117,5 @@ export async function offlineReply(text: string, profile?: UserProfile): Promise
     return "**Ganho de massa muscular**\n\n- Treine cada músculo 2x por semana, 10 a 20 séries semanais\n- Aumente carga ou repetições aos poucos (progressão)\n- Proteína: 1,6 a 2,2 g por kg de peso\n- Leve superávit calórico (+300 kcal)\n- Durma bem" + note;
   }
 
-  return "No momento estou no **modo bot** e respondo sobre:\n\n- Exercícios por músculo (ex.: \"exercícios para peito\")\n- Métodos de treino (drop-set, myo-reps, BFR...)\n- Dieta, macros e água\n- Ganho de massa e sono\n\nVocê também pode gerar seu treino pelo botão de plano automático." + note;
+  return "No momento estou no **modo bot** e respondo sobre:\n\n- Meu treino atual, meu perfil e meu histórico\n- Exercícios por músculo e métodos de treino\n- Dieta, macros, água e sono\n- Para o administrador: métricas, rotinas, auditoria, commits e arquivos do GitHub\n\nPara arquivos, informe o caminho: \"leia arquivo src/pages/Index.tsx\"." + note;
 }

@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { UserProfile } from "@/lib/workout-generator";
 import { generateWorkout } from "@/lib/workout-generator";
 import { savePlan } from "@/lib/storage";
-import { offlineReply } from "@/lib/offline-bot";
+import { offlineReply, queryBotReply } from "@/lib/offline-bot";
 
 interface Message {
   role: "user" | "assistant";
@@ -225,6 +225,28 @@ Veja tudo em **Meus treinos**.`;
     const currentMessages = [...messagesRef.current, userMsg];
     setMessages(currentMessages);
 
+    // Read-only tools do not depend on AI credits or the AI cooldown.
+    setIsStreaming(true);
+    const toolController = new AbortController();
+    abortRef.current = toolController;
+    try {
+      const toolReply = await queryBotReply(text.trim(), toolController.signal);
+      if (toolController.signal.aborted) return;
+      if (toolReply) {
+        setMessages(prev => [...prev, { role: "assistant", content: toolReply, timestamp: Date.now() }]);
+        setIsStreaming(false);
+        abortRef.current = null;
+        if (!openRef.current) setUnread(u => u + 1);
+        return;
+      }
+    } catch {
+      if (toolController.signal.aborted) return;
+      setMessages(prev => [...prev, { role: "assistant", content: "⚠️ Não foi possível consultar os dados agora. Tente novamente.", timestamp: Date.now() }]);
+      setIsStreaming(false);
+      abortRef.current = null;
+      return;
+    }
+
     if (PLAN_INTENT.test(text)) {
       await generatePlan(text.trim());
       return;
@@ -306,8 +328,8 @@ Veja tudo em **Meus treinos**.`;
   };
 
   const statusLabel = useMemo(() => {
-    if (isStreaming) return "Pensando...";
-    return "Online · IA pronta";
+    if (isStreaming) return "Consultando...";
+    return isOffline() ? "Modo bot · consultas disponíveis" : "Online · consultas disponíveis";
   }, [isStreaming]);
 
   return (

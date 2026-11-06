@@ -77,12 +77,12 @@ Deno.serve(async req => {
       const [sessions, loads, progression] = await Promise.all([
         db.from("workout_history").select("workout_date,day_focus,completed_exercises,total_exercises").eq("user_id", auth.user.id).order("workout_date", { ascending: false }).limit(10),
         db.from("weight_logs").select("exercise_name,weight,logged_at").eq("user_id", auth.user.id).order("logged_at", { ascending: false }).limit(10),
-        db.from("progression_log").select("created_at,analysis,plan_changes").eq("user_id", auth.user.id).order("created_at", { ascending: false }).limit(5),
+        db.from("progression_log").select("created_at,recommendation,plan_changes").eq("user_id", auth.user.id).order("created_at", { ascending: false }).limit(5),
       ]);
       for (const result of [sessions, loads, progression]) if (result.error) throw new Error(result.error.message);
       content = "**Seu histórico**\n\n**Sessões recentes**\n" + ((sessions.data ?? []).map(s => `- ${s.workout_date.slice(0, 10)} · ${s.day_focus} · ${s.completed_exercises}/${s.total_exercises} exercícios`).join("\n") || "Nenhuma sessão registrada.")
         + "\n\n**Cargas recentes**\n" + ((loads.data ?? []).map(l => `- ${l.exercise_name} · ${l.weight} kg · ${l.logged_at.slice(0, 10)}`).join("\n") || "Nenhuma carga registrada.")
-        + "\n\n**Progressão**\n" + ((progression.data ?? []).map(p => `- ${p.created_at.slice(0, 10)} · ${JSON.stringify(p.plan_changes ?? p.analysis)}`).join("\n") || "Nenhuma análise registrada.");
+        + "\n\n**Progressão**\n" + ((progression.data ?? []).map(p => `- ${p.created_at.slice(0, 10)} · ${p.recommendation ?? JSON.stringify(p.plan_changes)}`).join("\n") || "Nenhuma análise registrada.");
     } else if (query.tool === "metricas_app") {
       const count = async (request: PromiseLike<{ count: number | null; error: { message: string } | null }>) => {
         const result = await request;

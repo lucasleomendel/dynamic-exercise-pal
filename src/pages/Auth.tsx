@@ -49,6 +49,8 @@ const Auth = () => {
   const [cref, setCref] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [confirmationEmail, setConfirmationEmail] = useState("");
   const { toast } = useToast();
   const { enterGuestMode } = useAuth();
   const navigate = useNavigate();
@@ -57,18 +59,24 @@ const Auth = () => {
   const isLogin = tab === "login" && mode !== "forgot";
 
   const switchTab = (t: typeof tab) => {
+    if (loading) return;
+    setFormError("");
+    setConfirmationEmail("");
     setTab(t);
     setMode(t === "login" ? "login" : "signup");
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    setFormError("");
     setLoading(true);
     try {
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (error) throw error;
         toast({ title: "Login realizado com sucesso!" });
+        navigate("/", { replace: true });
       } else if (mode === "signup") {
         // Validações de signup
         if (!name.trim()) { toast({ title: "Informe seu nome", variant: "destructive" }); setLoading(false); return; }
@@ -92,7 +100,7 @@ const Auth = () => {
         }
 
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: { emailRedirectTo: window.location.origin, data: metadata },
         });
@@ -116,6 +124,12 @@ const Auth = () => {
           }
         }
         toast({ title: "Cadastro realizado!", description: "Verifique seu email para confirmar a conta." });
+        if (data.session) {
+          navigate("/", { replace: true });
+        } else {
+          setConfirmationEmail(email.trim());
+          setPassword("");
+        }
       } else if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
@@ -125,7 +139,11 @@ const Auth = () => {
         setMode("login"); setTab("login");
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erro desconhecido";
+      const raw = error instanceof Error ? error.message : "Não foi possível entrar. Tente novamente.";
+      const message = /invalid login credentials/i.test(raw) ? "E-mail ou senha incorretos."
+        : /email not confirmed/i.test(raw) ? "Confirme seu e-mail antes de entrar."
+        : /failed to fetch|network/i.test(raw) ? "Não foi possível conectar. Verifique sua internet e tente novamente." : raw;
+      setFormError(message);
       toast({ title: "Erro", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
@@ -191,7 +209,14 @@ const Auth = () => {
           <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
         </div>
 
-        <form onSubmit={handleEmailAuth} className="space-y-3">
+        {confirmationEmail ? (
+          <div className="space-y-3 border-y border-border py-5" role="status">
+            <Mail className="w-6 h-6 text-primary" />
+            <h2 className="font-display text-xl">Confirme seu e-mail</h2>
+            <p className="text-sm text-muted-foreground break-words">Enviamos a confirmação para {confirmationEmail}. Abra o link recebido para ativar sua conta.</p>
+            <Button className="w-full" onClick={() => switchTab("login")}>Voltar para entrar</Button>
+          </div>
+        ) : <form onSubmit={handleEmailAuth} className="space-y-3">
           {isSignup && (
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -201,18 +226,19 @@ const Auth = () => {
 
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" required />
+            <Input type="email" aria-label="E-mail" autoComplete="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" required maxLength={255} disabled={loading} />
           </div>
 
           {mode !== "forgot" && (
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input type={showPassword ? "text" : "password"} placeholder="Senha" value={password}
-                onChange={(e) => setPassword(e.target.value)} className="pl-10 pr-10" required minLength={6} />
-              <button type="button" onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                aria-label="Senha" autoComplete={isSignup ? "new-password" : "current-password"}
+                onChange={(e) => setPassword(e.target.value)} className="pl-10 pr-10" required minLength={isSignup ? 6 : undefined} disabled={loading} />
+              <Button variant="ghost" size="icon" type="button" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+              </Button>
             </div>
           )}
 
@@ -250,11 +276,12 @@ const Auth = () => {
             </>
           )}
 
+          {formError && <p role="alert" className="text-sm text-destructive">{formError}</p>}
           <Button type="submit" className="w-full gap-2 font-display tracking-wider text-base h-11" disabled={loading}>
             <LogIn className="w-4 h-4" />
             {loading ? "CARREGANDO..." : mode === "login" ? "ENTRAR" : mode === "signup" ? (role === "personal" ? "CADASTRAR COMO PERSONAL" : "CRIAR CONTA") : "ENVIAR LINK"}
           </Button>
-        </form>
+        </form>}
 
         {isLogin && (
           <div className="text-center">

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import Auth from "@/pages/Auth";
 
 // ---- Mocks ----
@@ -158,5 +158,38 @@ describe("E2E – Login com Google", () => {
 
     resolveFn({ redirected: true });
     await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("Email/password accounts", () => {
+  it("navigates inside the app after successful email login", async () => {
+    supabaseSignIn.mockResolvedValueOnce({ error: null });
+    render(<MemoryRouter initialEntries={["/auth"]}><Routes>
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/" element={<div data-testid="signed-in" />} />
+    </Routes></MemoryRouter>);
+    await userEvent.type(screen.getByLabelText("E-mail"), "student@example.com");
+    await userEvent.type(screen.getByLabelText("Senha"), "student-password");
+    await userEvent.click(screen.getAllByRole("button", { name: /^entrar$/i }).find(button => button.getAttribute("type") === "submit") ?? (() => { throw new Error("Submit missing"); })());
+    await waitFor(() => expect(screen.getByTestId("signed-in")).toBeInTheDocument());
+    expect(supabaseSignIn).toHaveBeenCalledWith({ email: "student@example.com", password: "student-password" });
+  });
+  it("does not sign in a student until email confirmation", async () => {
+    supabaseSignUp.mockResolvedValueOnce({ data: { session: null }, error: null });
+    renderAuth();
+    await userEvent.click(screen.getByRole("button", { name: /^aluno$/i }));
+    await userEvent.type(screen.getByPlaceholderText("Nome completo"), "Aluno Teste");
+    await userEvent.type(screen.getByLabelText("E-mail"), "student@example.com");
+    await userEvent.type(screen.getByLabelText("Senha"), "student-password");
+    await userEvent.type(screen.getByPlaceholderText("CPF (000.000.000-00)"), "52998224725");
+    const date = document.querySelector('input[type="date"]');
+    if (!(date instanceof HTMLInputElement)) throw new Error("Date input missing");
+    await userEvent.type(date, "2000-01-01");
+    await userEvent.type(screen.getByPlaceholderText("(11) 99999-9999"), "11999999999");
+    await userEvent.click(screen.getByRole("button", { name: /criar conta/i }));
+    await waitFor(() => expect(supabaseSignUp).toHaveBeenCalledTimes(1));
+    expect(supabaseSignIn).not.toHaveBeenCalled();
+    expect(supabaseSignUp.mock.calls[0][0].options.data.name).toBe("Aluno Teste");
+    expect(supabaseSignUp.mock.calls[0][0].options.data.cpf).toBe("52998224725");
   });
 });

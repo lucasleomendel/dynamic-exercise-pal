@@ -35,9 +35,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, isGuest } = useAuth();
+  const { user, loading } = useAuth();
   if (loading) return <LoadingScreen />;
-  if (user || isGuest) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 

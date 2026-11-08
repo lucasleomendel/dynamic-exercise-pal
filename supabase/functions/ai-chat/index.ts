@@ -1,22 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
-const ALLOWED_ORIGINS = new Set([
-  "https://dynamic-exercise-pal.lovable.app",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-]);
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-function getCorsHeaders(req: Request) {
-  const origin = req.headers.get("Origin") ?? "";
-  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://dynamic-exercise-pal.lovable.app";
-  return {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
-}
+function getCorsHeaders(_req: Request) { return corsHeaders; }
 
 
 const SYSTEM_PROMPT = `Você é o **FitForge AI**, assistente sênior em fitness, musculação, nutrição esportiva, composição corporal e performance, e também o **gestor autônomo** do treino do usuário dentro do app.

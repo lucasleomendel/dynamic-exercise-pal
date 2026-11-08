@@ -110,7 +110,8 @@ async function streamChat({
     onDone();
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") return;
-    onError(e instanceof Error ? e.message : "Erro de conexão");
+    // Network/CORS failures must also activate the credit-free bot.
+    onError(OFFLINE_SIGNAL);
   }
 }
 
@@ -255,7 +256,7 @@ Veja tudo em **Meus treinos**.`;
     setIsStreaming(true);
 
     const botAnswer = async () => {
-      const reply = await offlineReply(text, profile).catch(() => "⚠️ Não consegui responder agora.");
+      const reply = await offlineReply(text, profile, true).catch(() => "⚠️ Não consegui responder agora. Verifique a conexão e tente novamente.");
       setMessages(prev => [...prev.filter(m => m.timestamp !== 0), { role: "assistant", content: reply, timestamp: Date.now() }]);
       setIsStreaming(false);
       abortRef.current = null;

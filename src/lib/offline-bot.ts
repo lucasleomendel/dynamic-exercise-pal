@@ -70,9 +70,11 @@ function macros(p?: UserProfile) {
   return { tdee, kcal, prot, fat, carb, water: Math.round(w * 35) };
 }
 
-export async function offlineReply(text: string, profile?: UserProfile): Promise<string> {
-  const toolReply = await queryBotReply(text);
-  if (toolReply) return toolReply;
+export async function offlineReply(text: string, profile?: UserProfile, toolsAlreadyChecked = false): Promise<string> {
+  if (!toolsAlreadyChecked) {
+    const toolReply = await queryBotReply(text);
+    if (toolReply) return toolReply;
+  }
   const t = norm(text);
   const note = "\n\n_Modo bot ativo: o assistente de IA está temporariamente indisponível._";
 

@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
-import { routeBotQuery, canUseBotTool, safeRepositoryPath } from "../_shared/bot-tools.ts";
+import { routeBotQuery, canUseBotTool, safeRepositoryPath, ADMIN_BOT_TOOLS } from "../_shared/bot-tools.ts";
 
 const schema = z.object({ text: z.string().trim().min(1).max(4000) });
 const labels: Record<string, string> = {
@@ -29,8 +29,10 @@ Deno.serve(async req => {
     if (!parsed.success) return reply({ error: "Informe uma pergunta de até 4000 caracteres." }, 400);
     const query = routeBotQuery(parsed.data.text);
     if (!query) return reply({ handled: false });
-    const { data: admin } = await db.rpc("is_master_admin", { uid: auth.user.id });
-    if (!canUseBotTool(query.tool, admin === true)) return reply({ error: "Esta consulta é exclusiva do administrador." }, 403);
+    if (ADMIN_BOT_TOOLS.has(query.tool)) {
+      const { data: admin } = await db.rpc("is_master_admin", { uid: auth.user.id });
+      if (!canUseBotTool(query.tool, admin === true)) return reply({ error: "Esta consulta é exclusiva do administrador." }, 403);
+    }
     const read = async (request: PromiseLike<{ data: unknown; error: { message: string } | null }>) => {
       const result = await request;
       if (result.error) throw new Error(result.error.message);
@@ -97,7 +99,11 @@ Deno.serve(async req => {
       ]);
       content = `**Métricas do app**\n\n- Perfis: ${profiles}\n- Planos ativos: ${plans}\n- Exercícios: ${exercises}\n- Sessões nos últimos 7 dias: ${sessions}`;
     } else if (query.tool === "status_rotinas") {
-      data = { rotinas: await read(db.from("job_runs").select("job_name,status,started_at,error_message").order("started_at", { ascending: false }).limit(5)), varredura: await read(db.from("library_updates").select("status,exercises_added,ran_at").order("ran_at", { ascending: false }).limit(5)) };
+      const [rotinas, varredura] = await Promise.all([
+        read(db.from("job_runs").select("job_name,status,started_at,error_message").order("started_at", { ascending: false }).limit(5)),
+        read(db.from("library_updates").select("status,exercises_added,ran_at").order("ran_at", { ascending: false }).limit(5)),
+      ]);
+      data = { rotinas, varredura };
     } else {
       data = await read(db.from("audit_log").select("created_at,action,entity,entity_label").order("created_at", { ascending: false }).limit(10));
     }

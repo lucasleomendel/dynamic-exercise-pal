@@ -1,0 +1,1 @@
+import type {} from "../supabase/functions/_shared/generated/ai-gateway/models";

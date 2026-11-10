@@ -52,7 +52,10 @@ async function resolveUserId(userId?: string | null): Promise<string | null> {
 
 async function isCurrentUser(userId: string): Promise<boolean> {
   try {
-    return (await getUserId()) === userId;
+    // Cache ownership only, not authorization: RLS still validates every request.
+    // Reading the local session avoids a network auth request per sync operation.
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user.id === userId;
   } catch {
     return false;
   }
@@ -367,9 +370,7 @@ export function markLocalUpdate(kind: "profile" | "plan") {
   localStorage.setItem(key, String(Date.now()));
 }
 
-async function resolveProfileConflict() {
-  const userId = await getUserId();
-  if (!userId) return;
+async function resolveProfileConflict(userId: string) {
   const localProfile = loadProfile();
   const localTs = Number(localStorage.getItem(PROFILE_TS_KEY) ?? 0);
   const { data, error } = await supabase
@@ -414,9 +415,7 @@ async function resolveProfileConflict() {
   }
 }
 
-async function resolvePlanConflict() {
-  const userId = await getUserId();
-  if (!userId) return;
+async function resolvePlanConflict(userId: string) {
   const localPlan = loadPlan();
   const localTs = Number(localStorage.getItem(PLAN_TS_KEY) ?? 0);
   const { data, error } = await supabase
@@ -442,9 +441,7 @@ async function resolvePlanConflict() {
   }
 }
 
-async function resolveChecksConflict() {
-  const userId = await getUserId();
-  if (!userId) return;
+async function resolveChecksConflict(userId: string) {
   const { data, error } = await supabase
     .from("exercise_checks")
     .select("checks_data,updated_at")
@@ -476,7 +473,7 @@ export async function hydrateFromCloud() {
       ["hydrate-plan", resolvePlanConflict],
       ["hydrate-checks", resolveChecksConflict],
     ] as const;
-    const results = await Promise.allSettled(operations.map(([, operation]) => operation()));
+    const results = await Promise.allSettled(operations.map(([, operation]) => operation(userId)));
     results.forEach((result, index) => {
       if (result.status !== "rejected") return;
       const [operation] = operations[index];

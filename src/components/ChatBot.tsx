@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { UserProfile } from "@/lib/workout-generator";
 import { generateWorkout } from "@/lib/workout-generator";
 import { savePlan } from "@/lib/storage";
-import { offlineReply, queryBotReply } from "@/lib/offline-bot";
+import { offlineReply, queryBotReply, profileEstimateReply } from "@/lib/offline-bot";
 
 interface Message {
   role: "user" | "assistant";
@@ -98,9 +98,14 @@ async function streamChat({
         if (line.startsWith(":") || line.trim() === "") continue;
         if (!line.startsWith("data: ")) continue;
         const jsonStr = line.slice(6).trim();
-        if (jsonStr === "[DONE]") break;
+        if (jsonStr === "[DONE]") { onDone(); await reader.cancel(); return; }
         try {
           const parsed = JSON.parse(jsonStr);
+          if (parsed.error) {
+            onError(parsed.status === 402 || parsed.status === 403 || parsed.status >= 500 ? OFFLINE_SIGNAL : String(parsed.error));
+            await reader.cancel();
+            return;
+          }
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) onDelta(content);
         } catch { /* partial */ }
@@ -145,11 +150,14 @@ const ChatBot = ({ profile }: { profile?: UserProfile }) => {
   useEffect(() => {
     if (open) {
       setUnread(0);
-      setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      const timer = setTimeout(() => endRef.current?.scrollIntoView({ behavior: isStreaming ? "auto" : "smooth" }), 50);
+      return () => clearTimeout(timer);
     }
-  }, [messages, open]);
+  }, [messages, open, isStreaming]);
 
-  useEffect(() => { saveChatHistory(messages); }, [messages]);
+  useEffect(() => {
+    if (!isStreaming) saveChatHistory(messages);
+  }, [messages, isStreaming]);
 
   // When auth clears the shared cache, also clear the mounted chat state so
   // a later render cannot restore another account's conversation to storage.
@@ -226,6 +234,12 @@ Veja tudo em **Meus treinos**.`;
     const currentMessages = [...messagesRef.current, userMsg];
     setMessages(currentMessages);
 
+    const estimate = profileEstimateReply(text, profile);
+    if (estimate) {
+      setMessages(prev => [...prev, { role: "assistant", content: estimate, timestamp: Date.now() }]);
+      return;
+    }
+
     // Read-only tools do not depend on AI credits or the AI cooldown.
     setIsStreaming(true);
     const toolController = new AbortController();
@@ -269,16 +283,27 @@ Veja tudo em **Meus treinos**.`;
     abortRef.current = controller;
 
     let assistantContent = "";
+    let renderTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const updateAssistant = (chunk: string) => {
-      assistantContent += chunk;
+    const flushAssistant = () => {
+      clearTimeout(renderTimer);
+      renderTimer = undefined;
+      if (controller.signal.aborted || !assistantContent) return;
+      const content = assistantContent;
       setMessages(prev => {
         const last = prev[prev.length - 1];
         if (last?.role === "assistant" && last.timestamp === 0) {
-          return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent } : m);
+          return prev.map((m, i) => i === prev.length - 1 ? { ...m, content } : m);
         }
-        return [...prev, { role: "assistant", content: assistantContent, timestamp: 0 }];
+        return [...prev, { role: "assistant", content, timestamp: 0 }];
       });
+    };
+    controller.signal.addEventListener("abort", () => clearTimeout(renderTimer), { once: true });
+    const updateAssistant = (chunk: string) => {
+      const first = !assistantContent;
+      assistantContent += chunk;
+      if (first) flushAssistant();
+      else if (!renderTimer) renderTimer = setTimeout(flushAssistant, 80);
     };
 
     await streamChat({
@@ -286,6 +311,7 @@ Veja tudo em **Meus treinos**.`;
       profile,
       onDelta: updateAssistant,
       onDone: () => {
+        flushAssistant();
         setMessages(prev =>
           prev.map((m, i) => i === prev.length - 1 && m.timestamp === 0
             ? { ...m, timestamp: Date.now() } : m)
@@ -295,6 +321,15 @@ Veja tudo em **Meus treinos**.`;
         if (!openRef.current) setUnread(u => u + 1);
       },
       onError: (err) => {
+        clearTimeout(renderTimer);
+        if (assistantContent) {
+          flushAssistant();
+          setMessages(prev => prev.map(m => m.timestamp === 0 ? { ...m, timestamp: Date.now() } : m));
+          setMessages(prev => [...prev, { role: "assistant", content: "⚠️ A resposta foi interrompida. Você pode tentar novamente.", timestamp: Date.now() }]);
+          setIsStreaming(false);
+          abortRef.current = null;
+          return;
+        }
         if (err === OFFLINE_SIGNAL) { markOffline(); void botAnswer(); return; }
         setMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${err}`, timestamp: Date.now() }]);
         setIsStreaming(false);

@@ -1,6 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
+import { streamChatCompletion, GatewayError, type GeminiChatMessage, type GeminiChatFields } from "npm:@lovable.dev/ai-gateway@0.1.11";
+import { safeRepositoryPath } from "../_shared/bot-tools.ts";
+
+// Deno resolves npm specifiers separately from the browser TypeScript project.
+declare module "npm:@lovable.dev/ai-gateway@0.1.11" {
+  interface GeneratedModelsBySurface {
+    "chat-completions": "google/gemini-3.6-flash";
+  }
+}
+
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 function getCorsHeaders(_req: Request) { return corsHeaders; }
@@ -54,7 +64,7 @@ Responda brevemente e redirecione para fitness/saúde.
 Emojis com moderação (💪 🏋️ 🥗 📊) — só quando agregam.`;
 
 function fn(name: string, description: string, properties: Record<string, unknown>, required: string[]) {
-  return { type: "function", function: { name, description, parameters: { type: "object", properties, required } } };
+  return { type: "function" as const, function: { name, description, parameters: { type: "object", properties, required } } };
 }
 
 serve(async (req) => {
@@ -69,8 +79,8 @@ serve(async (req) => {
     }
 
     const supabaseAuth = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
     const { data: userData, error: authError } = await supabaseAuth.auth.getUser(jwt);
     if (authError || !userData?.user) {
@@ -93,8 +103,8 @@ serve(async (req) => {
         { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
-    const sanitizedMessages = messages
-      .filter((m: any) => m?.role && m?.content)
+    const sanitizedMessages: GeminiChatMessage[] = messages
+      .filter((m: any) => (m?.role === "user" || m?.role === "assistant") && typeof m?.content === "string")
       .slice(-12)
       .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 4000) }));
 
@@ -124,24 +134,27 @@ serve(async (req) => {
 ${tmb ? `- TMB: ${tmb} kcal | GET estimado: ${get} kcal` : ""}`;
     }
 
+    const latestText = sanitizedMessages.at(-1)?.content;
+    const needsTrainingContext = typeof latestText === "string" && /trein|carga|exerc|lesao|progres|fadiga|desempenho|estagna|adesao/i.test(latestText);
+
     // Contexto real de treino do usuário (RLS aplicada via JWT) — permite gestão autônoma.
-    try {
+    if (needsTrainingContext) try {
       const db = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
         { global: { headers: { Authorization: `Bearer ${jwt}` } } },
       );
       const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
       const [hist, loads, plan] = await Promise.all([
         db.from("workout_history")
           .select("workout_date,completed_exercises,total_exercises,day_focus")
-          .gte("workout_date", since).order("workout_date", { ascending: false }).limit(30),
+          .eq("user_id", userData.user.id).gte("workout_date", since).order("workout_date", { ascending: false }).limit(30),
         db.from("weight_logs")
           .select("exercise_name,weight,logged_at")
-          .gte("logged_at", since).order("logged_at", { ascending: false }).limit(40),
+          .eq("user_id", userData.user.id).gte("logged_at", since).order("logged_at", { ascending: false }).limit(40),
         db.from("workout_plans")
           .select("title,days_per_week,updated_at")
-          .eq("is_active", true).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+          .eq("user_id", userData.user.id).eq("is_active", true).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
       ]);
 
       const sessions = hist.data ?? [];
@@ -174,8 +187,8 @@ Se houver estagnação, baixa adesão ou queda de desempenho, aponte isso proati
     }
 
     const db = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       { global: { headers: { Authorization: `Bearer ${jwt}` } } },
     );
     const user = userData.user;
@@ -191,7 +204,7 @@ Você pode chamar ferramentas. Use-as quando agregarem dados reais:
 ${isAdmin ? "- [ADMIN] metricas_app, status_rotinas, auditoria_recente, github_repo: o usuário é o Master Admin — pode consultar dados gerais do app e o repositório lucasleomendel/dynamic-exercise-pal." : ""}
 Nunca invente dados: se a ferramenta não retornar nada, diga isso.`;
 
-    const tools: any[] = [
+    const tools: NonNullable<GeminiChatFields["tools"]> = [
       fn("buscar_exercicios", "Busca exercícios no catálogo do app por nome ou grupo muscular.", { termo: { type: "string" } }, ["termo"]),
       fn("ver_treino_atual", "Retorna o plano de treino ativo do usuário.", {}, []),
       fn("modificar_treino", "Altera um exercício no plano ativo do usuário: substitui por outro e/ou muda séries e repetições.", {
@@ -300,10 +313,10 @@ Nunca invente dados: se a ferramenta não retornar nada, diga isso.`;
         }
         case "github_repo": {
           const ghKey = Deno.env.get("GITHUB_API_KEY");
-          const base = ghKey
-            ? "https://connector-gateway.lovable.dev/github/repos/lucasleomendel/dynamic-exercise-pal"
-            : "https://api.github.com/repos/lucasleomendel/dynamic-exercise-pal";
+          if (!ghKey) return { erro: "Conexão com GitHub indisponível" };
+          const base = "https://connector-gateway.lovable.dev/github/repos/lucasleomendel/dynamic-exercise-pal";
           const path = String(args.caminho ?? "").replace(/^\/+|\.\./g, "").slice(0, 200);
+          if (!safeRepositoryPath(path)) return { erro: "Caminho não permitido" };
           const h: Record<string, string> = { Accept: "application/vnd.github+json", "User-Agent": "fitforge-agent" };
           if (ghKey) { h.Authorization = `Bearer ${LOVABLE_API_KEY}`; h["X-Connection-Api-Key"] = ghKey; }
           if (args.acao === "commits") {
@@ -322,55 +335,82 @@ Nunca invente dados: se a ferramenta não retornar nada, diga isso.`;
       return { erro: "Ferramenta desconhecida" };
     };
 
-    const convo: any[] = [{ role: "system", content: contextPrompt }, ...sanitizedMessages];
-    let finalText = "";
-    for (let step = 0; step < 6; step++) {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-3.6-flash", messages: convo, tools, temperature: 0.7 }),
-      });
-      if (!response.ok) {
-        const status = response.status;
-        const errorText = await response.text().catch(() => "");
-        console.error(`AI gateway error: ${status} ${errorText}`);
-        const msg = status === 429 ? "Muitas requisições. Aguarde alguns segundos."
-          : status === 402 ? "Créditos de IA esgotados." : "Erro ao conectar com a IA.";
-        return new Response(JSON.stringify({ error: msg }),
-          { status: status === 429 || status === 402 || status === 403 ? status : 502, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
-      }
-      const data = await response.json();
-      const msg = data?.choices?.[0]?.message;
-      const calls = msg?.tool_calls ?? [];
-      if (!calls.length) { finalText = msg?.content ?? ""; break; }
-      convo.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });
-      for (const c of calls) {
-        let result: unknown;
-        try { result = await exec(c.function?.name, JSON.parse(c.function?.arguments || "{}")); }
-        catch (err) { result = { erro: String((err as Error)?.message ?? err) }; }
-        convo.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(result).slice(0, 8000) });
-      }
-    }
-    if (!finalText) finalText = "Não consegui concluir a tarefa agora. Tente reformular o pedido.";
-
+    const convo: GeminiChatMessage[] = [{ role: "system", content: contextPrompt }, ...sanitizedMessages];
     const LABELS: Record<string, string> = {
-      buscar_exercicios: "🗂️ catálogo", ver_treino_atual: "📋 seu treino", modificar_treino: "✏️ treino alterado",
-      pesquisar_estudos: "🔬 PubMed", pesquisar_web: "🌐 web", metricas_app: "📊 métricas",
-      status_rotinas: "⚙️ rotinas", auditoria_recente: "🧾 auditoria", github_repo: "🐙 GitHub",
+      buscar_exercicios: "catálogo", ver_treino_atual: "seu treino", modificar_treino: "treino alterado",
+      pesquisar_estudos: "PubMed", pesquisar_web: "web", metricas_app: "métricas",
+      status_rotinas: "rotinas", auditoria_recente: "auditoria", github_repo: "GitHub",
     };
-    const prefix = used.size ? `_Consultou: ${[...used].map(u => LABELS[u] ?? u).join(" · ")}_\n\n` : "";
-    const full = prefix + finalText;
+    const cancellation = new AbortController();
+    req.signal.addEventListener("abort", () => cancellation.abort(), { once: true });
     const enc = new TextEncoder();
-    const stream = new ReadableStream({
-      start(ctrl) {
-        for (let i = 0; i < full.length; i += 80) {
-          ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: full.slice(i, i + 80) } }] })}\n\n`));
+    const stream = new ReadableStream<Uint8Array>({
+      async start(ctrl) {
+        const send = (body: unknown) => ctrl.enqueue(enc.encode(`data: ${JSON.stringify(body)}\n\n`));
+        const delta = (content: string) => send({ choices: [{ delta: { content } }] });
+        let wrote = false;
+        try {
+          // Emit tokens immediately; don't wait for an entire generated answer.
+          for (let step = 0; step < 6; step++) {
+            const output = await streamChatCompletion({
+              model: "google/gemini-3.6-flash", messages: convo, tools, temperature: 0.7,
+            }, { signal: cancellation.signal });
+            const pending = new Map<number, { id: string; type: "function"; function: { name: string; arguments: string } }>();
+            let content = "";
+            let prefixSent = false;
+            for await (const event of output) {
+              for (const choice of event.choices ?? []) {
+                const d = choice.delta;
+                for (const call of d?.tool_calls ?? []) {
+                  const current = pending.get(call.index) ?? { id: "", type: "function", function: { name: "", arguments: "" } };
+                  if (call.id) current.id = call.id;
+                  if (call.function?.name) current.function.name += call.function.name;
+                  if (call.function?.arguments) current.function.arguments += call.function.arguments;
+                  pending.set(call.index, current);
+                }
+                if (d?.content) {
+                  if (!prefixSent && used.size) {
+                    delta(`_Consultou: ${[...used].map(u => LABELS[u] ?? u).join(" · ")}_\n\n`);
+                    prefixSent = true;
+                  }
+                  content += d.content;
+                  delta(d.content);
+                  wrote = true;
+                }
+              }
+            }
+            const calls = [...pending.values()];
+            if (!calls.length) break;
+            convo.push({ role: "assistant", content, tool_calls: calls });
+            // Preserve mutation ordering; independent read-only tools run together.
+            const executeCall = async (call: typeof calls[number]): Promise<GeminiChatMessage> => {
+              let result: unknown;
+              try { result = await exec(call.function.name, JSON.parse(call.function.arguments || "{}")); }
+              catch (error) { result = { erro: error instanceof Error ? error.message : "Falha na consulta" }; }
+              return { role: "tool", tool_call_id: call.id, content: JSON.stringify(result).slice(0, 8000) };
+            };
+            if (calls.some(c => c.function.name === "modificar_treino")) {
+              for (const call of calls) convo.push(await executeCall(call));
+            } else {
+              convo.push(...await Promise.all(calls.map(executeCall)));
+            }
+          }
+          if (!wrote) delta("Não consegui concluir a tarefa agora. Tente reformular o pedido.");
+        } catch (error) {
+          if (cancellation.signal.aborted) return;
+          const status = error instanceof GatewayError ? error.httpStatus : undefined;
+          console.error("ai-chat stream failed", error instanceof GatewayError ? error.toJSON() : String(error));
+          send({ error: status === 402 ? "Créditos de IA esgotados." : "Não foi possível concluir a resposta.", status: status ?? 502 });
+        } finally {
+          if (!cancellation.signal.aborted) {
+            ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
+            ctrl.close();
+          }
         }
-        ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
-        ctrl.close();
       },
+      cancel() { cancellation.abort(); },
     });
-    return new Response(stream, { headers: { ...getCorsHeaders(req), "Content-Type": "text/event-stream" } });
+    return new Response(stream, { headers: { ...getCorsHeaders(req), "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
   } catch (e) {
     console.error("ai-chat error:", e);
     return new Response(JSON.stringify({ error: "Erro interno do servidor" }),

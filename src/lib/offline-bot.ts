@@ -3,6 +3,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import type { UserProfile } from "@/lib/workout-generator";
+import { routeBotQuery } from "../../supabase/functions/_shared/bot-tools";
 
 const MUSCLES: Record<string, string[]> = {
   peito: ["peito", "peitoral", "supino"],
@@ -23,8 +24,10 @@ const MUSCLES: Record<string, string[]> = {
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 export async function queryBotReply(text: string, signal?: AbortSignal): Promise<string> {
+  // Ordinary coaching questions need no server round trip before the AI.
+  if (signal?.aborted || !routeBotQuery(text)) return "";
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return "";
+  if (!session || signal?.aborted) return "";
   const { data, error } = await supabase.functions.invoke("bot-query", { body: { text }, signal });
   if (signal?.aborted) return "";
   if (error) {
@@ -68,6 +71,14 @@ function macros(p?: UserProfile) {
   const fat = Math.round(w * 0.9);
   const carb = Math.max(0, Math.round((kcal - prot * 4 - fat * 9) / 4));
   return { tdee, kcal, prot, fat, carb, water: Math.round(w * 35) };
+}
+
+export function profileEstimateReply(text: string, profile?: UserProfile): string {
+  const t = norm(text);
+  if (!/(calcul|quanto|qual|meta|estimativ)/.test(t) || !/(macro|caloria|agua|hidrat)/.test(t)) return "";
+  const m = macros(profile);
+  if (!m) return "";
+  return `_Consultou: seu perfil · cálculo local (estimativa)_\n\n**Sua estimativa diária**\n\n- Gasto total: ~${m.tdee} kcal\n- Meta: **${m.kcal} kcal**\n- Proteína: ${m.prot} g · Gordura: ${m.fat} g · Carboidrato: ${m.carb} g\n- Água: ~${m.water} ml (+500 ml por hora de treino)\n\nEstimativa por Mifflin-St Jeor com atividade moderada; ajuste conforme sua evolução. Para uma análise mais detalhada, peça uma avaliação da dieta.`;
 }
 
 export async function offlineReply(text: string, profile?: UserProfile, toolsAlreadyChecked = false): Promise<string> {
